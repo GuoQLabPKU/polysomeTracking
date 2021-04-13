@@ -296,7 +296,7 @@ class Polysome:
         writeOutputStar(stat, statPerPoly, outputFolder)
         genOutput(stat,2)
     
-    def find_transFromMeighbours(self, outputName = '', nrStatOut = 10):
+    def find_transFromNeighbours(self, outputName = '', nrStatOut = 10):
         
         if len(outputName) == 0:
             outputName = "%s/allTransforms.star"%self.io['classifyFold']
