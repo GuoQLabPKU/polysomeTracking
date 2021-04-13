@@ -41,8 +41,9 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric):
                              transList["pairInvTransVectY"].values, 
                              transList["pairInvTransVectZ"].values]).transpose()
     
-    distsAng =tom_pdist(transAngVect, 'ang', transAngVectInv)
     distsVect = tom_pdist(transVect, 'euc', transVectInv)
+    distsAng =tom_pdist(transAngVect, 'ang', transAngVectInv)
+    
     print("Using %s to combine angles and shifts"%cmb_metric)
     
     if cmb_metric == 'scale2Ang':
@@ -68,12 +69,12 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric):
             distsAng_norm = (distsAng - np.mean(distsAng)) + 1.0 #from 0-1(1,1,1)   
         distsCN = distsVect_norm*distsAng_norm
         if np.std(distsCN) > 0:
-            distsCN_norm = (distsCN - np.mean(distsCN)) / np.std(distsCN) #mean+- 1std.
-            distsCN_norm = (distsCN_norm - np.min(distsCN_norm)) / max(distsCN_norm - min(distsCN_norm)) #from 0-1 
+            distsCN = (distsCN - np.mean(distsCN)) / np.std(distsCN) #mean+- 1std.
+            distsCN = (distsCN - np.min(distsCN)) / max(distsCN - min(distsCN)) #from 0-1 
         else:
-            distsCN_norm = (distsCN - np.mean(distsCN)) + 1.0 #(1,1,1)
+            distsCN = (distsCN - np.mean(distsCN)) + 1.0 #(1,1,1)
     print('calculating linkage')
-    ll = linkage(distsCN_norm,'average')
+    ll = linkage(distsCN,'average')
     print("calculating linkage done")
     #save the ll results
     np.save("%s/tree.npy"%preCalcFold,ll)

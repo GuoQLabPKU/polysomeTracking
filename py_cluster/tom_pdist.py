@@ -76,7 +76,7 @@ def tom_pdist(in_Fw, dmetric = 'euc', in_Inv = '', maxChunk = 600000000 ,verbose
              
     elif dmetric == 'ang':
         Rin, RinInv = calcRotMatrices(in_Fw)
-        if in_Inv != '':
+        if len(in_Inv) > 0:
             Rin_Inv, _ = calcRotMatrices(in_Inv)
             print("using inverse transforms")
         else:
@@ -123,7 +123,7 @@ def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
     jobListChunk = np.load(jobList_single["file"])
     g1 = in_Fw[jobListChunk[:,0],:]
     g2 = in_Fw[jobListChunk[:,1],:]
-    if in_Inv  == '':
+    if len(in_Inv)  == 0:
         g1Inv = ''
         g2Inv = ''
     else:
@@ -140,7 +140,7 @@ def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
 def calcVectDist(g1,g2,g1Inv,g2Inv):
     dv = g2-g1
     dtmp =  np.sqrt(np.sum(dv*dv,axis = 1))
-    if g1Inv != '':
+    if len(g1Inv) > 0:
         dv = g2-g1Inv
         distsInv = np.sqrt(np.sum(dv*dv,axis = 1))
         #new
@@ -174,7 +174,7 @@ def  calcAngDist_mp(pr_id, jobList_single, Rin, RinInv,Rin_Inv, shared_ncc):
     Rs = Rin[jobListChunk[:,0],:,:]
     RsInv = RinInv[jobListChunk[:,1],:,:]
     dtmp = calcAngDist(Rs, RsInv)
-    if Rin_Inv != '':
+    if len(Rin_Inv) > 0:
         Rs_Inv = Rin_Inv[jobListChunk[:,0],:,:]
         dtmpInv = calcAngDist(Rs_Inv, RsInv)
         dists_all = np.array([dtmp, dtmpInv])

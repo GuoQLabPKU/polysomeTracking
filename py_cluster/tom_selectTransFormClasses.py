@@ -4,7 +4,7 @@ from py_io.tom_extractData import tom_extractData
 import numpy as np
 import os
 
-def tom_selectTransFormClasses(transList, selList, outputFolder = '', minNumTransForms = -1):
+def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputFolder = '', ):
     '''
     TOM_SELECTTRANSFORMCLASSES selects classes from transForm list
 
@@ -47,56 +47,76 @@ def tom_selectTransFormClasses(transList, selList, outputFolder = '', minNumTran
             selList = [ ]
             for i in range(len(uClass)):
                 selList.append({ })
-                selList[i]["classNr"] = uClass[i] #can be list of single int, the same for polyNr
+                selList[i]["classNr"] = uClass[i] # #can be -1 OR [0,1,2...]
                 selList[i]["polyNr"] = -1 #selList is a list with dicts stored
+        else:
+            print('Error: some unrecongnized input')
+            os._exit(-1)
     
-    zz = 1
     idxCmb = [ ]
     transListSel = [ ]
-    selFolder = [ ]
+    selFolders = [ ]
     for i in range(len(selList)):#process each class, also class0:fail to cluster
         clNr = selList[i]["classNr"]
         polyNr = selList[i]['polyNr']
+        if (clNr == 0) | (clNr == -1):
+            continue
         idx = filterList(st, clNr, polyNr) #which class and in this class,which polysome you like?
-        if clNr == 0:
-            continue #garbege class
         if len(idx) < minNumTransForms:
             continue #this class has few transforms 
         transListSel.append( transList.iloc[idx,:])
         trFilt = transList.iloc[idx,:]
-        selFolder.append(genOutput(trFilt, selList[i], outputFolder))
-        zz+=1
+        selFolders.append(genOutput(trFilt, selList[i], outputFolder)) #contain -1 when don't save class subset
         idxCmb = np.concatenate((idxCmb, idx), axis = 0)
         
-    transListSelCmb = transList.iloc[idxCmb,:]
+    if len(idxCmb) > 0:
+        idxCmb.astype(np.int)
+        transListSelCmb = transList.iloc[idxCmb,:]
+        #reindex the index 
+        transListSelCmb.reset_index(drop = True, inplace = True)
+        
+        
+    else:
+        transListSelCmb = ''  #should save space than []
+        
+    return   transListSel,selFolders,transListSelCmb
 
 
 
 
 def genOutput(transList, selList, outputFolder):
     if outputFolder == '':
-        selFolder = '-1'
+        selFolder = ''
         return selFolder
     clNr = selList['classNr']
     polyNr = selList['polyNr']
     
-    if polyNr[0] == -1:
-        polyNr = ''
-    else:
-        if type(polyNr).__name__ == 'int':
+    if 'int' in type(polyNr).__name__:
+        if polyNr == -1:
+            polyNrStr = ''
+        else:
             polyNrStr = str(polyNr)
-        elif (type(polyNr).__name__ == 'list') | (type(polyNr).__name__ == 'ndarray'):
-            polyNrStr = '+'.join([str(i) for i in polyNr]) #in any case, there  only less than one '+'
-        polyNrStr = 'p%s'%polyNrStr
+            polyNrStr = 'p%s'%polyNrStr
+            
+    elif (type(polyNr).__name__ == 'list') | (type(polyNr).__name__ == 'ndarray'):
+        if polyNr[0] == -1:  #no polysome tracked
+            polyNrStr = ''
+        else:
+            polyNrStr = '+'.join([str(i) for i in polyNr]) #in any case, there  only less than one '+'   
+            polyNrStr = 'p%s'%polyNrStr
         
-    if type(clNr).__name__ == 'int':
+    if 'int' in type(clNr).__name__:
             clNrStr = str(clNr)
     elif (type(clNr).__name__ == 'list') | (type(clNr).__name__ == 'ndarray'):
             clNrStr = '+'.join([str(i) for i in clNr]) #in any case, there  only less than one '+'
     selFolder = '%s/c%s%s'%(outputFolder, clNrStr, polyNrStr)
     os.mkdir(selFolder)
     #write starfile
-    tom_starwrite('%s/transList.star', transList, list(transList.columns))
+    header = { }
+    header["is_loop"] = 1
+    header["title"] = "data_"
+    header["fieldNames"]  = ["_%s"%i for i in transList.columns]
+    tom_starwrite('%s/transList.star'%selFolder, transList, header)
     return selFolder
  
     
@@ -104,13 +124,13 @@ def genOutput(transList, selList, outputFolder):
 
 def filterList(st, classNr, polyNr):
     if 'pairClass' in st["label"].keys():
-        if classNr == -1:
+        if classNr == -1:  #-1 represents no clustering process performed!
             idxC = np.arange(len(st['label']['pairClass']))
         else:
             allClasses = st["label"]["pairClass"]
             #judge the type of input:
-            if type(classNr).__name__ == 'int':
-                idxC = np.where(allClasses == classNr) #return the index of classNr
+            if 'int' in type(classNr).__name__:
+                idxC = np.where(allClasses == classNr)[0] #return the index of classNr
             elif (type(classNr).__name__ == 'ndarray') |  (type(classNr).__name__ == 'list'):
                 idxC = np.where(allClasses==classNr[:,None])[-1] #in case the classNr is an container
                 
@@ -121,13 +141,14 @@ def filterList(st, classNr, polyNr):
             idxP = np.arange(len(st['label']['pairClass']))
         else:               
             allPoly = st["label"]["pairlabel"]
-            if type(polyNr).__name__ == 'int':
+            if 'int' in type(polyNr).__name__:
                 idxP = np.where(allPoly == polyNr) #return the index of classNr
             elif (type(polyNr).__name__ == 'ndarray') |  (type(classNr).__name__ == 'list'):
                 idxP = np.where(allPoly == polyNr[:,None])[-1] #in case the classNr is an container            
    
     else:
         idxP = np.arange(st['p1']['positions'].shape[0])
+        
     idx = np.intersect1d(idxC,idxP)
     
     return idx #1D array

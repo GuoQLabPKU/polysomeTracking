@@ -57,9 +57,15 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
     
     tree_cp = deepcopy(tree)
     groupIdx, _, cmap = genColorLookUp(tree_cp, ColorThreshold) #the tree changed!
+ 
     
-    groups = []
-    dlabels = np.array(['c0']*nrObservation)
+    
+    if len(groupIdx) == 0:
+        groups = ''
+        return groups, cmap, groupIdx, ColorThreshold, ''  #if the threshold is too high/0,
+    
+    groups = []                                                       #no classes can be checked
+    dlabels = np.array(['c0']*nrObservation)   #it should be nrObservation = size(cluster_tree) + 1
     ugroupIdx = np.unique(groupIdx) #for example we assume that genColorLookUp returns
     len_ugroupidx = len(ugroupIdx)
     
@@ -71,19 +77,17 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
         else:
             groups[i]["color"] = cmap[groups[i]["id"]-1,: ]
         
-        tt = np.where(groupIdx == groups[i]["id"])
+        tt = np.where(groupIdx == ugroupIdx[i])
         tmpMem = np.unique(tree[tt, 0:2]).astype(np.int)  #1D int64 array
         if nrObservation>0:
             tmpMem = tmpMem[tmpMem < nrObservation] #skip the member>size(transforms)
             if tmpMem.size == 0:
-                tmpMem = -1
+                tmpMem = np.array([], dtype = np.int)
         groups[i]["members"] = tmpMem
         groups[i]["tree"] = tree[tt,:]
-        if np.sum(groups[i]["members"] != -1) == groups[i]["members"].size:
+        if groups[i]["members"].size != 0:
             for iii in groups[i]["members"]:
                 dlabels[iii] = "c%d"%groups[i]["id"]
-    if nrObservation < 0:
-        dlabels = np.array([])
     if (dsp):
         if dlabels.size == 0:
             #plt.title(figure_title)
@@ -100,8 +104,9 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
             h_plot.append(plt.plot(1,1, color = "C%d"%i))
             i += 1
             h_label.append('cl:%d(%d)'%(single_dict['id'], len(single_dict['members'])))
-        plt.legend(h_plot,labels = h_label,fontsize = 25)              
-    return groups, cmap, groupIdx, ColorThreshold, hline
+        plt.legend(h_plot,labels = h_label,fontsize = 25)  
+            
+    return groups, cmap, groupIdx, ColorThreshold
         
         
     
@@ -112,11 +117,8 @@ def genColorLookUp(Z, threshold): #Z:tree --- Array is changable data structure,
         cmap = ''
     else:
         Z = transz(Z) #return the readable cluster formation tree
-        theGroups = 1
-        groups = 0
         cmap = np.array([1,0,0]) # 1-D
-        numLeaves = Z.shape[0] + 1
-        
+        numLeaves = Z.shape[0] + 1        
         groups = np.sum(Z[:,2] < threshold) #number of transform pairs considered
         if (groups > 1) & (groups < (numLeaves - 1)):
             theGroups = np.zeros(numLeaves-1,dtype = np.int32) #1-D array int class

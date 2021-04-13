@@ -278,7 +278,7 @@ def genStarFile(transList, allTomoNames, st, maxDist, oriPartList, outputName):
     startSt_data[header["fieldNames"][45:47]] = np.tile([-1,-1],(transList.shape[0],1))
     
     #store the starSt 
-    tom_starwrite(outputName, startSt_data, header)
+    tom_starwrite(outputName, startSt_data, header) ###header should begin with "_"
     #load the saved starfile
     startSt = tom_starread(outputName)
    

@@ -49,13 +49,13 @@ def tom_extractData(listFile,makePosUnique = 0):
         data_process, type_processData = readList(listFile)
         if type_processData == 'pairStar':
             st = extractFromPairStar(data_process)
-            print("Finish generating st file from pairStar")
+            print("Finish extracting st file from pairStar")
         if type_processData == "relionStar":
             st = extractFromRelionStar(data_process)
-            print("Finish generating st file from relionStar")
+            print("Finish extracting st file from relionStar")
         if type_processData == 'stopGapStar':
             st = extractFromStopGapStar(data_process)
-            print("Finish generating st file from stopGap")
+            print("Finish extracting st file from stopGap")
     if 'tomoID' not in  st["label"].keys(): 
         st = updateTomoID(st)        
     if st["label"]["tomoID"][0] == -1:
@@ -139,7 +139,7 @@ def extractFromPairStar(starfile):
     return data_dict   
 
 def extractFromRelionStar(starfile):
-    data_size = starfile.shape[0]
+    #data_size = starfile.shape[0]
     data_dict = { }
     data_dict["p1"] = { }
     data_dict["label"] = {}

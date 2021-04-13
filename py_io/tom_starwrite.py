@@ -43,7 +43,7 @@ def tom_starwrite(outputName, st_input, header):
     f.close()
     #write the data body
     store_data.to_csv(outputName,mode = 'a', index=False, header = False, sep = " ")
-    print("Store the data successfully!")
+    print("Save the star data successfully!")
     
 
     
