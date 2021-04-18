@@ -1,5 +1,5 @@
-import os
 import pandas as pd
+
 def tom_starwrite(outputName, st_input, header):
     '''
     TOM_STARWRITE write a dataframe/dict to a star file
@@ -20,18 +20,17 @@ def tom_starwrite(outputName, st_input, header):
     #check the type of input data 
     input_type = type(st_input)
     if input_type.__name__ == 'dict':
-        print("The input data is one dict.")
+        #print("The input data is one dict.")
         store_data = pd.DataFrame()
         for single_key in header["fieldNames"]:
             store_data[single_key] = st_input[single_key]
             
     elif input_type.__name__ == 'DataFrame':
-        print("The input data is one dataframe.")
+        #print("The input data is one dataframe.")
         store_data = st_input
     
     else:
-        print('Error: unrecognized data type!')
-        os._exit(1)
+        raise TypeError('unrecognized data type!')
     
     #write out the data 
     f = open(outputName,'w')
@@ -43,7 +42,7 @@ def tom_starwrite(outputName, st_input, header):
     f.close()
     #write the data body
     store_data.to_csv(outputName,mode = 'a', index=False, header = False, sep = " ")
-    print("Save the star data successfully!")
+    #print("Save the star data successfully!")
     
 
     

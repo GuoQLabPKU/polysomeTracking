@@ -32,6 +32,7 @@ def tom_average_rotations(rotations, rotFlav = 'zxz'):
     AngsQuat = tom_eulerconvert_Quaternion(rotations, rotFlav)
     A = np.zeros((4,4))
     M  = AngsQuat.shape[0]
+    ifComplex_flag = 0
     
     for i in range(M):
         q = AngsQuat[i,:]
@@ -42,9 +43,20 @@ def tom_average_rotations(rotations, rotFlav = 'zxz'):
     w,v = np.linalg.eig(A)
     idx = w.argmax()
     eigV = v[:,idx]
-    avgRotMat = tom_quaternion2rotMatrix(eigV)
+    #analysis the eigV
+    a,b,c,d = eigV
+    a = np.real(a)
+    b = np.real(b)
+    c = np.real(c)
+    d = np.real(d)
+    if np.sum([ np.iscomplex(a), np.iscomplex(b), np.iscomplex(c), np.iscomplex(d)   ]) > 0:
+    
+        print('warning: find non zero imag complex!')
+        ifComplex_flag = 1
+                             
+    avgRotMat = tom_quaternion2rotMatrix([a,b,c,d])
     avgRotEuler = tom_rotmatrix2angles(avgRotMat)
-    return avgRotEuler, avgRotMat
+    return avgRotEuler, avgRotMat, ifComplex_flag
     
 
     

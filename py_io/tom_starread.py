@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import os
+
 def tom_starread(starfile):
     '''
     tom_starread read star files 
@@ -49,13 +49,13 @@ def tom_starread(starfile):
             line_content_clean = [i  for i in line_content if len(i)!= 0]
             if line_content_clean[-1] == '\n':
                 if len(line_content_clean)-1 != len(colname_dict.keys()):  #because the last char shoule be "\n" 
-                    print("Error: the star data is not consistent!") 
+                    raise TypeError("the star data is not consistent!") 
                     #os._exit(1)
             
             else:
                 if "\n" in line_content_clean[-1]:
                     if len(line_content_clean) != len(colname_dict.keys()):                  
-                        print("Error: the star data is not consistent!")
+                        raise TypeError("the star data is not consistent!")
                         break
                         #os._exit(1)
                     else:
@@ -63,7 +63,7 @@ def tom_starread(starfile):
                         last_element_clean = last_element[0:-1]
                         line_content_clean[-1] = last_element_clean
                 else:
-                    print("Error: no newline symbol detected! Check you file !")
+                    raise TypeError("newline symbol detected! Check you file !")
                     #os._exit(1)                        
             for single_element,single_columne in zip(line_content_clean,colname_list):
                 try:

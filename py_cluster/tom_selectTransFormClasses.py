@@ -1,6 +1,7 @@
 from py_io.tom_starread import tom_starread
 from py_io.tom_starwrite import tom_starwrite
 from py_io.tom_extractData import tom_extractData
+
 import numpy as np
 import os
 
@@ -47,11 +48,12 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
             selList = [ ]
             for i in range(len(uClass)):
                 selList.append({ })
-                selList[i]["classNr"] = uClass[i] # #can be -1 OR [0,1,2...]
-                selList[i]["polyNr"] = -1 #selList is a list with dicts stored
+                selList[i]["classNr"] = np.array([uClass[i]]) # #can be -1 OR [0,1,2...]
+                selList[i]["polyNr"] = np.array([-1]) #selList is a list with dicts stored
         else:
-            print('Error: some unrecongnized input')
-            os._exit(-1)
+            raise TypeError('some unrecongnized input')
+
+
     
     idxCmb = [ ]
     transListSel = [ ]
@@ -59,7 +61,9 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
     for i in range(len(selList)):#process each class, also class0:fail to cluster
         clNr = selList[i]["classNr"]
         polyNr = selList[i]['polyNr']
-        if (clNr == 0) | (clNr == -1):
+        if not all(clNr):
+            continue
+        if clNr[0] == -1:
             continue
         idx = filterList(st, clNr, polyNr) #which class and in this class,which polysome you like?
         if len(idx) < minNumTransForms:
@@ -91,24 +95,15 @@ def genOutput(transList, selList, outputFolder):
     clNr = selList['classNr']
     polyNr = selList['polyNr']
     
-    if 'int' in type(polyNr).__name__:
-        if polyNr == -1:
-            polyNrStr = ''
-        else:
-            polyNrStr = str(polyNr)
-            polyNrStr = 'p%s'%polyNrStr
-            
-    elif (type(polyNr).__name__ == 'list') | (type(polyNr).__name__ == 'ndarray'):
-        if polyNr[0] == -1:  #no polysome tracked
-            polyNrStr = ''
-        else:
-            polyNrStr = '+'.join([str(i) for i in polyNr]) #in any case, there  only less than one '+'   
-            polyNrStr = 'p%s'%polyNrStr
-        
-    if 'int' in type(clNr).__name__:
-            clNrStr = str(clNr)
-    elif (type(clNr).__name__ == 'list') | (type(clNr).__name__ == 'ndarray'):
-            clNrStr = '+'.join([str(i) for i in clNr]) #in any case, there  only less than one '+'
+    
+  
+    if polyNr[0] == -1:  #no polysome tracked
+        polyNrStr = ''
+    else:
+        polyNrStr = '+'.join([str(i) for i in polyNr]) #in any case, there  only less than one '+'   
+        polyNrStr = 'p%s'%polyNrStr
+          
+    clNrStr = '+'.join([str(i) for i in clNr]) #in any case, there  only less than one '+'
     selFolder = '%s/c%s%s'%(outputFolder, clNrStr, polyNrStr)
     os.mkdir(selFolder)
     #write starfile
@@ -124,27 +119,21 @@ def genOutput(transList, selList, outputFolder):
 
 def filterList(st, classNr, polyNr):
     if 'pairClass' in st["label"].keys():
-        if classNr == -1:  #-1 represents no clustering process performed!
+        if classNr[0] == -1:  #-1 represents no clustering process performed!
             idxC = np.arange(len(st['label']['pairClass']))
         else:
             allClasses = st["label"]["pairClass"]
             #judge the type of input:
-            if 'int' in type(classNr).__name__:
-                idxC = np.where(allClasses == classNr)[0] #return the index of classNr
-            elif (type(classNr).__name__ == 'ndarray') |  (type(classNr).__name__ == 'list'):
-                idxC = np.where(allClasses==classNr[:,None])[-1] #in case the classNr is an container
+            idxC = np.where(allClasses==classNr[:,None])[-1] #in case the classNr is an container
                 
     else:
         idxC = np.arange(st['p1']['positions'].shape[0])
     if 'pairLabel' in st["label"].keys():
-        if polyNr == -1:
+        if polyNr[0] == -1:
             idxP = np.arange(len(st['label']['pairClass']))
         else:               
             allPoly = st["label"]["pairlabel"]
-            if 'int' in type(polyNr).__name__:
-                idxP = np.where(allPoly == polyNr) #return the index of classNr
-            elif (type(polyNr).__name__ == 'ndarray') |  (type(classNr).__name__ == 'list'):
-                idxP = np.where(allPoly == polyNr[:,None])[-1] #in case the classNr is an container            
+            idxP = np.where(allPoly == polyNr[:,None])[-1] #in case the classNr is an container            
    
     else:
         idxP = np.arange(st['p1']['positions'].shape[0])

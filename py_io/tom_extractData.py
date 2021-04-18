@@ -1,6 +1,6 @@
 #import pandas as pd
 import numpy as np
-import os
+
 from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_io.tom_starread import tom_starread
 
@@ -43,19 +43,18 @@ def tom_extractData(listFile,makePosUnique = 0):
     '''
     type_inputfile = type(listFile)
     if type_inputfile.__name__ != 'DataFrame':
-        print("Error: You should input the dataframe using tom_starread!")
-        os._exit(1)
+        raise TypeError("You should input the dataframe using tom_starread!")
     else:
         data_process, type_processData = readList(listFile)
         if type_processData == 'pairStar':
             st = extractFromPairStar(data_process)
-            print("Finish extracting st file from pairStar")
+            #print("Finish extracting st file from pairStar")
         if type_processData == "relionStar":
             st = extractFromRelionStar(data_process)
-            print("Finish extracting st file from relionStar")
+            #print("Finish extracting st file from relionStar")
         if type_processData == 'stopGapStar':
             st = extractFromStopGapStar(data_process)
-            print("Finish extracting st file from stopGap")
+            #print("Finish extracting st file from stopGap")
     if 'tomoID' not in  st["label"].keys(): 
         st = updateTomoID(st)        
     if st["label"]["tomoID"][0] == -1:
@@ -74,8 +73,8 @@ def readList(listFile):
             elif 'phi' in list_return.columns:
                 return list_return, 'stopGapStar'
         else:
-            print("Error: unrecognized input type!")
-            os._exit(1)
+            raise TypeError("Unrecognized input type!")
+            
             
     elif type_inputfile.__name__ == "DataFrame":
         list_return = listFile
@@ -86,11 +85,11 @@ def readList(listFile):
         elif 'phi' in list_return.columns:
             return list_return, 'stopGapStar'
         else:
-            print("Error: unrecognized input type!")
-            os._exit(1)
+            raise TypeError("Unrecognized input type!")
+            
     else:
-        print("Error: unrecognized input type!")
-        os._exit(1)
+        raise TypeError("Unrecognized input type!")
+        
             
 def extractFromPairStar(starfile):
     cmbInd = np.zeros([starfile.shape[0],7],dtype = np.int)
