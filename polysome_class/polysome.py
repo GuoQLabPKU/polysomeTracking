@@ -481,7 +481,7 @@ class Polysome:
         plt.ylabel('linkage score')        
         plt.savefig('%s/vis/clustering/tree.png'%classifyFold, dpi = 300)
         plt.show()
-        #plt.close()
+        plt.close()
         
     @staticmethod
     def dspLinkage(classifyFold, treeFile,thres):
@@ -499,7 +499,7 @@ class Polysome:
         
         plt.savefig('%s/vis/clustering/linkLevel.png'%classifyFold, dpi = 300)
         plt.show()
-        #plt.close()
+        plt.close()
         
          
         

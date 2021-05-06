@@ -43,12 +43,12 @@ def tom_calcTransforms(posAng,  maxDist, tomoNames='', dmetric='exact', outputNa
     
     '''
     oriPartList = 'noListStarGiven'
-    type_posAng = type(posAng)
+
     
-    if type_posAng.__name__ == 'str':
+    if isinstance(posAng, str):
         oriPartList = posAng
         posAng = tom_starread(posAng)
-    if type_posAng.__name__ == 'dict':
+    if isinstance(posAng, dict):
         if "pairTransVectX" in posAng.keys():
             print("The file already has transformation information! No need to transform.")
             return 
@@ -107,8 +107,7 @@ def calcTransforms_linear(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbos
     jobList = jobListN
     
     if jobList.shape[0] == 0:
-        print("Error: the distances between ribosomes are bigger than %d pixels! Set bigger maxDist and try again!"%pruneRad)
-        os._exit(1)    
+        raise RuntimeError("the distances between ribosomes are bigger than   %d pixels! Set bigger maxDist and try again!"%pruneRad)  
     transListAct_inner = np.zeros([jobList.shape[0],29], dtype = np.float)#this will store the transformation results   
     for i in range(jobList.shape[0]):             
         icmb0,icmb1 = jobList[i,:]

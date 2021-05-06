@@ -18,14 +18,13 @@ def tom_starwrite(outputName, st_input, header):
     
     '''
     #check the type of input data 
-    input_type = type(st_input)
-    if input_type.__name__ == 'dict':
+    if isinstance(st_input, dict):
         #print("The input data is one dict.")
         store_data = pd.DataFrame()
         for single_key in header["fieldNames"]:
             store_data[single_key] = st_input[single_key]
             
-    elif input_type.__name__ == 'DataFrame':
+    elif isinstance(st_input, pd.DataFrame):
         #print("The input data is one dataframe.")
         store_data = st_input
     

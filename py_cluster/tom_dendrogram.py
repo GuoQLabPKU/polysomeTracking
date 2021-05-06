@@ -41,8 +41,7 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
    SEE ALSO
        linkage,dendrogram
    '''
-    type_tree = type(tree).__name__
-    if type_tree == 'str':
+    if isinstance(tree,str):
         tree = np.load(tree)
         
     if ColorThreshold == -1:

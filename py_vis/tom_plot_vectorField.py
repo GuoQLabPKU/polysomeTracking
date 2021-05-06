@@ -61,11 +61,12 @@ def plot_vectField(posAng, repVect, scale, col, cmbInd, classNr, polyNr, onlySel
 
 def doRender(st, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleList, 
              tomoName, repVect, scale, col, plotClassZero):
+    
+    fTitle = '%s%s'%(fTitleList, tomoName)
     if len(outputFolder) > 0:
         if not os.path.exists(outputFolder):
             os.mkdir(outputFolder)
         fig = plt.figure()
-        plt.title('vector representation')
         ax = fig.gca(projection ='3d')
         
     else:
@@ -83,7 +84,6 @@ def doRender(st, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleLi
         
     pos = st['p1']['positions'][idxRep,:]
     angles = st['p1']['angles'][idxRep,:]
-    fTitle = '%s%s'%(fTitleList, tomoName)
     plotRepVects(pos,angles, repVect, scale, col, ax)
         
     if 'p2' in st.keys():  #plot another ribosome that near close (<2 ribosomo distance)
@@ -92,7 +92,7 @@ def doRender(st, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleLi
         plotRepVects(pos, angles, repVect, scale, col, ax)
         plotPairs(st, idx, plotClassZero, ax)
         
-    fTitle = ''
+    
     
     if len(outputFolder)>0:
         fnameTmp = os.path.splitext(os.path.split(tomoName)[1])[0]
@@ -213,11 +213,15 @@ def tom_rotVectByAng(vect, angs, rotFlav = 'zxz', display = None, col = np.array
         ax.quiver(ori[:,0], ori[:,1], ori[:,2], 
                   vectsRot[:,0], vectsRot[:,1], vectsRot[:,2],
                   color = col)
+        plt.show()
+        plt.close()
     if display == 'points':
         fig = plt.figure()
         ax = fig.add_subplot(111, projection = '3d')
         ax.plot(vectsRot[:,0], vectsRot[:,1], vectsRot[:,2],
                 'ro',color = col)
+        plt.show()
+        plt.close()
     return vectsRot
         
         

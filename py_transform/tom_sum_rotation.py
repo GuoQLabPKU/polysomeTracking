@@ -124,8 +124,7 @@ def tom_sum_rotation(rots, shifts, order = 'trans_rot'):
         
     return euler_out, shift_out, rott        
         
-tom_sum_rotation(np.array([[10,20,30],[-20,-10,-30]]),
-                          np.array([[5,5,5],[5,5,5]]))
+
             
         
     

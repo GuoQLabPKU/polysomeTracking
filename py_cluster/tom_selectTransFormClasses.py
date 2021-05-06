@@ -37,11 +37,10 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
     REFERENCES
     '''
     #DO NOT Change the changable data struct in function/anywhere
-    type_list = type(transList).__name__
-    if type_list == 'str':
+    if isinstance(transList, str):
         transList = tom_starread(transList)
     st = tom_extractData(transList)#st should be a dict 
-    if type(selList).__name__ ==  'str':
+    if isinstance(selList, str):
         if selList == 'Classes-Sep':
             uClass = np.unique(st["label"]['pairClass'])  # select all the classes and ploys
             del selList
