@@ -99,7 +99,7 @@ def doRender(st, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleLi
         plt.title(fTitle)
         plt.savefig('%s/%s.png'%(outputFolder,fnameTmp), dpi = 300)
         plt.show()
-        #plt.close()
+        plt.close()
     else:
         plt.show()
         plt.close()

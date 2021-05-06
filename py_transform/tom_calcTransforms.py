@@ -261,12 +261,12 @@ def genStarFile(transList, allTomoNames, st, maxDist, oriPartList, outputName):
     startSt_data = pd.concat([startSt_data,transform_data],axis = 1)
     startSt_data[header["fieldNames"][23]] = classesPart1
     startSt_data[header["fieldNames"][24]] = psfsPart1
-    startSt_data[header["fieldNames"][25:27]] = neighPMPart
+    startSt_data[header["fieldNames"][25:27]] = pd.DataFrame(neighPMPart)
     startSt_data[header["fieldNames"][27]] = posInPolyPart
-    startSt_data[header["fieldNames"][28:34]] = transList[:,23:29]
+    startSt_data[header["fieldNames"][28:34]] = pd.DataFrame(transList[:,23:29])
     startSt_data[header["fieldNames"][34]] = classesPart2
     startSt_data[header["fieldNames"][35]] = psfsPart2
-    startSt_data[header["fieldNames"][36:38]] = neighPMPart
+    startSt_data[header["fieldNames"][36:38]] = pd.DataFrame(neighPMPart)
     startSt_data[header["fieldNames"][38]] = posInPolyPart
     startSt_data[header["fieldNames"][39]] = tomoName12
     startSt_data[header["fieldNames"][40]] = np.repeat([pixs[0]], transList.shape[0])
@@ -274,7 +274,7 @@ def genStarFile(transList, allTomoNames, st, maxDist, oriPartList, outputName):
     startSt_data[header["fieldNames"][42]] = np.repeat([maxDist],transList.shape[0])
     startSt_data[header["fieldNames"][43]] = np.repeat([-1],transList.shape[0])
     startSt_data[header["fieldNames"][44]]  = np.repeat(['0-0-0'],transList.shape[0])
-    startSt_data[header["fieldNames"][45:47]] = np.tile([-1,-1],(transList.shape[0],1))
+    startSt_data[header["fieldNames"][45:47]] = pd.DataFrame(np.tile([-1,-1],(transList.shape[0],1)))
     
     #store the starSt 
     tom_starwrite(outputName, startSt_data, header) ###header should begin with "_"

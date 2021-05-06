@@ -4,7 +4,7 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
-def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeaves = 500):
+def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeaves = 0):
     '''
     TOM_DENDROGRAM creates a dendrogram from linked data and gives the members
     and color for clusters
@@ -84,7 +84,7 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
             for iii in groups[i]["members"]:
                 dlabels[iii] = "c%d"%groups[i]["id"]
     if (dsp):
-        if nrObservation > maxLeaves:
+        if nrObservation <= maxLeaves:
             figure_title = "clustering %d of %d shown"%(maxLeaves, nrObservation)
         else:
             figure_title  = 'clustering'
@@ -99,7 +99,7 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
         else:
             #plt.title(figure_title)
             with plt.rc_context({'lines.linewidth': 0.5}):
-                hline = dendrogram(tree,  p = maxLeaves, color_threshold=ColorThreshold, labels= dlabels)
+                hline = dendrogram(tree,  p = maxLeaves, color_threshold=ColorThreshold)#, labels= dlabels)
                 plt.xticks(fontsize = 5)
     #add the legend
     if dsp & (len(groups) > 0):
@@ -110,7 +110,7 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
             h_plot.append(plt.plot(1,1, color = "C%d"%i))
             i += 1
             h_label.append('cl:%d(%d)'%(single_dict['id'], len(single_dict['members'])))
-        plt.legend(h_plot,labels = h_label,fontsize = 10,bbox_to_anchor=(1.05, 1), loc='upper left',
+        plt.legend(h_plot,labels = h_label,fontsize = 10,bbox_to_anchor=(1.05, 1),
                    title = 'class')  
         plt.tight_layout()
         
