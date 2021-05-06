@@ -6,11 +6,11 @@ codes for track polysomes from tomograms
 
 #polysome: the polysome Class
 
-python: 3.6.7
+python: 3.6.7 (3.8.3)
 
-numpy: 1.16.1
+numpy: 1.16.1 (1.18.5)
 
-pandas: 1.1.1
+pandas: 1.1.1 (1.0.5)
 
 jupyter: 1.0.0
 
