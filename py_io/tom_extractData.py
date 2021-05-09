@@ -8,7 +8,7 @@ def tom_extractData(listFile,makePosUnique = 0):
     '''
     tom_extractData reads positions,angles... from file after tom_starread (.star)
   
-    [angles,positions,shifts,cmbInd]=tom_extractData(listFile)
+    angles,positions,shifts,cmbInd=tom_extractData(listFile)
   
     PARAMETERS
   
@@ -55,7 +55,7 @@ def tom_extractData(listFile,makePosUnique = 0):
         if type_processData == 'stopGapStar':
             st = extractFromStopGapStar(data_process)
             #print("Finish extracting st file from stopGap")
-    if 'tomoID' not in  st["label"].keys(): 
+    if 'tomoID' not in  st["label"].keys():  #update the tomoID,such that number replace tomo Name
         st = updateTomoID(st)        
     if st["label"]["tomoID"][0] == -1:
         st = updateTomoID(st)
@@ -63,7 +63,7 @@ def tom_extractData(listFile,makePosUnique = 0):
         
 def readList(listFile): 
     type_inputfile = type(listFile)
-    if type_inputfile.__name__ == 'str':
+    if isinstance(listFile, str):
         if '.star' in listFile:
             list_return = tom_starread(listFile)
             if 'pairTransVectX' in list_return.columns:
@@ -116,7 +116,7 @@ def extractFromPairStar(starfile):
     data_dict["p2"]["pairPosInPoly"] = starfile["pairPosInPoly2"].values
     
     data_dict["label"]["pairClass"] = starfile["pairClass"].values
-    data_dict["label"]["pairClassColour"] = np.zeros([starfile.shape[0],3],dtype = np.int)
+    data_dict["label"]["pairClassColour"] = np.zeros([starfile.shape[0],3])
     for i in range(starfile.shape[0]):
         single_pairClassColour = [float(j) for j in starfile["pairClassColour"].values[i].split("-")]
         #print(single_pairClassColour)
@@ -175,16 +175,11 @@ def extractFromStopGapStar(starfile):
    
 def updateTomoID(st):
     tomoNames = st["p1"]["tomoName"]
-    tomoIDs = np.zeros([len(tomoNames),1],dtype = np.int)
+    tomoIDs = np.zeros(len(tomoNames),dtype = np.int)
     utomoName = np.unique(tomoNames)
     len_utomoName = len(utomoName)
     for i in range(len_utomoName):
-        idx = np.where(tomoNames == utomoName[i])
+        idx = np.where(tomoNames == utomoName[i])[0]
         tomoIDs[idx] = i
-    st["label"]["tomoID"] = tomoIDs.reshape(1,-1)[0]
+    st["label"]["tomoID"] = tomoIDs
     return st
-
-   
-        
-                
-        

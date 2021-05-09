@@ -22,12 +22,12 @@ def alignDir(pairList): #the input is subset of one dataframe pointer
         useCl = 0
     else:
         useCl = 1
-    idx = np.where(cl == useCl)
-    meanV = np.mean(vects[idx[0],:], axis = 0)
+    idx = np.where(cl == useCl)[0]
+    meanV = np.mean(vects[idx,:], axis = 0)
     diffV = vects - np.tile(meanV, (vects.shape[0],1))
-    diffV = np.sqrt(np.sum(diffV*diffV,axis = 1))
+    diffV = np.linalg.norm(diffV, axis = 1)
     diffVInv = vectsInv - np.tile(meanV, (vects.shape[0],1))
-    diffVInv = np.sqrt(np.sum(diffVInv*diffVInv,axis = 1))
+    diffVInv = np.linalg.norm(diffVInv, axis = 1)
     
     idxSwap = np.where(diffV < diffVInv)[0]
 #    for single_idx in idxSwap:
@@ -52,7 +52,7 @@ def alignDir(pairList): #the input is subset of one dataframe pointer
 
     backup = pairList.loc[rowNamesSel, swap_name1].values
     pairList.loc[rowNamesSel, swap_name1] =  pairList.loc[rowNamesSel, swap_name2].values
-    pairList.loc[rowNamesSel, swap_name2] = backup    
+    pairList.loc[rowNamesSel, swap_name2] =  backup    
     
     return pairList.values
 
@@ -62,5 +62,11 @@ def tom_align_transformDirection(transList):
     allClasses = transList['pairClass'].values
     allClassesU = np.unique(allClasses)
     for single_class in allClassesU:
-        idx = np.where(allClasses == single_class)
-        transList.loc[idx[0],:] = alignDir(transList.iloc[idx[0],:]) #class 0 will also be aligned and class -1
+        if single_class == 0: #if the class == 0: continue
+            continue 
+        if single_class == -1:
+            print('Warning: no clusters detected. Skipping align the transform.')
+            break
+        idx = np.where(allClasses == single_class)[0]
+        transList.iloc[idx,:] = alignDir(transList.iloc[idx,:]) #class 0 will also be aligned and class -1
+    return transList

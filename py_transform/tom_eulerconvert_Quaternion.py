@@ -22,7 +22,7 @@ def tom_eulerconvert_Quaternion(angles, rotFlav = 'zxz'):  #the input should be 
        euler_out            resulting Euler angles
 
     EXAMPLE
-       [euler_out]=tom_eulerconvert_Quaternion([10 20 30; 0 0 20]);
+       euler_out=tom_eulerconvert_Quaternion(np.array([[10 20 30], [0 0 20]]);
       
     '''
     Q = np.zeros([angles.shape[0], 4 ])

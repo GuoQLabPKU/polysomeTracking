@@ -16,11 +16,12 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
     INPUT
        tree                          linked data returned by the tom_calcLinkage()
        ColorThreshold                (mean(tree(:,3))) threshold for creating clusters
+                                      can be number/auto/off(don't cluster)
        nrObservations                (-1) number of obs b4 linkage needed for cluster  #shoule be precision
                                           members. It should == #of ribosomes pairs
                                           (rem:more than two members can be merged at the same time)
        dsp                           (1) display flag
-       maxLeaves                     (7000) max number of leaves in dendrogram use 0
+       maxLeaves                     (7000) max number of leaves in dendrogram to display use 0
                                                       to switch off
    
 
@@ -50,7 +51,7 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
         del ColorThreshold
         ColorThreshold = np.max(tree[:,2])*0.7
 
-    tree_cp = deepcopy(tree)
+    tree_cp = deepcopy(tree)  #this is necessary, I will change the tree following 
     groupIdx, _, cmap = genColorLookUp(tree_cp, ColorThreshold) #the tree changed!
  
     
@@ -70,39 +71,34 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
         if ugroupIdx[i] == 0:
             groups[i]["color"] = cmap[-1,:] #0 means that it belongs to no cluster(impossible)
         else:
-            groups[i]["color"] = cmap[groups[i]["id"]-1,: ]
+            groups[i]["color"] = cmap[ugroupIdx[i]-1,: ]
         
-        tt = np.where(groupIdx == ugroupIdx[i])
+        tt = np.where(groupIdx == ugroupIdx[i])[0]
         tmpMem = np.unique(tree[tt, 0:2]).astype(np.int)  #1D int64 array
         if nrObservation>0:
             tmpMem = tmpMem[tmpMem < nrObservation] #skip the member>size(transforms)
             if tmpMem.size == 0:
                 tmpMem = np.array([], dtype = np.int)
-        groups[i]["members"] = tmpMem
+        groups[i]["members"] = tmpMem  #member can be empty!
         groups[i]["tree"] = tree[tt,:]
         if groups[i]["members"].size != 0:
             for iii in groups[i]["members"]:
                 dlabels[iii] = "c%d"%groups[i]["id"]
-    if (dsp):
-        if nrObservation <= maxLeaves:
-            figure_title = "clustering %d of %d shown"%(maxLeaves, nrObservation)
-        else:
-            figure_title  = 'clustering'
-            maxLeaves = nrObservation
-        #plot the figure   
+    if dsp & (maxLeaves>0):
         plt.figure()
-        plt.title(figure_title)
-        if dlabels.size == 0:
-            #plt.title(figure_title)
+        if nrObservation > maxLeaves:
+            figure_title = "clustering %d of %d shown"%(maxLeaves, nrObservation)
+            plt.title(figure_title)
             with plt.rc_context({'lines.linewidth': 0.5}):
                 hline = dendrogram(tree,  p=maxLeaves, color_threshold= ColorThreshold)
         else:
-            #plt.title(figure_title)
+            figure_title  = 'clustering'
+            plt.title(figure_title)
             with plt.rc_context({'lines.linewidth': 0.5}):
-                hline = dendrogram(tree,  p = maxLeaves, color_threshold=ColorThreshold)#, labels= dlabels)
-                plt.xticks(fontsize = 5)
+                hline = dendrogram(tree,  p = nrObservation, color_threshold=ColorThreshold, labels= dlabels)
+            plt.xticks(fontsize = 5)
     #add the legend
-    if dsp & (len(groups) > 0):
+    if dsp & (len(groups) > 0) & (maxLeaves>0):
         h_plot = [ ]
         h_label = [ ]
         i = 0
@@ -110,13 +106,12 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
             h_plot.append(plt.plot(1,1, color = "C%d"%i))
             i += 1
             h_label.append('cl:%d(%d)'%(single_dict['id'], len(single_dict['members'])))
-        plt.legend(h_plot,labels = h_label,fontsize = 10,bbox_to_anchor=(1.05, 1),
+        plt.legend(h_plot,labels = h_label,fontsize = 10,bbox_to_anchor=(1.15, 1),
                    title = 'class')  
         plt.tight_layout()
         
-    if dsp: 
-        
-        return groups, cmap, groupIdx, ColorThreshold, hline
+    if dsp:        
+        return groups, cmap, groupIdx, ColorThreshold,hline
     else:
         return groups, cmap, groupIdx, ColorThreshold
         
@@ -132,7 +127,7 @@ def genColorLookUp(Z, threshold): #Z:tree --- Array is changable data structure,
         cmap = np.array([1,0,0]) # 1-D
         numLeaves = Z.shape[0] + 1        
         groups = np.sum(Z[:,2] < threshold) #number of transform pairs considered
-        if (groups > 1) & (groups < (numLeaves - 1)):
+        if (groups > 1) & (groups < Z.shape[0]):
             theGroups = np.zeros(numLeaves-1,dtype = np.int32) #1-D array int class
             numColors = 0
             for count in np.arange(groups-1, -1, -1):
@@ -205,7 +200,7 @@ def traceback(Z,b):
     return np.min([a,c])
         
     
-def gen_colors(clusters_n):
+def gen_colors(clusters_n): #one cluster one color
     colorm = [cm.hsv(i/clusters_n, 1) for i in range(clusters_n)]
     return np.array(colorm)[:,0:3]        
     

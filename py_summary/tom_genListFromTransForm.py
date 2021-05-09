@@ -31,7 +31,8 @@ def tom_genListFromTransForm(transList, outputFolder, polyType = 'center', listF
 
 
     '''
-    if type(transList).__name__ == 'str':
+    
+    if isinstance(transList, str):
         transList = tom_starread(transList)
     st = tom_extractData(transList)
     os.mkdir(outputFolder)

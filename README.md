@@ -18,3 +18,4 @@ matplotlib: 3.0.2
 
 Any platform (linux/windows/macos)should be fine.
 
+For test, please run pytest test_polysome in the terminal 

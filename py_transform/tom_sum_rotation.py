@@ -26,9 +26,8 @@ def tom_sum_rotation(rots, shifts, order = 'trans_rot'):
        rott                resulting rotation matrix
 
    EXAMPLE
-   [euler_out shift_out rott]=tom_sum_rotation(np.array([10 20 30; -20 -10 -30]),np.array([5 5 5; 5 5 5]))
-   [euler_out shift_out rott]=tom_sum_rotation([10 20 30; -20 -10 -30],
-                                               [5 5 5; -2.9506 -3.7517  -7.2263])
+   euler_out shift_out rott=tom_sum_rotation(np.array([[10, 20, 30], [-20, -10, -30]]),np.array([[5, 5, 5],[5, 5, 5]]))
+ 
    
    '''
    #check if the iput is one dimention 

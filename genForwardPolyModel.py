@@ -29,15 +29,31 @@ def genForwardPolyModel(conf = None):
         
     #code 
     list_ = 'init'
+    polysome_flag = dict()
+    polysome_Nr = 1
     for single_conf in conf:
         if single_conf['type'] == 'vect':
+            if isinstance(list_, str):
+                shape0 = 0
+            else:      
+                shape0 = list_.shape[0]
             list_ = genVects(list_, single_conf['tomoName'], single_conf['increPos'],
                              single_conf['increAng'], single_conf['startPos'],
                               single_conf['startAng'], single_conf['numRepeats'])
+            shape1 = list_.shape[0]
+            polysome_flag[polysome_Nr] = (shape0, shape1)
+            polysome_Nr += 1
         if single_conf['type'] == 'noise':
             list_ = addNoisePoints(list_, single_conf['tomoName'],
                                    single_conf['numRepeats'], single_conf['minDist'],
                                    single_conf['searchRad'])
+    
+    polysome_label = np.zeros(list_.shape[0], dtype = np.int)#label the polysome information to the data 
+    for key in polysome_flag.keys():
+        begin, end = polysome_flag[key]
+        polysome_label[begin:end] = key
+    list_['polysome'] = polysome_label
+    #print(list_['polysome'])
     writeStarFile(list_)
 
 def writeStarFile(list_):
@@ -46,11 +62,24 @@ def writeStarFile(list_):
     header["title"] = "data_"
     header["fieldNames"] = [ ]
     for i,j in enumerate(list_.columns):
+        if j == 'polysome':
+            continue
         header["fieldNames"].append('_%s #%d'%(j,i+1))
     tom_starwrite('sim.star', list_, header)
     id_ = np.random.permutation(list_.shape[0])
     list_ = list_.loc[id_,:]
-    list_.reset_index(drop=True,inplace = True)
+    list_.reset_index(drop=True,inplace = True)  
+    #save the polysome information
+    ori_polysome = dict()
+    polysome_unique = np.unique(list_['polysome'].values)
+    for single_polysome in polysome_unique:
+        if single_polysome == 0:
+            continue
+        idx = list_[list_['polysome'] == single_polysome].index
+        ori_polysome[np.min(idx)] = set(idx)
+    #save the dict 
+    np.save('./py_test/ori_polysome.npy', ori_polysome)      
+    list_.drop('polysome',axis = 1,inplace = True)
     tom_starwrite('simOrderRandomized.star',list_, header)
     
 def genVects(list_,tomoName, increPos, increAng, startPos, startAng, nrRep, branch=0):

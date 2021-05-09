@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import arccos
 import os
 import gc
 import shutil
@@ -29,16 +28,16 @@ def tom_pdist(in_Fw, dmetric = 'euc', in_Inv = '', maxChunk = 600000000 ,verbose
     EXAMPLE
   
 
-    dd=tom_pdist(np.array([0 0 0;0 0 10; 10 20 30]),'ang');
+    dd=tom_pdist(np.array([[0, 0, 0],[0, 0, 10], [10, 20, 30]]),'ang');
     '''
     tmpDir = 'tmpPdist' #since the number of combination of pairs can be large 
     jobList = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
-    dists = np.zeros(np.int(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2), dtype = np.single ) # the distance between pairs of ribosomes , one dimention array
+    dists = np.zeros(np.int(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2), dtype = np.single) # the distance between pairs of ribosomes , one dimention array
     print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
     worker_n = len(jobList) #number of cores to use
     if dmetric == 'euc':
         if worker_n != 1:
-            print("staring %d processors..."%worker_n)
+            print("Staring %d processors..."%worker_n)
             shared_ncc = mp.Array('f', np.int(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2))            
             avail_cpu = mp.cpu_count()
             if avail_cpu < worker_n:
@@ -59,15 +58,15 @@ def tom_pdist(in_Fw, dmetric = 'euc', in_Inv = '', maxChunk = 600000000 ,verbose
             #check the exit stats
             for pr_id in range(len(processes)):
                 if pr_id != pr_results[pr_id]:
-                    print("Error: process %d exited unexpectedly."%pr_id)
-                    os._exit(-1)
+                    raise RuntimeError("Process %d exited unexpectedly."%pr_id)
             dists = np.frombuffer(shared_ncc.get_obj(), dtype=np.float32).reshape(1,-1)
             dists = dists[0]
             gc.collect()
                 
                 
         else:
-            print("using single node")
+            
+            print("Using single node")
             for i in range(worker_n):
                 #never change a changable variant in one function
                 dists[jobList[i]["start"]:jobList[i]["stop"]] = calcVectDist_mp(-1, jobList[i], in_Fw, in_Inv, dists) 
@@ -77,13 +76,14 @@ def tom_pdist(in_Fw, dmetric = 'euc', in_Inv = '', maxChunk = 600000000 ,verbose
     elif dmetric == 'ang':
         Rin, RinInv = calcRotMatrices(in_Fw)
         if len(in_Inv) > 0:
-            Rin_Inv, _ = calcRotMatrices(in_Inv)
-            print("using inverse transforms")
+            Rin_Inv, RinInv_Inv = calcRotMatrices(in_Inv)
+            print("Using inverse transforms")
         else:
             Rin_Inv = ''
+            RinInv_Inv = ''
         
         if worker_n != 1:
-            print("staring %d processors..."%(worker_n))
+            print("Staring %d processors..."%(worker_n))
             shared_ncc = mp.Array('f', np.int(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2))   
             avail_cpu = mp.cpu_count()
             if avail_cpu < worker_n:
@@ -93,7 +93,7 @@ def tom_pdist(in_Fw, dmetric = 'euc', in_Inv = '', maxChunk = 600000000 ,verbose
             for pr_id in range(worker_n):
                 jobList_single = jobList[pr_id]
                 pr = mp.Process(target = calcAngDist_mp,
-                                args = (pr_id, jobList_single, Rin, RinInv,Rin_Inv, shared_ncc))        
+                                args = (pr_id, jobList_single, Rin, RinInv,Rin_Inv, RinInv_Inv,shared_ncc))        
                 pr.start()
                 processes.append(pr)
             pr_results = [ ]
@@ -109,10 +109,10 @@ def tom_pdist(in_Fw, dmetric = 'euc', in_Inv = '', maxChunk = 600000000 ,verbose
             dists = dists[0]
             gc.collect()       
         else:
-            print("using single node")
+            print("Using single node")
             for i in range(worker_n):
                 #never change a changable variant in one function
-                dists[jobList[i]["start"]:jobList[i]["stop"]] = calcAngDist_mp(-1, jobList[i], Rin, RinInv,Rin_Inv, dists) 
+                dists[jobList[i]["start"]:jobList[i]["stop"]] = calcAngDist_mp(-1, jobList[i], Rin, RinInv,Rin_Inv, RinInv_Inv, dists) 
         print("Finishing calculating transforms distance!")  
         
     shutil.rmtree(tmpDir) #remove the dirs  
@@ -127,7 +127,7 @@ def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
         g1Inv = ''
         g2Inv = ''
     else:
-        print("using inverse transforms")
+        print("Using inverse transforms")
         g1Inv = in_Inv[jobListChunk[:,0],:]
         g2Inv = in_Inv[jobListChunk[:,1],:]
     dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)
@@ -139,16 +139,16 @@ def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
     
 def calcVectDist(g1,g2,g1Inv,g2Inv):
     dv = g2-g1
-    dtmp =  np.sqrt(np.sum(dv*dv,axis = 1))
+    dtmp =  np.linalg.norm(dv, axis = 1)
     if len(g1Inv) > 0:
         dv = g2-g1Inv
-        distsInv = np.sqrt(np.sum(dv*dv,axis = 1))
+        distsInv = np.linalg.norm(dv, axis = 1)
         #new
         dv = g1-g2Inv
-        distsInv2 = np.sqrt(np.sum(dv*dv,axis = 1))
+        distsInv2 = np.linalg.norm(dv, axis = 1)
         
         dv = g1Inv - g2Inv
-        distsInv3 = np.sqrt(np.sum(dv*dv,axis = 1))
+        distsInv3 = np.linalg.norm(dv, axis = 1)
         
         dists_all = np.array([dtmp, distsInv, distsInv2, distsInv3])
         dtmp = np.min(dists_all, axis = 0)
@@ -169,15 +169,19 @@ def calcRotMatrices(in_angs):
     return  Rin, RinInv
     
     
-def  calcAngDist_mp(pr_id, jobList_single, Rin, RinInv,Rin_Inv, shared_ncc):
+def calcAngDist_mp(pr_id, jobList_single, Rin, RinInv,Rin_Inv, RinInv_Inv,shared_ncc):
     jobListChunk = np.load(jobList_single["file"])
     Rs = Rin[jobListChunk[:,0],:,:]
     RsInv = RinInv[jobListChunk[:,1],:,:]
     dtmp = calcAngDist(Rs, RsInv)
     if len(Rin_Inv) > 0:
         Rs_Inv = Rin_Inv[jobListChunk[:,0],:,:]
+        Rs_Inv_Inv = RinInv_Inv[jobListChunk[:,1],:,:]
         dtmpInv = calcAngDist(Rs_Inv, RsInv)
-        dists_all = np.array([dtmp, dtmpInv])
+        dtmpInv2 = calcAngDist(Rs, Rs_Inv_Inv)
+        dtmpInv3 = calcAngDist(Rs_Inv, Rs_Inv_Inv )
+        
+        dists_all = np.array([dtmp, dtmpInv, dtmpInv2, dtmpInv3])
         dtmp = np.min(dists_all, axis = 0)
     if pr_id == -1:
         return dtmp
@@ -193,7 +197,7 @@ def calcAngDist(Rs,RsInv):
         Rp = np.dot(Rs[i,:,:], RsInv[i,:,:])
         tr_Rp[i] = np.trace(Rp)
     #calculate the angle distance 
-    dists = np.array([arccos(i)/np.pi*180 for i in (tr_Rp-1)/2])
+    dists = np.array([np.lib.scimath.arccos(i)/np.pi*180 for i in (tr_Rp-1)/2])
     #extract the real part of the dists and single them
     dists = np.single(dists.real)
     
@@ -206,15 +210,21 @@ def genJobList(szIn, tmpDir, maxChunk):
     jobList = np.zeros([lenJobs,2], dtype = np.uint32) #expand the range of positive int save memory(no negative int)
     startA = 0   
     for i in range(szIn):
-        v2 = np.arange(i+1,szIn, dtype = np.uint32).reshape(-1,1)
-        v1 = np.repeat(i, len(v2)).astype(np.uint32).reshape(-1,1)
-        jobListTmp = np.concatenate((v1,v2),axis = 1).astype(np.uint32) 
-        endA = startA+jobListTmp.shape[0]
-        jobList[startA:endA,:] = jobListTmp
+        v2 = np.arange(i+1,szIn, dtype = np.uint32)
+        v1 = np.repeat(i, len(v2)).astype(np.uint32)
+        endA = startA+len(v2)
+        jobList[startA:endA,0] = v1
+        jobList[startA:endA,1] = v2
         startA = endA  
     numOfPackages = np.int(np.floor(jobList.shape[0]/maxChunk))
     if numOfPackages < 1:
         numOfPackages = 1
+    else:    
+        avail_cpu = mp.cpu_count()
+        if avail_cpu < numOfPackages:
+            numOfPackages = avail_cpu
+            print("Warning: No enough CPUs are available! Use %d CPUs instead."%numOfPackages)
+        
     packages = tom_calc_packages(numOfPackages, jobList.shape[0]) #split the jobList into different size, the packages is one array
     #make new directory to store the Tmp jobList
     if os.path.isdir(tmpDir):
@@ -235,7 +245,7 @@ def genJobList(szIn, tmpDir, maxChunk):
 
 #if __name__ == '__main__':
 #    startSt  = tom_calcTransforms('./simOrderRandomized.star', 100, tomoNames='', 
-#                                      dmetric='exact', outputName='allTransforms.star', verbose=1, worker_n = 2)
+#                                      dmetric='exact', outputName='allTransforms.star', verbose=1, worker_n = 1)
 #    stest = np.array([startSt["pairTransAngleZXZPhi"].values, startSt["pairTransAngleZXZPsi"].values, startSt["pairTransAngleZXZTheta"].values])
 #    stestinv = np.array([startSt["pairInvTransAngleZXZPhi"].values, startSt["pairInvTransAngleZXZPsi"].values, 
 #                         startSt["pairInvTransAngleZXZTheta"].values])
@@ -245,7 +255,7 @@ def genJobList(szIn, tmpDir, maxChunk):
 #                         startSt["pairInvTransVectZ"].values])    
 #    stest = stest.T
 #    stestinv = stestinv.T
-#    pdist = tom_pdist(stest, 'ang', in_Inv = stestinv, maxChunk = 50000)
+#    pdist = tom_pdist(stest, 'euc', in_Inv = stestinv, maxChunk = 50000)
     
     
     

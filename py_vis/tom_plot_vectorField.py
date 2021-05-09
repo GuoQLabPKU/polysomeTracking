@@ -34,13 +34,12 @@ def plot_vectField(posAng, repVect, scale, col, cmbInd, classNr, polyNr, onlySel
         allTomoID = st['label']['tomoID']
         uTomoID = np.unique(allTomoID)
         allTomoLabel = st['label']['tomoName']
-        uTomoLabel = np.unique(allTomoLabel)
+        
         
         if tomoID[0] > -1:  #select this tomo
             uTomoID = tomoID  #only keep this tomoID further analysis
         if len(uTomoID) > 1:
-            print('more than one tomogram in list')
-            
+            print('more than one tomogram in list')          
             for i in range(len(uTomoID)):
                 tmpInd = np.where(allTomoID == uTomoID[i])[0]
                 print('tomoID: %d  tomoName: %s'%(uTomoID[i], allTomoLabel[tmpInd[0]]))
@@ -224,34 +223,3 @@ def tom_rotVectByAng(vect, angs, rotFlav = 'zxz', display = None, col = np.array
         plt.close()
     return vectsRot
         
-        
-        
-    
-    
-        
-        
-        
-    
-                
-        
-        
-        
-        
-        
-            
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-            
-        
-            
-            
-                

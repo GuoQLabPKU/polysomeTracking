@@ -1,10 +1,11 @@
 import os
 import numpy as np
 import shutil
-from scipy.cluster.hierarchy import dendrogram
-import warnings
 from collections import Counter
 import matplotlib.pyplot as plt
+import warnings
+from scipy.cluster.hierarchy import dendrogram
+import time
 
 from py_io.tom_starread import tom_starread
 from py_io.tom_starwrite import tom_starwrite
@@ -14,8 +15,8 @@ from py_cluster.tom_dendrogram import tom_dendrogram
 from py_cluster.tom_selectTransFormClasses import tom_selectTransFormClasses
 from py_align.tom_align_transformDirection import tom_align_transformDirection
 from py_link.tom_linkTransforms import tom_linkTransforms
-from py_summary.tom_analysePolysomePopulation import *
 from py_link.tom_find_transFormNeighbours import *
+from py_summary.tom_analysePolysomePopulation import *
 from py_summary.tom_findPattern import tom_findPattern
 from py_summary.tom_genListFromTransForm import tom_genListFromTransForm
 from py_summary.tom_avgFromTransForm import tom_avgFromTransForm
@@ -26,14 +27,14 @@ from py_vis.tom_plot_vectorField import tom_plot_vectorField
 class Polysome:
     ''' 
     Polysome is one class that used to track the polysomes in
-    the risome groups
+    the ribosome groups
     '''
     def __init__(self, input_star = None, run_time = 'run0',translist = None):
         '''
         set the default properties for polysome class
         input:
-            the star file for ribosomes euler angles and coordinates
-            the times to get new polysomes
+            inut_star: the star file for ribosomes euler angles and coordinates
+            run_time: the times to get new polysomes
         '''
         #for io
         self.io = { }
@@ -43,11 +44,11 @@ class Polysome:
         self.io['projectFolder'] = 'cluster-%s'%shotname
         self.io['classificationRun'] = run_time 
         self.io['classifyFold'] = None  #should be modify only after run input
-        #for trans
+        #for geting transformation of ribosome pairs
         self.transForm = { }
         self.transForm['pixS'] = 3.42
-        self.transForm['maxDist'] = 342
-        self.transForm['branchDepth'] = 2
+        self.transForm['maxDist'] = 342 #the searching region of adjacent ribosomes
+        self.transForm['branchDepth'] = 2 #searching the depeth of branch of ribosomes
         #for classify
         self.classify = { }
         self.classify['clustThr'] = 0.12
@@ -59,13 +60,14 @@ class Polysome:
         self.sel[0]['classNr'] = np.array([-1]) #select the class of transform
         self.sel[0]['polyNr'] = np.array([-1])   #select the polysome
         self.sel[0]['list'] = 'Classes-Sep'
+        #we can add more requirement to select the clusters
         #for vis
         self.vis  = { }
         self.vis["vectField"] = { }
         self.vis['vectField']['render'] = 1
         self.vis['vectField']['showTomo'] = np.array([-1])  #what tomos to vis?
         self.vis['vectField']['showClass'] = np.arange(10000) #what classes of trans to vis?
-        self.vis['vectField']['onlySelected'] = 1  #only vis thoes selected by upper to params?
+        self.vis['vectField']['onlySelected'] = 1  #only vis those selected by upper to params?
         self.vis['vectField']['polyNr'] = np.array([-1]) #what polys to show?
         self.vis['vectField']['repVect'] = np.array([[0,1,0]]) #how to represents the ribosomes(angle + position)
                                                                 #must be 2D array
@@ -78,7 +80,7 @@ class Polysome:
         self.avg['filt']['maxNumPart'] = 500  #select number of transforms in each class
         self.avg['pixS'] = 3.42
         self.avg['maxRes'] = 45
-        #for fw
+        #for fw, create the forward model
         self.fw = { } 
         self.fw['Map'] = 'vol4forward.mrc'
         self.fw['minNumTransform'] = 0
@@ -90,7 +92,7 @@ class Polysome:
         self.clSt['findPat']['filt'] = { }
         self.clSt['findPat']['filt']['operator'] = '>'
         self.clSt['findPat']['filt']['value'] = 3
-        #for the trand data 
+        #for the transform data 
         self.transList = translist
         
     def creatOutputFolder(self):
@@ -131,28 +133,33 @@ class Polysome:
         os.mkdir('%s/classes'%classificationFolder)
             
             
-    def calcTransForms(self):
+    def calcTransForms(self, worker_n = 1):
         '''
         give the input ribosomes input star,
         generate the transforms 
+        worker_n: the number of cpus to process
         '''
         maxDistInPix = self.transForm['maxDist']/self.transForm['pixS']
         transFormFile = '%s/%s'%(self.io['classifyFold'],
                                  'allTransforms.star')
         #check if allTransforms exist
         if os.path.exists(transFormFile):
-            print('load distances from %s'%transFormFile)
+            print('Load distances from %s'%transFormFile)
             self.transList = tom_starread(transFormFile)
         else:
             self.transList = tom_calcTransforms(self.io['posAngList'], maxDistInPix, '',
-                                                'exact', transFormFile)
+                                                'exact', transFormFile, worker_n)
             #self.transList should be data frame object
     
-    def groupTransForms(self):
+    def groupTransForms(self, maxChunk = 600000000):
         '''
         give transforms,
         generate the clustering results(trees/classes) 
+        maxChunk: the threshold to split the transformation data and 
+                  parallel process
         '''
+        print('Starting clustering')
+        t1 = time.time()
         maxDistInPix = self.transForm['maxDist']/self.transForm['pixS']
         outputFold = '%s/scores'%self.io['classifyFold']
         treeFile = '%s/tree.npy'%outputFold
@@ -160,20 +167,22 @@ class Polysome:
             ll = np.load(treeFile) #load the clustering tree models 
         else:
             ll = tom_calcLinkage(self.transList, outputFold, maxDistInPix,
-                                self.classify['cmb_metric'] ) #how to calculate the linkage 
+                                self.classify['cmb_metric'], maxChunk = maxChunk) #how to calculate the linkage 
         #ll should be a float64 n*4 ndarray
         clusters, _, _, thres = tom_dendrogram(ll, 
                                                  self.classify['clustThr'],
-                                                 self.transList.shape[0], 0, 500)
+                                                 self.transList.shape[0], 0,0)
 
         #groups shoud be a list with dicts stored
         #threshold is to kept transforms with distance less than this threshold
         #large distance represents less similariity to form new cluster            
         self.classify['clustThr'] = thres  #this is differnt from matlab clusterThrAct
         if len(clusters) == 0:
-            print("Warninig: no classed! Check the threshold you input!")
+            print("Warninig: no classes! Check the threshold you input! This usually you put \
+                  a very high or very low threshold.")
             dendrogram(ll) #using default parameters to show the tree
         else:
+            #this step give the cluster id for each transform
             for single_dict in clusters:
                 idx = single_dict['members']
                 classes = single_dict['id']
@@ -184,42 +193,47 @@ class Polysome:
                                            single_dict['color'][2])
                 self.transList.loc[idx, "pairClass"] = classes
                 self.transList.loc[idx, 'pairClassColour'] = colour
-                    
-    def selectTransFormClasses(self):
+        print('Finishing clustering with %d seconds consumed'%(time.time()-t1))          
+    def selectTransFormClasses(self,itrClean = 1):
         #now the translist has pairclass label as well as colour  label 
         '''
-        select any class OR polysome  and Relink
+        select any class OR polysome and Relink
+        itrClean: # of cycles to clean the data 
         '''
         transListSel = ''
         selFolds = ''
         
-        itrClean = 1
-        for _ in range(itrClean):
-            if self.classify['relinkWithoutSmallClasses']:          
+        
+        if self.classify['relinkWithoutSmallClasses']:  
+            for _ in range(itrClean):  
+                #this step can keep classes we want for further analysis as well as remove class 0                 
                 _,_, transListSelCmb = tom_selectTransFormClasses(self.transList,
                                                                   self.sel[0]['list'],
-                                                                  '', self.sel[0]['minNumTransform'])
+                                                                  self.sel[0]['minNumTransform'], '')
                 self.transList = transListSelCmb
                 #this select can discard the transforms with class ==0 (which failed to form cluster)
                 os.rename('%s/scores/tree.npy'%self.io['classifyFold'],
                          '%s/scores/treeb4Relink.npy'%self.io['classifyFold'] )
                 self.groupTransForms()
-                if os.path.exists('%s/allTransforms.star'%self.io['classifyFold']):
-                    os.rename('%s/allTransforms.star'%self.io['classifyFold'],
-                              '%s/allTransformsb4Relink.star'%self.io['classifyFold'])
-                #store the translist
-                header = { }
-                header["is_loop"] = 1
-                header["title"] = "data_"
-                header["fieldNames"]  = ["_%s"%i for i in self.transList.columns]
-                tom_starwrite('%s/allTransforms.star'%self.io['classifyFold'], self.transList)
                 
-            transListSel, selFolds, _ = tom_selectTransFormClasses(self.transList,
+            if os.path.exists('%s/allTransforms.star'%self.io['classifyFold']):
+                os.rename('%s/allTransforms.star'%self.io['classifyFold'],
+                              '%s/allTransformsb4Relink.star'%self.io['classifyFold'])
+            #store the translist
+            header = { }
+            header["is_loop"] = 1
+            header["title"] = "data_"
+            header["fieldNames"]  = ["_%s"%i for i in self.transList.columns]
+            tom_starwrite('%s/allTransforms.star'%self.io['classifyFold'], self.transList) #and also use the transforms to generate the tree.npy
+                
+        transListSel, selFolds, _ = tom_selectTransFormClasses(self.transList,
                                        self.sel[0]['list'],
                                         self.sel[0]['minNumTransform'], #just remove small classes[0] w/o relink
                                        '%s/classes'%(self.io['classifyFold'])) 
 
-           #the transListSel & selFolds can be [] with empty or with elements            
+           #the transListSel & selFolds can be [] with empty or with elements    
+        if len(transListSel) == 0:
+            print('Warning: no translist has been selected!')
         return transListSel, selFolds  #transListSel be empty when on clustering performs  
     
     def alignTransforms(self):
@@ -227,29 +241,33 @@ class Polysome:
         in each class, exchange the position of 
         ribosomes pairs to alignment
         '''
+        warnings.filterwarnings('ignore')
         print('Align the transform pairs')
-        tom_align_transformDirection(self.transList)
+        self.transList = tom_align_transformDirection(self.transList)
     
     def find_connectedTransforms(self):
         #the input should be the translist with classes confered and directon aligned
         '''
         track the polyribosomes
+        the branch analysis is developing
+        the pairsPosInPoly2 is meaningless
         '''
         warnings.filterwarnings('ignore')
-        print('tracking the polysomes.')
-        allClasses = self.transList['pairClass']
+        print('Tracking the polysomes.')
+        t1 = time.time()
+        allClasses = self.transList['pairClass'].values
         allClassesU = np.unique(allClasses)
         
-        allTomos = self.transList['pairTomoID']
+        allTomos = self.transList['pairTomoID'].values
         allTomosU = np.unique(allTomos)
         
-        br = np.zeros(len(allClassesU), dtype = np.int) #1D-array
+        br = np.zeros(len(allClassesU), dtype = np.int) #1D-array, if this tomogram has branch
         
         for single_class in allClassesU:
             if single_class == 0:  #also should aviod single_class == -1
                 continue  ##no cluster occur with class == 0  
             if single_class == -1:
-                print('Warning: track the polysomes w/o any classes of transforms.')
+                print('Warning: track the polysomes w/o any cluster.')
                 
             idx1 = np.where(allClasses == single_class)[0]
             offset_PolyID = 0
@@ -258,7 +276,7 @@ class Polysome:
                 idx = np.intersect1d(idx1, idx2)
                 #track the single polysome in the same tomogram 
                 if len(idx) > 1:
-                    self.transList.loc[idx,:], _, br[single_class], offset_PolyID = tom_linkTransforms(self.transList.loc[idx,:],
+                    self.transList.loc[idx,:], _, br[single_class], offset_PolyID = tom_linkTransforms(self.transList.iloc[idx,:],
                                       self.transForm['branchDepth'], offset_PolyID)
                 elif len(idx) == 1:
                     offset_PolyID += 1
@@ -271,9 +289,9 @@ class Polysome:
         #those with class 0 will have pairLabel == -1
         len_branch = np.where(br > 0)[0]
         if len(len_branch) > 0:
-            print('Warning: found brancges in class %s'%(str(len_branch)))
+            print('Warning: found branches in class %s'%(str(len_branch)))
             print('==> make smaller classes')
-        
+        print('Polysome tracking finished with %.5f seconds consumed'%(time.time() - t1))
         header = { }
         header["is_loop"] = 1
         header["title"] = "data_"
@@ -293,23 +311,28 @@ class Polysome:
         stat = [ ]
         statPerPolyTmp = [ ]
         for single_class in allClassesU:
+            if single_class == 0:#no need analysis class0
+                continue
             idx = np.where(allClasses == single_class)[0]
             stat.append(analysePopulation(self.transList.iloc[idx,:]))
-            statPerPolyTmp.append(analysePopulationPerPoly( self.transList.iloc[idx,:]))
+            statPerPolyTmp.append(analysePopulationPerPoly(self.transList.iloc[idx,:]))
         
         statPerPoly = sortStatPoly(statPerPolyTmp)
         stat = sortStat(stat)
         writeOutputStar(stat, statPerPoly, outputFolder)
-        genOutput(stat,2)
+        genOutput(stat,minTransMembers = 2)
     
     def find_transFromNeighbours(self, outputName = '', nrStatOut = 10):
         '''
-        analyse the transform classes for each ribosomes(this ribosome should be in different 
-        transform classes)
+        for each ribosome of one ribosome pair, this ribosome can belong to 
+        different transform clusters, that is to say, can be in different ribosome 
+        pairs and in different cluster classes.
+        This function summary th cluster classes for each ribosome
+
         '''
         if len(outputName) == 0:
             outputName = "%s/allTransforms.star"%self.io['classifyFold']
-        allTomoId = self.transList['pairTomoID']
+        allTomoId = self.transList['pairTomoID'].values
         allTomoIdU = np.unique(allTomoId)
         
         listTomo = [ ]
@@ -451,7 +474,7 @@ class Polysome:
         
     def visResult(self):
         print(' ')
-        print('rendering figures')
+        print('Rendering figures')
         vectVisP = self.vis['vectField']
         if vectVisP['render']:
             tom_plot_vectorField(self.transList, vectVisP['showTomo'], 
@@ -459,7 +482,7 @@ class Polysome:
                                   vectVisP['repVectLen'],vectVisP['repVect'],
                                   np.array([0,0,1]), '', '%s/vis/vectfields'%self.io['classifyFold'])
         else:
-            print('vectorFiled rendering skipped')
+            print('VectorFiled rendering skipped')
         
         nrTrans = self.transList.shape[0]
         treeFile = '%s/scores/tree.npy'%self.io['classifyFold']
@@ -470,13 +493,13 @@ class Polysome:
                 self.dspTree(self.io['classifyFold'], self.classify['clustThr'], nrTrans, treeFile)
             if i==2:
                 self.dspLinkage(self.io['classifyFold'], treeFile, thres)
-        print('rendering figures done')
+        print('Rendering figures done')
     
     @staticmethod
     def dspTree(classifyFold, clustThr, nrTrans, treeFile):
         print(' ')
               
-        _, _, _, _,_  = tom_dendrogram(treeFile, clustThr, nrTrans )
+        _, _, _, _,_ = tom_dendrogram(treeFile, clustThr, nrTrans,dsp = 1,maxLeaves = 500)
         
         plt.ylabel('linkage score')        
         plt.savefig('%s/vis/clustering/tree.png'%classifyFold, dpi = 300)
@@ -500,92 +523,3 @@ class Polysome:
         plt.savefig('%s/vis/clustering/linkLevel.png'%classifyFold, dpi = 300)
         plt.show()
         plt.close()
-        
-         
-        
-         
-         
-        
-        
-        
-        
-        
-        
-        
-        
-            
-        
-        
-        
-        
-    
-    
-        
-            
-            
-        
-        
-        
-        
-                    
-                
-        
-    
-    
-        
-        
-        
-
-            
-    
-    
-    
-            
-        
-        
-        
-        
-        
-    
-            
-            
-        
-            
-            
-            
-            
-            
-            
-            
-        
-        
-        
-        
-        
-                        
-                        
-                
-            
-            
-            
-            
-        
-
-            
-        
-            
-            
-            
-        
-        
-        
-        
-        
-        
-         
-        
-        
-        
-        
-    
-    

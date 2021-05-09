@@ -28,11 +28,11 @@ def tom_eulerconvert_xmipp(rot, tilt, psi, flag = 'xmipp2tom'):
 
     %unit test: rot_mat should be the same
    
-    [rot_mat_tom euler_tom]=tom_eulerconvert_xmipp(10,20,30); %xmipp2tom
-    [rot_mat_xmipp euler_out]=tom_eulerconvert_xmipp(euler_tom(1),euler_tom(2),euler_tom(3),'tom2xmipp'); %tom2xmipp
+    rot_mat_tom euler_tom=tom_eulerconvert_xmipp(10,20,30); %xmipp2tom
+    rot_mat_xmipp euler_out=tom_eulerconvert_xmipp(euler_tom(1),euler_tom(2),euler_tom(3),'tom2xmipp'); %tom2xmipp
     rot_mat_tom-rot_mat_xmipp
 
-    (ps: rotmatrix indices are transposed !! have fun)
+    (ps: rotmatrix indices are transposed)
    
     '''
     if flag == 'xmipp2tom':

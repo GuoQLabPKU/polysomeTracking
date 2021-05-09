@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
+from py_io.tom_starwrite import tom_starwrite
 from py_transform.tom_angular_distance import tom_angular_distance
 from py_transform.tom_average_rotations import tom_average_rotations
-from py_io.tom_starwrite import tom_starwrite
+
 
 def analysePopulation(pairList): #the input shoule be a ptr
     
@@ -10,7 +11,7 @@ def analysePopulation(pairList): #the input shoule be a ptr
     
     stat = { }
     stat['classNr'] = classNr
-    stat['num'] = pairList.shape[0] #number of the trans from one class
+    stat['num'] = pairList.shape[0] #number of the trans of one class
     
     vectStat = calcVectStat(pairList)
     angStat = calcAngStat(pairList)
@@ -93,8 +94,8 @@ def calcPolyStat(pairList):
         stat['polyIDMax'] = -1
         stat['numBranch'] = -1
     else:
-        allNum = np.zeros(len(allLabelU)) #1D array with number of polysomes in this class
-        allPolyHasBranch = np.zeros(len(allLabelU))
+        allNum = np.zeros(len(allLabelU), dtype = np.int) #1D array with number of polysomes in this class
+        allPolyHasBranch = np.zeros(len(allLabelU), dtype = np.int)
         
         for i in range(len(allLabelU)):
             idx = np.where(allLabel_fix == allLabelU[i])[0]
@@ -103,11 +104,11 @@ def calcPolyStat(pairList):
         
         stat['numPolybg5'] = np.sum(allNum > 5)
         stat['numPolybg3'] = np.sum(allNum > 3)
-        mPos = allNum.argmax()
+        mPos = allNum.argmax() #not so accurate, because may two polysomes has the same length but only the first one kept in one tomo
         mVal = np.max(allNum)
         stat['numPolyMax'] = mVal #the longest polysomes in this class 
         stat['numBranch'] = np.sum(allPolyHasBranch)
-        labelMax = allLabelU[mPos]
+        labelMax = allLabelU[mPos] #which polysome has the longest length
         tomoMax =  np.unique(allTomoID[np.where(allLabel == labelMax)[0]])
         if len(tomoMax) == 0:
             tomoMax = np.unique(allTomoID[np.where(allLabel_fix == labelMax)[0]])
@@ -138,9 +139,9 @@ def analysePopulationPerPoly(pairList):
         return stat
     else:
         for i in range(len(allLabelU)):
-            idx = np.where(allLabel == allLabelU[i])[0] ##this is no branch
+            idx = np.where(allLabel == allLabelU[i])[0] ##this is no branch(branch1)
             tmpLabel = allLabelU[i] + 0.1
-            idxbB1 = np.where(allLabel == tmpLabel)[0]  ##this is with branch
+            idxbB1 = np.where(allLabel == tmpLabel)[0]  ##this is with branch(branch2)
             if (len(idxbB1) > len(idx)):
                 idx = idxbB1
             stat.append({})
@@ -157,7 +158,7 @@ def analysePopulationPerPoly(pairList):
             confClassVect = np.array([], dtype = np.int)
             posInListVect = np.array([], dtype = np.int)
             
-            for ii in range(len(idx)):
+            for ii in range(len(idx)):#only analysis one branch which longer than another branch
                 posInPolyVect = np.concatenate((posInPolyVect, np.array([pairList['pairPosInPoly1'].values[idx[ii]],
                                                                         pairList['pairPosInPoly2'].values[idx[ii]] ]) ))
                 confClassVect = np.concatenate((confClassVect, np.array([pairList['pairClass1'].values[idx[ii]],
@@ -220,9 +221,9 @@ def writeOutputStar(stat, statPoly, outputFolder = ''): #the two inputs shoule b
         header["fieldNames"]  = ["_%s"%i for i in statPoly.columns]  
         tom_starwrite('%s/statPerPoly.star'%outputFolder, statPoly, header)
         
-def genOutput(stat, minClassMembers):
+def genOutput(stat, minTransMembers):
     if stat.shape[0] > 20: #the number of this represent the class numbers!
-        stat = stat[stat['num'] > 2] #each row represent one class, this number represent the #trans in this class
+        stat = stat[stat['num'] > minTransMembers] #each row represent one class, this number represent the #transformation in this class
         stat.reset_index(inplace = True, drop = True)
 
     select_col = ['classNr',  'num', 'stdTransVect', 'stdTransAng', 
@@ -239,7 +240,7 @@ def genOutput(stat, minClassMembers):
         
         
     if stat.shape[0] > 20:
-        print('only classes with more than 2 transforms showed!')
+        print('only classes with more than %d transforms showed!'%minTransMembers)
         
     
     

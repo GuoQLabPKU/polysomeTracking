@@ -1,7 +1,7 @@
 import numpy as np
 from py_io.tom_extractData import tom_extractData
 def findNeighOneTomo(pairList):
-    debugFl = 0
+
     
     st = tom_extractData(pairList)
     idxU = np.unique(np.concatenate((st['p1']['orgListIDX'],
@@ -13,7 +13,7 @@ def findNeighOneTomo(pairList):
     all_pos1 = st['p1']['positions']
     all_idx2 = st['p2']['orgListIDX']
     all_pos2 = st['p2']['positions']
-    all_class = st['label']['pairClass']  #1D array
+    all_class = st['label']['pairClass']  #1D array, which cluster belongs to
          
     for i in range(len(idxU)):         
          act_idx = idxU[i]        
@@ -48,7 +48,7 @@ def findNeighOneTomo(pairList):
             pairList.loc[ii, 'pairNeighPlus2'] = vect2ClassStr(neigh_N_plus[act_idx  ,:])
             pairList.loc[ii, 'pairNeighMinus2'] = vect2ClassStr(neigh_N_minus[act_idx ,:])  
             
-    return pairList, neigh_N_plus, neigh_N_minus
+    return pairList.values, neigh_N_plus, neigh_N_minus
              
 def find_neigh(all_idx, all_pos, all_class, act_Idx):
     p_act = [ ]
@@ -73,7 +73,7 @@ def find_neigh(all_idx, all_pos, all_class, act_Idx):
         classes = tmp
         classes[np.where(classes == 0)] = -1
        
-     ##not interested in class == 0,which failed to from cluster
+    ##not interested in class == 0,which failed to from cluster
     if len(p_act) > 0:
         p_act = p_act[0,:]
         

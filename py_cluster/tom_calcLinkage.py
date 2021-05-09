@@ -2,7 +2,7 @@ import numpy as np
 from scipy.cluster.hierarchy import linkage
 from py_cluster.tom_pdist import tom_pdist
 
-def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric):
+def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric, maxChunk = 600000000):
     '''
     TOM_CALCLINKAGE: using hierachical clustering method to build linkage of different transforms 
         ll = tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric)
@@ -41,8 +41,8 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric):
                              transList["pairInvTransVectY"].values, 
                              transList["pairInvTransVectZ"].values]).transpose()
     
-    distsVect = tom_pdist(transVect, 'euc', transVectInv)
-    distsAng =tom_pdist(transAngVect, 'ang', transAngVectInv)
+    distsVect = tom_pdist(transVect, 'euc', transVectInv, maxChunk = maxChunk)
+    distsAng =tom_pdist(transAngVect, 'ang', transAngVectInv,maxChunk = maxChunk)
     
     print("Using %s to combine angles and shifts"%cmb_metric)
     
@@ -53,7 +53,6 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric):
         distsVect = distsVect/(2*maxDistInpix)*180
         distsCN = (distsAng+(distsVect*2))/2
     elif cmb_metric == 'mean+1std':
-        print('using old metric')
         if np.std(distsVect) > 0:
             distsVect_norm = (distsVect - np.mean(distsVect)) / np.std(distsVect) #mean+- 1std.
             distsVect_norm = (distsVect_norm - np.min(distsVect_norm)) / max(distsVect_norm - min(distsVect_norm)) #from 0-1
@@ -73,9 +72,9 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric):
             distsCN = (distsCN - np.min(distsCN)) / max(distsCN - min(distsCN)) #from 0-1 
         else:
             distsCN = (distsCN - np.mean(distsCN)) + 1.0 #(1,1,1)
-    print('calculating linkage')
+    print('Calculating linkage')
     ll = linkage(distsCN,'average')
-    print("calculating linkage done")
+    print("Calculating linkage done")
     #save the ll results
     np.save("%s/tree.npy"%preCalcFold,ll)
     

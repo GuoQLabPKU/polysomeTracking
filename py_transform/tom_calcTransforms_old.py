@@ -1,9 +1,10 @@
 import numpy as np
 import time
 import os
+import copy 
 import pandas as pd
 import multiprocessing as mp
-import shutil
+import gc
 from py_io.tom_starread import tom_starread
 from py_io.tom_extractData import tom_extractData
 from py_io.tom_starwrite import tom_starwrite
@@ -62,88 +63,34 @@ def tom_calcTransforms(posAng,  maxDist, tomoNames='', dmetric='exact', outputNa
     transList = np.array([],dtype = np.float).reshape(0, 29)
     allTomoNames = st["label"]["tomoName"]
     #idxOffSet = 0
-    
-    if worker_n == 1:
-        for i in range(len_tomo):
-            time1 = time.time()
-            print("####################################################")
-            print("Calculating transformations for tomo %s.........."%allTomoNames[i])
-            idx = list(np.where(st["label"]["tomoID"] == uTomoId[i])[0])
-            idxAct = idx
-            posAct = st["p1"]["positions"][idx,:]
-            anglesAct = st["p1"]["angles"][idx,:]
-            transListAct = calcTransforms(posAct, anglesAct, maxDist, dmetric, uTomoId[i], idxAct, verbose)
-              
-            #transListAct[:,0:2] = transListAct[:,0:2] + idxOffSet
-            transList = np.concatenate((transList, transListAct),axis=0)
-            #idxOffSet = idxOffSet + posAct.shape[0]
-            time2 = time.time()
-            time_gap = (time2-time1)
-            print("Finish calculating transformations for tomo %d with %d pairs, %.5f seconds consumed."%(i,transListAct.shape[0],
-                                                                                                         time_gap))
-    else:
-        #make temp directory to store the transListAct and then reload merge them!
-        temp_dir = "%s/tempTrans"%os.path.split(outputName)[0]
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-            os.mkdir(temp_dir)
+
+    for i in range(len_tomo):
+        time1 = time.time()
+        print("####################################################")
+        print("Calculating transformations for tomo %s.........."%(allTomoNames[i]))
+        idx = list(np.where(st["label"]["tomoID"] == uTomoId[i])[0])
+        idxAct = copy.deepcopy(idx)
+        posAct = st["p1"]["positions"][idx,:]
+        anglesAct = st["p1"]["angles"][idx,:]
+        if worker_n == 1:
+            transListAct = calcTransforms_linear(posAct, anglesAct, maxDist, dmetric, uTomoId[i], idxAct, verbose)
         else:
-            os.mkdir(temp_dir)
-                   
-        npr = worker_n
-        avail_cpu = mp.cpu_count()
-        if worker_n == -1:
-            npr = avail_cpu
-            print("Use all available %d CPUs to calculate transformations."%npr)
-        elif avail_cpu < worker_n:
-            npr = avail_cpu
-            print("Warning: No enough CPUs are available! Use %d CPUs instead."%npr)
-            
-        #using parallel
-        print('Using parallel cpus to calculate transformations.')
-        t1 = time.time()
-        processes = dict()
-        spl_ids = np.array_split(uTomoId,npr) #one cpu process one tomogram, save the consuming of creating processes
-        #remove the empty spl_ids
-        spl_ids = [i for i in spl_ids if len(i) > 0]
-        
-        for pr_id, spl_id in enumerate(spl_ids):
-            pr = mp.Process(target = pr_worker, args=(pr_id, st, spl_id, maxDist, dmetric, temp_dir))
-            pr.start()
-            processes[pr_id] = pr
-        for pr_id, pr in zip(processes.keys(), processes.values()):
-            pr.join()
-            if pr_id != pr.exitcode:
-                raise RuntimeError('the process %d ended usuccessfully [%d]'%(pr_id, pr.exitcode))
-        
-        for single_id in uTomoId:
-            transListAct = np.load('%s/tomo%d_trans.npy'%(temp_dir, single_id))
-            transList = np.concatenate((transList, transListAct),axis=0)
-        #delete the temp files       
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-        t2 = time.time()
-        print('Finish calulating transformations with %.5f seconds consumed.'%(t2-t1))
-        
+            transListAct = calcTransforms(posAct, anglesAct, maxDist, dmetric, uTomoId[i], idxAct, verbose,  worker_n)     
+        #transListAct[:,0:2] = transListAct[:,0:2] + idxOffSet
+        transList = np.concatenate((transList, transListAct),axis=0)
+        #idxOffSet = idxOffSet + posAct.shape[0]
+        time2 = time.time()
+        time_gap = (time2-time1)
+        print("Finish calculating transformations for tomo %d with %d pairs, %.5f seconds consumed."%(i,transListAct.shape[0],
+                                                                                                      time_gap))
+    
     if outputName == '':
         return transList
     else:
         startSt = genStarFile(transList, allTomoNames, st, maxDist, oriPartList, outputName)  
         return startSt 
 
-def pr_worker(pr_id, st, tomo_ids, maxDist, dmetric, temp_dir):
-    for i in tomo_ids:
-        idx = list(np.where(st["label"]["tomoID"] == i)[0])
-        idxAct = idx
-        posAct = st["p1"]["positions"][idx,:]
-        anglesAct = st["p1"]["angles"][idx,:]
-        transListAct = calcTransforms(posAct, anglesAct, maxDist, dmetric, i, idxAct, verbose=0)
-        np.save('%s/tomo%d_trans.npy'%(temp_dir, i), transListAct)
-        
-    os._exit(pr_id)
-              
-    
-def calcTransforms(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose):
+def calcTransforms_linear(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose):
     #jobList: store three columns: 1.the index of the pair1 in pos_array 2. the index of the pair2 in pos_array
     jobList = np.zeros([pos.shape[0]*pos.shape[0], 2], dtype = np.int)
     zz = 0
@@ -182,11 +129,97 @@ def calcTransforms(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose):
                 
     return transListAct_inner
       
+def calcTransforms(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose, worker_n):
+    #jobList: store three columns: 1.the index of the pair1 in pos_array 2. the index of the pair2 in pos_array
+    jobList = np.zeros([pos.shape[0]*pos.shape[0], 2], dtype = np.int)
+    zz = 0
+    
+    for i in range(pos.shape[0]):
+        for ii in range(i+1, pos.shape[0]):
+            pos1 = pos[i,:]
+            pos2 = pos[ii,:]
+            if (np.linalg.norm(pos1 - pos2)) > pruneRad: #discard the pairs with euler distance > pruneRad
+                continue
+            jobList[zz,0] = i
+            jobList[zz,1] = ii
+            zz += 1        
+    jobListN = jobList[0:zz,:]
+    jobList = jobListN
+    
+    if jobList.shape[0] == 0:
+        raise RuntimeError("the distances between ribosomes are bigger than %d pixels! Set bigger maxDist and try again!"%pruneRad)   
+    transListAct_inner = np.zeros([jobList.shape[0],29], dtype = np.float)#this will store the transformation results   
+    transListAct_inner[:,0] = np.array([ idxAct[i] for i in jobList[:,0]]) #should be int 
+    transListAct_inner[:,1] = np.array([ idxAct[i] for i in jobList[:,1]]) #should be int 
+    transListAct_inner[:,2] = np.repeat([tomoID], jobList.shape[0]) #should be int
+    
+    npr = worker_n
+    avail_cpu = mp.cpu_count()
+    if worker_n == -1:
+        npr = avail_cpu
+        print("Use %d CPUs to calculate transformations."%npr)
+    elif avail_cpu < worker_n:
+        npr = avail_cpu
+        print("Warning: No enough CPUs are available! Use %d CPUs instead."%npr)
+    processes = [ ]
+    #create the list on indices to split
+    npart = jobList.shape[0]
+    sym_ids = np.arange(npart)
+    spl_ids = np.array_split(range(len(sym_ids)),npr)
+    shared_ncc = mp.Array('f', npart*26)
+    for pr_id in range(npr):
+        pr = mp.Process(target = tom_calcPairTransForm_parallel,
+                        args = (pr_id, spl_ids[pr_id],jobList, pos, angles, dmetric, shared_ncc))
+        pr.start()
+        processes.append(pr)
+    pr_results = [ ]
+    for pr in processes:
+        pr.join()
+        pr_results.append(pr.exitcode)
+    #check the exit stats
+    for pr_id in range(len(processes)):
+        if pr_id != pr_results[pr_id]:
+            raise RuntimeError("process %d exited unexpectedly."%pr_id)
+            
+    return_results = np.frombuffer(shared_ncc.get_obj(), dtype=np.float32).reshape(npart,26)
+    transListAct_inner[:,3:] = return_results
+    gc.collect() #free the memory 
+    
+    return transListAct_inner
+        
+
+
+def tom_calcPairTransForm_parallel(pr_id,rows_id, jobList, pos, angles, dmetric, shared_ncc):
+
+    for single_row in rows_id:             
+        icmb0,icmb1 = jobList[single_row,:]
+        pos1 = pos[icmb0,:]
+        pos2 = pos[icmb1,:]
+        ang1 = angles[icmb0,:]
+        ang2 = angles[icmb1,:]
+        posTr1, angTr1, lenPosTr1, lenAngTr1 = tom_calcPairTransForm(pos1,ang1,pos2,ang2,dmetric)
+        posTr2, angTr2, _, _ = tom_calcPairTransForm(pos2,ang2,pos1,ang1,dmetric)
+        if single_row == 0:
+            print(single_row)
+            shared_ncc[0:26] = np.array([posTr1[0], posTr1[1], posTr1[2], angTr1[0], angTr1[1], angTr1[2],                                        
+                                     posTr2[0], posTr2[1], posTr2[2], angTr2[0], angTr2[1], angTr2[2],
+                                     lenPosTr1, lenAngTr1,
+                                     pos1[0],pos1[1],pos1[2],ang1[0],ang1[1],ang1[2],
+                                     pos2[0],pos2[1],pos2[2],ang2[0],ang2[1],ang2[2]]  )
+        else:
+            shared_ncc[single_row*26:single_row*26+26] = np.array([posTr1[0], posTr1[1], posTr1[2], angTr1[0], angTr1[1], angTr1[2],                                        
+                                     posTr2[0], posTr2[1], posTr2[2], angTr2[0], angTr2[1], angTr2[2],
+                                     lenPosTr1, lenAngTr1,
+                                     pos1[0],pos1[1],pos1[2],ang1[0],ang1[1],ang1[2],
+                                     pos2[0],pos2[1],pos2[2],ang2[0],ang2[1],ang2[2]])
+           
+    
+    os._exit(pr_id)   
     
 def genStarFile(transList, allTomoNames, st, maxDist, oriPartList, outputName):
-    classes = st["p1"]["classes"] #make sure the newborn transList doesn't impact the st 
-    psfs = st["p1"]["psfs"]
-    pixs = st["p1"]["pixs"]
+    classes = copy.deepcopy(st["p1"]["classes"]) #make sure the newborn transList doesn't impact the st 
+    psfs = copy.deepcopy(st["p1"]["psfs"])
+    pixs = copy.deepcopy(st["p1"]["pixs"])
     #store the header information 
     header = { }
     header["is_loop"] = 1
@@ -253,7 +286,7 @@ def genStarFile(transList, allTomoNames, st, maxDist, oriPartList, outputName):
 
 if __name__ == '__main__':
     startSt  = tom_calcTransforms('./simOrderRandomized.star', 100, tomoNames='', 
-                                      dmetric='exact', outputName='./allTransforms.star', verbose=1, worker_n = 1)
+                                      dmetric='exact', outputName='allTransforms.star', verbose=1, worker_n = 2)
 
     
     

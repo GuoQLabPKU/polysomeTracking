@@ -5,7 +5,7 @@ from py_io.tom_extractData import tom_extractData
 import numpy as np
 import os
 
-def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputFolder = '', ):
+def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputFolder = ''):
     '''
     TOM_SELECTTRANSFORMCLASSES selects classes from transForm list
 
@@ -16,9 +16,10 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
     INPUT
        transList                     transformation List #should be a dataframe
        selList                       selecton List #should be the property of the class
-       outputFolder                  folder for output
        minNumTransForms              (-1) minimum number of transformations per class
                                      #the number of transforms of the ribosome pairs
+       outputFolder                  folder for output
+       
     OUTPUT
        transListSel                  seleted transforms lists
        selFolder                     folder where selected lists have been written 
@@ -41,8 +42,8 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
         transList = tom_starread(transList)
     st = tom_extractData(transList)#st should be a dict 
     if isinstance(selList, str):
-        if selList == 'Classes-Sep':
-            uClass = np.unique(st["label"]['pairClass'])  # select all the classes and ploys
+        if selList == 'Classes-Sep': 
+            uClass = np.unique(st["label"]['pairClass'])  # select all the classes and ploysomes
             del selList
             selList = [ ]
             for i in range(len(uClass)):
@@ -50,7 +51,7 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
                 selList[i]["classNr"] = np.array([uClass[i]]) # #can be -1 OR [0,1,2...]
                 selList[i]["polyNr"] = np.array([-1]) #selList is a list with dicts stored
         else:
-            raise TypeError('some unrecongnized input')
+            raise TypeError('Unrecongnized input')
 
 
     
@@ -60,15 +61,16 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
     for i in range(len(selList)):#process each class, also class0:fail to cluster
         clNr = selList[i]["classNr"]
         polyNr = selList[i]['polyNr']
-        if not all(clNr):
+        if not any(clNr): #if clNr only has class 0,then continue
             continue
         if clNr[0] == -1:
             continue
         idx = filterList(st, clNr, polyNr) #which class and in this class,which polysome you like?
         if len(idx) < minNumTransForms:
-            continue #this class has few transforms 
-        transListSel.append( transList.iloc[idx,:])
+            continue #this class has few transforms, if less than the threshold, continue
+        
         trFilt = transList.iloc[idx,:]
+        transListSel.append( trFilt )
         selFolders.append(genOutput(trFilt, selList[i], outputFolder)) #contain -1 when don't save class subset
         idxCmb = np.concatenate((idxCmb, idx), axis = 0)
         
@@ -82,7 +84,7 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
     else:
         transListSelCmb = ''  #should save space than []
         
-    return   transListSel,selFolders,transListSelCmb
+    return transListSel,selFolders,transListSelCmb
 
 
 
@@ -118,12 +120,8 @@ def genOutput(transList, selList, outputFolder):
 
 def filterList(st, classNr, polyNr):
     if 'pairClass' in st["label"].keys():
-        if classNr[0] == -1:  #-1 represents no clustering process performed!
-            idxC = np.arange(len(st['label']['pairClass']))
-        else:
-            allClasses = st["label"]["pairClass"]
-            #judge the type of input:
-            idxC = np.where(allClasses==classNr[:,None])[-1] #in case the classNr is an container
+        allClasses = st["label"]["pairClass"]
+        idxC = np.where(allClasses==classNr[:,None])[-1] #in case the classNr is an container
                 
     else:
         idxC = np.arange(st['p1']['positions'].shape[0])

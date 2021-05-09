@@ -16,7 +16,7 @@ def tom_quaternion2rotMatrix(Qrotation):
                           
     EXAMPLE
   
-    R = tom_quaternion2rotMatrix([0.9330    0.2578    0.0226    0.2500]);
+    R = tom_quaternion2rotMatrix(np.array([0.9330,    0.2578 ,   0.0226 ,   0.2500]));
     
     '''
     w = Qrotation[0]
