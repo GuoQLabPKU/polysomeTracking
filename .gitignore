@@ -3,6 +3,8 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
 ### Python ###
+#pytest files
+debugging.py
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
