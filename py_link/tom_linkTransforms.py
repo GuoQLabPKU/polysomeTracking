@@ -84,12 +84,16 @@ def searchPathForward(cmbInd, zz, branchNr):  #branch begin with 0 end with the 
         
         if len(idxT1) > 1:
             idxT1 = idxT1[branchNr] #more than one branch
-             
-        zz = idxT1
-        if len(idxT1) > 0:
+            zz = idxT1
+            
+        if len(idxT1) == 1:
+            idxT1 = idxT1[0]
+            zz = idxT1            
+        
+        if isinstance(idxT1,int):
             if cmbInd_circleFlag[idxT1] == 1:
                 circRepeat = 1
-        if (len(idxT1) == 0) | (circRepeat == 1):
+        if (isinstance(idxT1, np.ndarray)) | (circRepeat == 1):
             break
         
         zzPath += 1
