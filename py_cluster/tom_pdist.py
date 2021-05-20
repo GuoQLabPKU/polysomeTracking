@@ -221,7 +221,7 @@ def genJobList(szIn, tmpDir, maxChunk):
     jobList = np.zeros([lenJobs,2], dtype = np.uint32) #expand the range of positive int save memory(no negative int)
     startA = 0  
     
-    with alive_bar(szIn, title="euc distances") as bar:
+    with alive_bar(szIn, title="jobList generation") as bar:
         for i in range(szIn):
             v2 = np.arange(i+1,szIn, dtype = np.uint32)
             v1 = np.repeat(i, len(v2)).astype(np.uint32)
@@ -229,7 +229,7 @@ def genJobList(szIn, tmpDir, maxChunk):
             jobList[startA:endA,0] = v1
             jobList[startA:endA,1] = v2
             startA = endA 
-            if (i%1000) == 0:
+            if (i%100) == 0:
                 bar()                
     numOfPackages = np.int(np.floor(jobList.shape[0]/maxChunk))
     if numOfPackages < 1:
