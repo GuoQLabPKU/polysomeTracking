@@ -86,7 +86,7 @@ def searchPathForward(cmbInd, zz, branchNr):  #branch begin with 0 end with the 
             idxT1 = idxT1[branchNr] #more than one branch
             zz = idxT1
             
-        if len(idxT1) == 1:
+        elif len(idxT1) == 1:
             idxT1 = idxT1[0]
             zz = idxT1            
         
