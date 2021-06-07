@@ -5,6 +5,8 @@ from py_test.addRmPoly import teardown
 from py_io.tom_starread import tom_starread
 from polysome_class.polysome import Polysome
 
+import timeit as ti
+
 def pick_polysome(input_star):
     polysome = dict()
   
@@ -34,7 +36,8 @@ def pick_polysome(input_star):
 
 
 def test_polysome():
-    setup()    
+    #setup() 
+    t1 = ti.default_timer()
     polysome1 = Polysome(input_star = 'simOrderRandomized.star', run_time = 'run0')  
     polysome1.classify['clustThr'] = 5
     polysome1.classify['relinkWithoutSmallClasses'] = 0
@@ -46,23 +49,27 @@ def test_polysome():
     
     polysome1.calcTransForms(worker_n = 3) #parallel, can assert the speed of pdit next time
     
-    polysome1.groupTransForms(maxChunk = 80000000) #parallel 
-    
+    polysome1.groupTransForms(gpu_list=[1,2]) #parallel 
+                                         
     polysome1.alignTransforms()
     
     polysome1.find_connectedTransforms()  #can assert here next time
     
-    polysome1.visResult()
+    print('Finishing with %5.f seconds consumed.'%(ti.default_timer()-t1))
+    #polysome1.visResult()
     track_polysome = pick_polysome('./cluster-simOrderRandomized/run0/allTransforms.star')   
     gen_polysome = np.load('./py_test/ori_polysome.npy',allow_pickle=True).item()
+    print(track_polysome)
+    print(gen_polysome)
     assert len(track_polysome) == len(gen_polysome)
     for single_key in gen_polysome.keys():
         assert gen_polysome[single_key] == track_polysome[single_key]
         print('Tracked one right polysome!')
-    teardown()
+    #teardown()
     
 
-
+if __name__ == '__main__':
+    test_polysome()
                 
                 
         

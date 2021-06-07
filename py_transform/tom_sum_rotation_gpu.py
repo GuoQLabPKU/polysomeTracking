@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as np
 
 def tom_sum_rotation(rots, shifts, order = 'trans_rot'):
     '''
@@ -26,9 +26,8 @@ def tom_sum_rotation(rots, shifts, order = 'trans_rot'):
        rott                resulting rotation matrix
 
    EXAMPLE
-   [euler_out shift_out rott]=tom_sum_rotation(np.array([10 20 30; -20 -10 -30]),np.array([5 5 5; 5 5 5]))
-   [euler_out shift_out rott]=tom_sum_rotation([10 20 30; -20 -10 -30],
-                                               [5 5 5; -2.9506 -3.7517  -7.2263])
+   euler_out shift_out rott=tom_sum_rotation(np.array([[10, 20, 30], [-20, -10, -30]]),np.array([[5, 5, 5],[5, 5, 5]]))
+ 
    
    '''
    #check if the iput is one dimention 
@@ -47,15 +46,15 @@ def tom_sum_rotation(rots, shifts, order = 'trans_rot'):
             tom_psi = rots[i,1]*np.pi/180
             tom_theta = rots[i,2]*np.pi/180
             #use zxz matrix
-            rotM[i,:,:] = np.dot( np.dot(np.array([[np.cos(tom_psi), -np.sin(tom_psi), 0],
-                                           [np.sin(tom_psi), np.cos(tom_psi), 0],
-                                           [0, 0, 1]]),
-                                  np.array([[1, 0, 0],
-                                           [0, np.cos(tom_theta),-np.sin(tom_theta)],
-                                           [0, np.sin(tom_theta), np.cos(tom_theta)]])),
-                                  np.array([[np.cos(tom_phi), -np.sin(tom_phi), 0],
-                                           [np.sin(tom_phi), np.cos(tom_phi), 0],
-                                           [0, 0, 1]]))
+            rotM[i,:,:] = np.dot(np.dot(
+                    np.array([[np.cos(tom_psi).item(), -np.sin(tom_psi).item(), 0],
+                              [np.sin(tom_psi).item(), np.cos(tom_psi).item(), 0],[0, 0, 1]]),
+                    np.array([[1, 0, 0],
+                              [0, np.cos(tom_theta).item(),-np.sin(tom_theta).item()],
+                              [0, np.sin(tom_theta).item(), np.cos(tom_theta).item()]])),                  
+                    np.array([[np.cos(tom_phi).item(), -np.sin(tom_phi).item(), 0],
+                              [np.sin(tom_phi).item(), np.cos(tom_phi).item(), 0],
+                              [0, 0, 1]]) )
         #sum up the shifts
         shift_out = np.zeros(col_n)
         for i in range(row_n):
@@ -73,12 +72,12 @@ def tom_sum_rotation(rots, shifts, order = 'trans_rot'):
             rott = np.dot(rott,rotM[z-1,:,:])
             z -= 1
         #extract euler angles
-        euler_out = np.array([np.arctan2(rott[2,0], rott[2,1]),
-                     np.arctan2(rott[0,2],-1*rott[1,2]),
-                     np.arccos(rott[2,2])])
-        euler_out = np.array([np.round(i*180/np.pi,3) for i in euler_out])
-        if abs(rott[2,2] - 1) < 10e-8:
-            euler_out = np.array([np.around(np.arctan2(rott[1,0], rott[0,0])*180/np.pi,4),0,0])
+        euler_out = np.array([np.arctan2(rott[2,0], rott[2,1]).item(),
+                     np.arctan2(rott[0,2],-1*rott[1,2]).item(),
+                     np.arccos(rott[2,2]).item()])
+        euler_out = np.round(euler_out*180/np.pi,3)
+        if abs(rott[2,2].item() - 1) < 10e-8:
+            euler_out = np.array([np.around(np.arctan2(rott[1,0], rott[0,0])*180/np.pi,4).item(),0,0])
         
 
     
@@ -88,15 +87,17 @@ def tom_sum_rotation(rots, shifts, order = 'trans_rot'):
             tom_psi = rots[i,1]*np.pi/180
             tom_theta = rots[i,2]*np.pi/180
             #use zxz matrix
-            rotM[i,:,:] = np.dot( np.dot(np.array([[np.cos(tom_psi), -np.sin(tom_psi), 0],
-                                           [np.sin(tom_psi), np.cos(tom_psi), 0],
-                                           [0, 0, 1]]),
-                                  np.array([[1, 0, 0],
-                                           [0, np.cos(tom_theta),-np.sin(tom_theta)],
-                                           [0, np.sin(tom_theta), np.cos(tom_theta)]])),
-                                  np.array([[np.cos(tom_phi), -np.sin(tom_phi), 0],
-                                           [np.sin(tom_phi), np.cos(tom_phi), 0],
-                                           [0, 0, 1]]))
+
+            rotM[i,:,:] = np.dot(np.dot(
+                  np.array([[np.cos(tom_psi).item(), -np.sin(tom_psi).item(), 0], 
+                            [np.sin(tom_psi).item(), np.cos(tom_psi).item(), 0], 
+                            [0, 0, 1]]),
+                  np.array([[1, 0, 0],
+                             [0, np.cos(tom_theta).item(),-np.sin(tom_theta).item()],
+                             [0, np.sin(tom_theta).item(), np.cos(tom_theta).item()]])),
+                   np.array([[np.cos(tom_phi).item(), -np.sin(tom_phi).item(), 0],
+                             [np.sin(tom_phi).item(), np.cos(tom_phi).item(), 0],[0, 0, 1]]))
+            
         #sum up the shifts
         shift_out = np.zeros(col_n)
         for i in range(row_n):
@@ -114,18 +115,17 @@ def tom_sum_rotation(rots, shifts, order = 'trans_rot'):
             rott = np.dot(rott,rotM[z-1,:,:])
             z -= 1
         #extract euler angles
-        euler_out = np.array([np.arctan2(rott[2,0], rott[2,1]),
-                     np.arctan2(rott[0,2],-1*rott[1,2]),
-                     np.arccos(rott[2,2])])
-        euler_out = np.array([np.round(i*180/np.pi,3) for i in euler_out])
-        if abs(rott[2,2] - 1) < 10e-8:
-            euler_out = np.array([np.around(np.arctan2(rott[1,0], rott[0,0])*180/np.pi,4),0,0])
+        euler_out = np.array([np.arctan2(rott[2,0], rott[2,1]).item(),
+                     np.arctan2(rott[0,2],-1*rott[1,2]).item(),
+                     np.arccos(rott[2,2]).item()])
+        euler_out = np.round(euler_out*180/np.pi,3)
+        if abs(rott[2,2].item() - 1) < 10e-8:
+            euler_out = np.array([np.around(np.arctan2(rott[1,0], rott[0,0])*180/np.pi,4).item(),0,0])
         
         
     return euler_out, shift_out, rott        
         
-tom_sum_rotation(np.array([[10,20,30],[-20,-10,-30]]),
-                          np.array([[5,5,5],[5,5,5]]))
+
             
         
     

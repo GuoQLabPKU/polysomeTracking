@@ -4,8 +4,8 @@ import shutil
 from collections import Counter
 import matplotlib.pyplot as plt
 import warnings
-from scipy.cluster.hierarchy import dendrogram
-import time
+import timeit as ti
+
 
 from py_io.tom_starread import tom_starread
 from py_io.tom_starwrite import tom_starwrite
@@ -111,7 +111,7 @@ class Polysome:
             os.mkdir('%s/scores'%classificationFolder)
 
         #remove the dirs
-        if  os.path.exists(classificationFolder): #it seems that only scores dir kept
+        if  os.path.exists(classificationFolder): #it seems that only scores dir kept ans allTransforms.star
             if os.path.isdir('%s/stat'%classificationFolder):
                 shutil.rmtree('%s/stat'%classificationFolder)
             if os.path.isdir('%s/classes'%classificationFolder):
@@ -148,28 +148,29 @@ class Polysome:
             self.transList = tom_starread(transFormFile)
         else:
             self.transList = tom_calcTransforms(self.io['posAngList'], maxDistInPix, '',
-                                                'exact', transFormFile, worker_n)
+                                                'exact', transFormFile, 1, worker_n)
             #self.transList should be data frame object
     
-    def groupTransForms(self, maxChunk = 600000000):
+    def groupTransForms(self, worker_n = None, gpu_list = None,freeMem = None):
         '''
         give transforms,
-        generate the clustering results(trees/classes) 
+        generate the clustering results(trees/classes of transforms) 
         maxChunk: the threshold to split the transformation data and 
                   parallel process
         '''
         print('Starting clustering')
-        t1 = time.time()
+        t1 = ti.default_timer()
         maxDistInPix = self.transForm['maxDist']/self.transForm['pixS']
         outputFold = '%s/scores'%self.io['classifyFold']
         treeFile = '%s/tree.npy'%outputFold
         if os.path.exists(treeFile):
+            print('loading tree')
             ll = np.load(treeFile) #load the clustering tree models 
         else:
             ll = tom_calcLinkage(self.transList, outputFold, maxDistInPix,
-                                self.classify['cmb_metric'], maxChunk = maxChunk) #how to calculate the linkage 
-        #ll should be a float64 n*4 ndarray
-        clusters, _, _, thres = tom_dendrogram(ll, 
+                                self.classify['cmb_metric'], worker_n, gpu_list,freeMem) #how to calculate the linkage 
+        #ll should be a float32 n*4 ndarray, should consider GPU version
+        clusters, _, _, thres= tom_dendrogram(ll, 
                                                  self.classify['clustThr'],
                                                  self.transList.shape[0], 0,0)
 
@@ -180,7 +181,7 @@ class Polysome:
         if len(clusters) == 0:
             print("Warninig: no classes! Check the threshold you input! This usually you put \
                   a very high or very low threshold.")
-            dendrogram(ll) #using default parameters to show the tree
+            #dendrogram(ll) #using default parameters to show the tree
         else:
             #this step give the cluster id for each transform
             for single_dict in clusters:
@@ -193,7 +194,7 @@ class Polysome:
                                            single_dict['color'][2])
                 self.transList.loc[idx, "pairClass"] = classes
                 self.transList.loc[idx, 'pairClassColour'] = colour
-        print('Finishing clustering with %d seconds consumed'%(time.time()-t1))          
+        print('Finishing clustering with %d seconds consumed'%(ti.default_timer()-t1))          
     def selectTransFormClasses(self,itrClean = 1):
         #now the translist has pairclass label as well as colour  label 
         '''
@@ -233,7 +234,7 @@ class Polysome:
 
            #the transListSel & selFolds can be [] with empty or with elements    
         if len(transListSel) == 0:
-            print('Warning: no translist has been selected!')
+            print('Warning: no translist has been selected for further analysis!')
         return transListSel, selFolds  #transListSel be empty when on clustering performs  
     
     def alignTransforms(self):
@@ -254,20 +255,20 @@ class Polysome:
         '''
         warnings.filterwarnings('ignore')
         print('Tracking the polysomes.')
-        t1 = time.time()
+        t1 = ti.default_timer()
         allClasses = self.transList['pairClass'].values
         allClassesU = np.unique(allClasses)
         
         allTomos = self.transList['pairTomoID'].values
         allTomosU = np.unique(allTomos)
         
-        br = np.zeros(len(allClassesU), dtype = np.int) #1D-array, if this tomogram has branch
+        br = np.zeros(len(allClassesU), dtype = np.int) #1D-array, check if this tomogram has branch
         
         for single_class in allClassesU:
             if single_class == 0:  #also should aviod single_class == -1
                 continue  ##no cluster occur with class == 0  
             if single_class == -1:
-                print('Warning: track the polysomes w/o any cluster.')
+                print('Warning: track the polysomes w/o any cluster classes.')
                 
             idx1 = np.where(allClasses == single_class)[0]
             offset_PolyID = 0
@@ -289,9 +290,9 @@ class Polysome:
         #those with class 0 will have pairLabel == -1
         len_branch = np.where(br > 0)[0]
         if len(len_branch) > 0:
-            print('Warning: found branches in class %s'%(str(len_branch)))
+            print('Warning: found branches in these class: %s'%(str(len_branch)))
             print('==> make smaller classes')
-        print('Polysome tracking finished with %.5f seconds consumed'%(time.time() - t1))
+        print('Polysome tracking finished with %.5f seconds consumed'%(ti.default_timer() - t1))
         header = { }
         header["is_loop"] = 1
         header["title"] = "data_"
@@ -371,7 +372,7 @@ class Polysome:
         key_array = np.array(key_list, dtype = np.int)
         value_array = np.array(value_list, dtype = np.int)
         
-        #plot
+        #plot the results
         plt.figure()
         plt.bar(key_array,  value_array)
         plt.show()
@@ -406,7 +407,7 @@ class Polysome:
         in each polysome (creating)
         '''
         if self.clSt['findPat']['classNr'] == -2:
-            print('skipping conf. Class analysis ==> no conf class selected')
+            print('Skipping conf. Class pattern analysis ==> no conf class selected')
             return 
         inputFile = '%s/stat/statPerPoly.star'%self.io['classifyFold']
         outputFold = '%s/stat/confAnalysis'%self.io['classifyFold']
@@ -421,7 +422,7 @@ class Polysome:
         include each tomogram and the whole tomogram for one transform
         class
         '''
-        print('generating selection lists')
+        print('Generating selection lists and summary for each polysome.')
          
         for i in range(len(transListSel)):  #each translist represents one translist of one class
             transListTmp = transListSel[i]
@@ -436,9 +437,9 @@ class Polysome:
         using relion/chimera to average the ribosome from one transform class
         '''
         if np.isinf(self.avg['filt']['minNumTransform']):
-            print('skipping translational class averaging')
+            print('Skipping translational class averaging density map')
             return 
-        wk = "%s/classes/c*/particleCenter/allPart.star"%self.io['classifyFold']
+        wk = "%s/classes/c*/particleCenter/allParticles.star"%self.io['classifyFold']
         outfold = '%s/avg/exp/%s'%(self.io['classifyFold'], self.io['classificationRun'])
         outfoldVis = '%s/vis/averages'%self.io['classifyFold']
         tom_avgFromTransForm(wk, self.avg['filt'], self.avg['maxRes'], 
@@ -456,7 +457,7 @@ class Polysome:
         polysomes (one by one)
         '''
         if not os.path.exists(self.fw['Map']):
-            print('skipping forward model generation')
+            print('Skipping forward model generation')
             return 
         
         outfold = '%s/avg/model/%s/c'%(self.io['classifyFold'], 
@@ -470,7 +471,7 @@ class Polysome:
         outfoldVis = '%s/vis/averages'%(self.io['classifyFold'])
         #classFile = '%s/stat/statPerClass.star'%self.io['classifyFold']
         scriptName = '%s/models.cmd'%outfoldVis
-        genMapVisScript(outfold, inputList, scriptName, self.transList, self.transForm['pixS'],0 )
+        genMapVisScript(outfold, inputList, scriptName, self.transList, self.transForm['pixS'], 0 )
         
     def visResult(self):
         print(' ')
