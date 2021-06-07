@@ -70,9 +70,9 @@ def searchPathForEachEntry(indList, branchDepth):
             
 
 def searchPathForward(cmbInd, zz, branchNr):  #branch begin with 0 end with the branch number - 1
-    # zz:the row number in the pairindex datafram. Remember that cmbInd should has very long rows , zz ~= inf
+    # zz:the row number in the pairindex dataframe. Remember that cmbInd should has very long rows , zz ~= inf
     zzPath = 1 #not begin with 0
-    tmpPath = np.array([[cmbInd[zz, 0], cmbInd[zz,1], zz, zzPath, 1]], dtype = np.uint64)
+    tmpPath = np.array([[cmbInd[zz, 0], cmbInd[zz,1], zz, zzPath, 1]], dtype = np.int)
     cmbInd_circleFlag = np.zeros(cmbInd.shape[0], dtype = np.int)
     circRepeat = 0
     maxTrials = 1000
@@ -97,7 +97,7 @@ def searchPathForward(cmbInd, zz, branchNr):  #branch begin with 0 end with the 
             break
         
         zzPath += 1
-        tmpPath = np.concatenate((tmpPath, np.array([[cmbInd[zz, 0], cmbInd[zz,1], zz, zzPath, 1]],dtype = np.uint64)
+        tmpPath = np.concatenate((tmpPath, np.array([[cmbInd[zz, 0], cmbInd[zz,1], zz, zzPath, 1]],dtype = np.int)
                                   ), axis = 0)
     if i == maxTrials:
         print('Warning: max tries reached in searchPathForward,\nwhich means a long polysome detected.')
@@ -165,7 +165,7 @@ def uniquePathAdd(allPath, newPath): #allPath == [], should be a ptr
     
 def fastIntersect(A,B):  #A-B are 1D arrays
     if (len(A) > 0) & (len(B) > 0):
-        P = np.zeros(np.max( [np.max(A), np.max(B)] )+ np.uint64(1), dtype = np.uint64)
+        P = np.zeros(np.max( [np.max(A), np.max(B)] )+ np.uint32(1), dtype = np.int)
         P[A] = 1
         C = B[P[B].astype(np.bool)]    
     else:
