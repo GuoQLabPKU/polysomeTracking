@@ -20,10 +20,8 @@ cupy: 9.0.0
 
 cudatoolkit: 11.0.3 
 
-cudnn:8.0.5
-
 pytest: 6.2.4
 
-Any platform (linux/windows/macos)should be fine. But linux is largely be tested to run these codes.
+Any platform (linux/windows/macos)should be fine. But linux is largely tested to run these codes.
 
 For test, please run pytest test_polysome in the terminal 
