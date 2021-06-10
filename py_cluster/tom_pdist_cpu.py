@@ -35,10 +35,12 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
     dd=tom_pdist(np.array([[0, 0, 0],[0, 0, 10], [10, 20, 30]]),'ang');
     '''
     #change into single 
+ 
     in_Fw = in_Fw.astype(np.single)
     if len(in_Inv) > 0:
         in_Inv = in_Inv.astype(np.single)
         print("Using inverse transforms")
+   
     tmpDir = 'tmpPdistcpu' #since the number of combination of pairs can be large 
     lenJobs = np.uint64(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)
     jobList = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
@@ -133,7 +135,9 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
 def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
     with alive_bar(len(jobList_single), title="euc distances") as bar:
         for single_job in jobList_single:
+           
             jobListChunk = np.load(single_job["file"],allow_pickle=True)
+           
             g1 = in_Fw[jobListChunk[:,0],:]
             g2 = in_Fw[jobListChunk[:,1],:]
             if len(in_Inv)  == 0:
@@ -142,7 +146,9 @@ def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
             else:
                 g1Inv = in_Inv[jobListChunk[:,0],:]
                 g2Inv = in_Inv[jobListChunk[:,1],:]
+        
             dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)
+            
             shared_ncc[single_job["start"]:single_job["stop"]] = dtmp
             del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
             gc.collect()            
@@ -159,11 +165,6 @@ def calcVectDist(g1,g2,g1Inv,g2Inv):
     if len(g1Inv) > 0:
         dv = g2-g1Inv
         distsInv = np.linalg.norm(dv, axis = 1)
-        #new
-        dists_allpart1 = np.array([dtmp, distsInv])
-        dtmp1 = np.min(dists_allpart1, axis = 0).astype(np.single)
-        del dtmp, distsInv, dists_allpart1,g2
-        gc.collect()
         
         dv = g1-g2Inv
         distsInv2 = np.linalg.norm(dv, axis = 1)
@@ -171,18 +172,19 @@ def calcVectDist(g1,g2,g1Inv,g2Inv):
         dv = g1Inv - g2Inv
         distsInv3 = np.linalg.norm(dv, axis = 1)
         
-        dists_allpart2 = np.array([distsInv2, distsInv3])
-        dtmp = np.min(dists_allpart2, axis = 0).astype(np.single)
-        del dv, distsInv2, distsInv3,g1,g1Inv,g2Inv
+        dists_all = np.array([dtmp, distsInv,distsInv2, distsInv3])
+        dtmp = np.min(dists_all, axis = 0).astype(np.single)
+        
+        del dv, distsInv, distsInv2, distsInv3, dists_all, g1,g2,g1Inv,g2Inv
         gc.collect()
         
-        dists_allpart2 = np.array([dtmp1, dtmp])
-        dtmp = np.min(dists_allpart2, axis = 0).astype(np.single)
+     
            
     return dtmp
  
 def calcRotMatrices(in_angs):
     print("Starting calculating rotation matrices for each transform")
+  
     Rin = np.zeros([in_angs.shape[0], 3,6 ], dtype = np.single)
     
     for i in range(in_angs.shape[0]):
@@ -198,31 +200,21 @@ def calcRotMatrices(in_angs):
 def calcAngDist_mp(pr_id, jobList_single, Rin, Rin_Inv,shared_ncc):
     with alive_bar(len(jobList_single), title="ang distances") as bar:
         for singlejobs in jobList_single:
+           
             jobListChunk = np.load(singlejobs["file"])
+           
             dtmp = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
             if len(Rin_Inv) > 0:
                 #Rs_Inv = Rin_Inv[jobListChunk[:,0],:,0:3]
                 #Rs_Inv_Inv = Rin_Inv[jobListChunk[:,1],:,3:6]
-                dtmpInv = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
-                dists_allpart1 = np.array([dtmp, dtmpInv])
-                dtmp1 = np.min(dists_allpart1, axis = 0).astype(np.single)
-                del dtmpInv,dists_allpart1,dtmp
-                gc.collect()
-                
+                dtmpInv = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])               
                 dtmpInv2 = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6])
-                dtmpInv3 = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6] )
-                dists_allpart1 = np.array([dtmpInv2, dtmpInv3])
-                dtmp = np.min(dists_allpart1, axis = 0).astype(np.single)
-                del dtmpInv2,dtmpInv3,dists_allpart1
-                gc.collect()
-                
-                dists_all = np.array([dtmp, dtmp1])
-                dtmp = np.min(dists_all, axis = 0).astype(np.single)
-                del dists_all,dtmp1
-                gc.collect()
-                
+                dtmpInv3 = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6] )              
+                dists_all = np.array([dtmp, dtmpInv, dtmpInv2,dtmpInv3 ])
+                dtmp = np.min(dists_all, axis = 0)
+               
             shared_ncc[singlejobs["start"]:singlejobs["stop"]] = dtmp  
-            del jobListChunk, dtmp 
+            del jobListChunk, dtmp, dtmpInv,dtmpInv2,dtmpInv3,dists_all
             gc.collect()                            
             bar()
             
@@ -232,14 +224,15 @@ def calcAngDist_mp(pr_id, jobList_single, Rin, Rin_Inv,shared_ncc):
     
 #@profile    
 def calcAngDist(Rs,RsInv):
-    #multiple the two matrices       
+    #multiple the two matrices 
+        
     Rp = np.matmul(Rs, RsInv)   
     tr_Rp = (np.trace(Rp, axis1=1, axis2=2) - 1)/2 
     #calculate the angle distance 
-    del Rp
-    gc.collect()
     dists = np.lib.scimath.arccos(tr_Rp)/np.pi*180
-    return dists.real #one dimention arrsy float32)
+    dists = (dists.real).astype(np.single)
+   
+    return dists #one dimention arrsy float32)
     
     
     
@@ -248,7 +241,7 @@ def genJobList(szIn, tmpDir, maxChunk):
     jobList = np.zeros([lenJobs,2], dtype = np.uint32) #expand the range of positive int save memory(no negative int)
     startA = 0  
     
-    with alive_bar(int(np.floor(szIn/100)), title="jobList generation") as bar:
+    with alive_bar(int(np.floor(szIn/100)+1), title="jobList generation") as bar:
         for i in range(szIn):
             v2 = np.arange(i+1,szIn, dtype = np.uint32)
             v1 = np.repeat(i, len(v2)).astype(np.uint32)

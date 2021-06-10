@@ -1,5 +1,6 @@
 import numpy as np
 import gc
+import timeit as ti
 from scipy.cluster.hierarchy import linkage
 from py_memory.tom_memalloc import tom_memalloc
 
@@ -52,7 +53,11 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
     if isinstance(worker_n, int):
         from py_cluster.tom_pdist_cpu import tom_pdist
     else:
-        from py_cluster.tom_pdist_gpu import tom_pdist
+        if len(gpu_list) == 1:
+            from py_cluster.tom_pdist_gpu2 import tom_pdist
+        else:
+            from py_cluster.tom_pdist_gpu import tom_pdist
+            
        
     distsVect = tom_pdist(transVect,  maxChunk ,worker_n, gpu_list,'euc', transVectInv)
     del transVect, transVectInv
@@ -90,8 +95,9 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
         else:
             distsCN = (distsCN - np.mean(distsCN)) + 1.0 #(1,1,1)
     print('Calculating linkage')
+    t1 = ti.default_timer() 
     ll = linkage(distsCN,'average') #looks like a slow step if too large of distsCN
-    print("Calculating linkage done")
+    print("Calculating linkage done with %.5f seconds"%(ti.default_timer() -t1))
     #save the ll results
     np.save("%s/tree.npy"%preCalcFold,ll)
     

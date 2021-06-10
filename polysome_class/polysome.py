@@ -195,7 +195,7 @@ class Polysome:
                 self.transList.loc[idx, "pairClass"] = classes
                 self.transList.loc[idx, 'pairClassColour'] = colour
         print('Finishing clustering with %d seconds consumed'%(ti.default_timer()-t1))          
-    def selectTransFormClasses(self,itrClean = 1):
+    def selectTransFormClasses(self,worker_n = None, gpu_list = None, itrClean = 1):
         #now the translist has pairclass label as well as colour  label 
         '''
         select any class OR polysome and Relink
@@ -215,7 +215,7 @@ class Polysome:
                 #this select can discard the transforms with class ==0 (which failed to form cluster)
                 os.rename('%s/scores/tree.npy'%self.io['classifyFold'],
                          '%s/scores/treeb4Relink.npy'%self.io['classifyFold'] )
-                self.groupTransForms()
+                self.groupTransForms(worker_n, gpu_list)
                 
             if os.path.exists('%s/allTransforms.star'%self.io['classifyFold']):
                 os.rename('%s/allTransforms.star'%self.io['classifyFold'],
@@ -225,7 +225,8 @@ class Polysome:
             header["is_loop"] = 1
             header["title"] = "data_"
             header["fieldNames"]  = ["_%s"%i for i in self.transList.columns]
-            tom_starwrite('%s/allTransforms.star'%self.io['classifyFold'], self.transList) #and also use the transforms to generate the tree.npy
+            tom_starwrite('%s/allTransforms.star'%self.io['classifyFold'], self.transList,
+                          header) #and also use the transforms to generate the tree.npy
                 
         transListSel, selFolds, _ = tom_selectTransFormClasses(self.transList,
                                        self.sel[0]['list'],
@@ -263,7 +264,8 @@ class Polysome:
         allTomosU = np.unique(allTomos)
         
         br = np.zeros(len(allClassesU), dtype = np.int) #1D-array, check if this tomogram has branch
-        
+        if 0 not in allClassesU:
+            br = np.append(br,0)
         for single_class in allClassesU:
             if single_class == 0:  #also should aviod single_class == -1
                 continue  ##no cluster occur with class == 0  
@@ -277,9 +279,10 @@ class Polysome:
                 idx = np.intersect1d(idx1, idx2)
                 #track the single polysome in the same tomogram 
                 if len(idx) > 1:
-                    self.transList.loc[idx,:], _, br[single_class], offset_PolyID = tom_linkTransforms(self.transList.iloc[idx,:],
+                    self.transList.loc[idx,:], _, br[single_class-1], offset_PolyID = tom_linkTransforms(self.transList.iloc[idx,:],
                                       self.transForm['branchDepth'], offset_PolyID)
                 elif len(idx) == 1:
+                    print(idx)
                     offset_PolyID += 1
                     self.transList.loc[idx,'pairLabel'] = offset_PolyID  #begin with 1
                     self.transList.loc[idx,'pairPosInPoly1'] = 1 #the order in each polysome, begin with 1
