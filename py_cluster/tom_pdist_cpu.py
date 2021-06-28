@@ -10,7 +10,9 @@ from py_transform.tom_sum_rotation import tom_sum_rotation
 #from py_transform.tom_calcTransforms import tom_calcTransforms
 
 #@profile
-def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', verbose=1 ):
+def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None, dmetric = 'euc', 
+              in_Inv = '', makeJob = 1 , tmpDir = '', 
+                jobList = None, lenJobs = None, clean = 1):
     '''
     dists=tom_pdist(in_Fw,dmetric,in_Inv,maxChunk)
 
@@ -24,7 +26,7 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
        maxChunk         max chunk size  #shoud modity accoring to the cpus/gpus & memory
        worker_n        # of cpus 
        gpu_list        gpus (not used in this function)
-       verbose        (1) 0 for no output
+      
 
     OUTPUT
        dists             distances in the same order as pdist from matlab (single array)
@@ -40,10 +42,12 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
     if len(in_Inv) > 0:
         in_Inv = in_Inv.astype(np.single)
         print("Using inverse transforms")
-   
-    tmpDir = 'tmpPdistcpu' #since the number of combination of pairs can be large 
-    lenJobs = np.uint64(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)
-    jobList = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
+ 
+    if makeJob == 1:
+        lenJobs = np.uint64(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)
+        tmpDir = 'tmpPdistcpu'
+        jobList = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
+        
     dists = np.zeros(lenJobs, dtype = np.single) # the distance between pairs of ribosomes , one dimention array
     print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
     job_n = len(jobList) #number of chunks of joblists to process
@@ -127,17 +131,17 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
             dists = calcAngDist_mp(-1, jobList, Rin,Rin_Inv, dists) 
                  
         print("Finishing calculating ang transforms distance!")  
-        
-    shutil.rmtree(tmpDir) #remove the dirs  
+    if clean == 1:   
+        shutil.rmtree(tmpDir) #remove the dirs  
     return dists  # one dimension array float 32          
             
 #@profile  
 def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
+
     with alive_bar(len(jobList_single), title="euc distances") as bar:
-        for single_job in jobList_single:
-           
+        for single_job in jobList_single:           
             jobListChunk = np.load(single_job["file"],allow_pickle=True)
-           
+            
             g1 = in_Fw[jobListChunk[:,0],:]
             g2 = in_Fw[jobListChunk[:,1],:]
             if len(in_Inv)  == 0:
@@ -148,12 +152,11 @@ def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
                 g2Inv = in_Inv[jobListChunk[:,1],:]
         
             dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)
-            
             shared_ncc[single_job["start"]:single_job["stop"]] = dtmp
             del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
             gc.collect()            
             bar()
-            
+   
     if pr_id == -1:
         return shared_ncc    
     os._exit(pr_id)
@@ -198,11 +201,11 @@ def calcRotMatrices(in_angs):
     
 #@profile   
 def calcAngDist_mp(pr_id, jobList_single, Rin, Rin_Inv,shared_ncc):
+ 
     with alive_bar(len(jobList_single), title="ang distances") as bar:
-        for singlejobs in jobList_single:
-           
+        for singlejobs in jobList_single:         
             jobListChunk = np.load(singlejobs["file"])
-           
+            
             dtmp = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
             if len(Rin_Inv) > 0:
                 #Rs_Inv = Rin_Inv[jobListChunk[:,0],:,0:3]
@@ -212,26 +215,25 @@ def calcAngDist_mp(pr_id, jobList_single, Rin, Rin_Inv,shared_ncc):
                 dtmpInv3 = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6] )              
                 dists_all = np.array([dtmp, dtmpInv, dtmpInv2,dtmpInv3 ])
                 dtmp = np.min(dists_all, axis = 0)
-               
+                del dtmpInv, dtmpInv2, dtmpInv3, dists_all
+                
             shared_ncc[singlejobs["start"]:singlejobs["stop"]] = dtmp  
-            del jobListChunk, dtmp, dtmpInv,dtmpInv2,dtmpInv3,dists_all
+            del jobListChunk, dtmp
             gc.collect()                            
             bar()
-            
+          
     if pr_id == -1:
         return shared_ncc
     os._exit(pr_id)        
     
 #@profile    
 def calcAngDist(Rs,RsInv):
-    #multiple the two matrices 
-        
+    #multiple the two matrices  
     Rp = np.matmul(Rs, RsInv)   
     tr_Rp = (np.trace(Rp, axis1=1, axis2=2) - 1)/2 
     #calculate the angle distance 
     dists = np.lib.scimath.arccos(tr_Rp)/np.pi*180
     dists = (dists.real).astype(np.single)
-   
     return dists #one dimention arrsy float32)
     
     

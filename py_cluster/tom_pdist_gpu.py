@@ -10,7 +10,10 @@ from py_transform.tom_sum_rotation import tom_sum_rotation
 
 
 #@profile
-def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', verbose=1):
+def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
+              dmetric = 'euc', in_Inv = '', 
+              makeJob = 1, tmpDir = '', jobListdict = None,
+              lenJobs = None, clean = 1):
     '''
     dists=tom_pdist(in_Fw,dmetric,in_Inv,maxChunk)
 
@@ -24,7 +27,7 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
        maxChunk         max chunk size  #shoud modity accoring to the cpus/gpus & memory
        worker_n        # of cpus (not used in this function)
        gpu_list        gpus (not used in this function)
-       verbose        (1) 0 for no output
+       
 
     OUTPUT
        dists             distances in the same order as pdist from matlab (single array)
@@ -38,9 +41,12 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
     if len(in_Inv) > 0:
         print("Using inverse transforms")
         in_Inv = in_Inv.astype(np.single)
-    tmpDir = 'tmpPdistgpu' #since the number of combination of pairs can be large 
-    jobListdict = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
-    lenJobs = np.uint64(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)
+     #since the number of combination of pairs can be large 
+    if makeJob == 1:
+        tmpDir = 'tmpPdistgpu'
+        jobListdict = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
+        lenJobs = np.uint64(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)
+       
     dists = np.zeros(lenJobs, dtype = np.single) # the distance between pairs of ribosomes , one dimention array
     print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
     job_n = len(jobListdict) #number of cores to use
@@ -106,11 +112,12 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
                              
         print("Finishing calculating ang transforms distance!")  
         
-    shutil.rmtree(tmpDir) #remove the dirs 
+    if  clean == 1:
+        shutil.rmtree(tmpDir) #remove the dirs 
     return dists  # one dimension array           
             
 #@profile  
-def calcVectDist_mp(pr_id, jobList, in_Fw, in_Inv, shared_ncc,gpu_id):
+def calcVectDist_mp(pr_id, jobList, in_Fw, in_Inv, shared_ncc, gpu_id):
     cp.cuda.Device(gpu_id).use()
     in_Fw = cp.asarray(in_Fw) #move array into different GPUs
     if len(in_Inv) > 0:
@@ -191,10 +198,10 @@ def calcAngDist_mp(pr_id, jobList, Rin, Rin_Inv,shared_ncc,gpu_id):
     
                 dists_all = cp.array([dtmp, dtmpInv, dtmpInv2, dtmpInv3])
                 dtmp = cp.min(dists_all, axis = 0)
- 
-            dtmp = cp.asnumpy(dtmp)
+                del  dtmpInv, dtmpInv2, dtmpInv3, dists_all
+                
             shared_ncc[singlejobs["start"]:singlejobs["stop"]] = dtmp  
-            del dists_all,dtmp, dtmpInv,dtmpInv2,dtmpInv3,jobListChunk
+            del jobListChunk, dtmp
             gc.collect()                            
             bar()
                             
@@ -278,8 +285,5 @@ def genjobsList_oneGPU(startsite, lenJobs, maxChunk):
   
     
     
-        
-    
-        
         
     

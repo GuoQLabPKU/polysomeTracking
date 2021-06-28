@@ -4,13 +4,15 @@ import os
 import gc
 import shutil
 from alive_progress import alive_bar 
-import timeit as ti
 from py_cluster.tom_calc_packages import tom_calc_packages
 from py_transform.tom_sum_rotation_gpu import tom_sum_rotation
 
 
 #@profile
-def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', verbose=1):
+def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None, 
+              dmetric = 'euc', in_Inv = '', 
+              makeJob = 1, tmpDir = '', jobListdict = None, 
+              lenJobs = None, clean = 1):
     '''
     dists=tom_pdist(in_Fw,dmetric,in_Inv,maxChunk)
 
@@ -24,7 +26,7 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
        maxChunk         max chunk size  #shoud modity accoring to the cpus/gpus & memory
        worker_n        # of cpus (not used in this function)
        gpu_list        gpus (not used in this function)
-       verbose        (1) 0 for no output
+
 
     OUTPUT
        dists             distances in the same order as pdist from matlab (single array)
@@ -44,10 +46,12 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
         in_Inv = cp.asarray(in_Inv)
         in_Inv = in_Inv.astype(cp.single) #save the memory
         print("Using inverse transforms")
-    
-    tmpDir = 'tmpPdistgpu' #since the number of combination of pairs can be large 
-    jobListdict = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
-    lenJobs = int(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)
+        
+    if makeJob == 1:
+        tmpDir = 'tmpPdistgpu'
+        jobListdict = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
+        lenJobs = int(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)
+        
     dists = cp.zeros(lenJobs, dtype = cp.single) # the distance between pairs of ribosomes , one dimention array
     print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
     if dmetric == 'euc':        
@@ -69,8 +73,8 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
         print("Using single gpu")
         dists = calcAngDist_mp(jobListdict[main_gpu], Rin, Rin_Inv,dists)                          
         print("Finishing calculating ang transforms distance!")  
-        
-    shutil.rmtree(tmpDir) #remove the dirs 
+    if clean == 1:    
+        shutil.rmtree(tmpDir) #remove the dirs 
     
     dists = cp.asnumpy(dists) 
    
@@ -80,12 +84,12 @@ def tom_pdist(in_Fw, maxChunk ,worker_n, gpu_list,dmetric = 'euc', in_Inv = '', 
     return dists  # one dimension array           
             
 #@profile  
-def calcVectDist_mp(jobList, in_Fw, in_Inv, dists):    
+def calcVectDist_mp(jobList, in_Fw, in_Inv, dists):  
+
     with alive_bar(len(jobList), title="euc distances") as bar:  
         for jobList_single in jobList:
             
             jobListChunk = cp.load(jobList_single["file"],allow_pickle=True)
-           
             g1 = in_Fw[jobListChunk[:,0],:]
             g2 = in_Fw[jobListChunk[:,1],:]
             if len(in_Inv)  == 0:
@@ -96,13 +100,13 @@ def calcVectDist_mp(jobList, in_Fw, in_Inv, dists):
                 g2Inv = in_Inv[jobListChunk[:,1],:]
           
             dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)
-          
+             
             dists[jobList_single["start"]:jobList_single["stop"]] = dtmp
             del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
             gc.collect()
             
             bar()
-  
+    
     return dists
 
 
@@ -128,27 +132,26 @@ def calcVectDist(g1,g2,g1Inv,g2Inv):
  
 def calcRotMatrices(in_angs):
     print("Starting calculating rotation matrices for each transforms")
-    t1 = ti.default_timer() 
+   
     Rin = cp.zeros([in_angs.shape[0], 3,6 ], dtype = cp.single)
     
     for i in range(in_angs.shape[0]):
-        _,_, Rin[i,:,0:3] = tom_sum_rotation(in_angs[i,:], cp.array([0,0,0]))
+        Rin[i,:,0:3] = tom_sum_rotation(in_angs[i,:])
         Rin[i,:,3:6] = cp.linalg.inv(Rin[i,:,0:3])
         
-    print("Finishing calculating rotation matrices for each transforms with %.5f"%(ti.default_timer() - t1))
-    
-    
+    print("Finishing calculating rotation matrices for each transforms")
     return  Rin
     
 #@profile   
-def calcAngDist_mp(jobList, Rin, Rin_Inv,dists): 
+def calcAngDist_mp(jobList, Rin, Rin_Inv,dists):
+ 
     with alive_bar(len(jobList), title="ang distances") as bar:
         for singlejobs in jobList: 
           
             jobListChunk = cp.load(singlejobs["file"])
             
             #Rs = Rin[jobListChunk[:,0],:,0:3]
-            #RsInv = Rin[jobListChunk[:,1],:,3:6]           
+            #RsInv = Rin[jobListChunk[:,1],:,3:6] 
             dtmp = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
             if len(Rin_Inv) > 0:
                 #Rs_Inv = Rin_Inv[jobListChunk[:,0],:,0:3]
@@ -160,15 +163,15 @@ def calcAngDist_mp(jobList, Rin, Rin_Inv,dists):
                 
                 dists_all = cp.array([dtmp, dtmpInv, dtmpInv2, dtmpInv3])
                 dtmp = cp.min(dists_all, axis = 0)
-            
-            
-            dists[singlejobs["start"]:singlejobs["stop"]] = dtmp  
-            del dists_all,dtmp, dtmpInv,dtmpInv2,dtmpInv3,jobListChunk
+                del  dtmpInv, dtmpInv2, dtmpInv3, dists_all
+                
+            dists[singlejobs["start"]:singlejobs["stop"]] = dtmp                 
+            del jobListChunk, dtmp
             gc.collect()                            
             bar()
             
                
-    
+ 
     return dists
             
     
