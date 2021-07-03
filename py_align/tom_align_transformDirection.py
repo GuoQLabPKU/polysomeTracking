@@ -65,7 +65,7 @@ def tom_align_transformDirection(transList):
         if single_class == 0: #if the class == 0: continue
             continue 
         if single_class == -1:
-            print('Warning: no clusters detected. Skipping align the transform.')
+            print('Warning: no clusters classes detected. Skipping align the transform.')
             break
         idx = np.where(allClasses == single_class)[0]
         transList.iloc[idx,:] = alignDir(transList.iloc[idx,:]) #class 0 will also be aligned and class -1

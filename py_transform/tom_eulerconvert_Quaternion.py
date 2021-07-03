@@ -50,9 +50,9 @@ def tom_eulerconvert_Quaternion(angles, rotFlav = 'zxz'):  #the input should be 
         if np.iscomplex(w) == True:
             w = 0
         
-        x = np.sqrt( 1 + Rxx - Ryy - Rzz ) / 2
-        y = np.sqrt( 1 + Ryy - Rxx - Rzz ) / 2
-        z = np.sqrt( 1 + Rzz - Ryy - Rxx ) / 2
+        x = np.sqrt( abs(1 + Rxx - Ryy - Rzz) ) / 2
+        y = np.sqrt( abs(1 + Ryy - Rxx - Rzz) ) / 2
+        z = np.sqrt( abs(1 + Rzz - Ryy - Rxx) ) / 2
 
         idx  = np.argmax( [w,x,y,z] )
 

@@ -81,7 +81,7 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None, dmetric = 'euc',
                 
                 
         if (worker_n == 1) | (job_n == 1):          
-            print("Using single cpu")
+            print("Using single cpu to process")
             #never change a changable variant in one function
             dists = calcVectDist_mp(-1, jobList, in_Fw, in_Inv, dists) 
         

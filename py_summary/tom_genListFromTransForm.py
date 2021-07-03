@@ -91,7 +91,7 @@ def writeParticleCenterList(st, listFlav, outFold):
     header["title"] = "data_"
     header["fieldNames"]  = ["_%s"%i for i in starNew.columns]
     
-    tom_starwrite('%s/allPart.star'%outFold, starNew, header)
+    tom_starwrite('%s/allParticles.star'%outFold, starNew, header)
     
     
 

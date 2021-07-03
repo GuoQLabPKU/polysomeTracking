@@ -10,7 +10,7 @@ def genMapVisScript(mapfold, classFile, scriptName, transList, voxelSize, offSet
     mrc_file = [i for i in os.listdir(mapfold) if '.mrc' in i]
     mrc_abspath = ["%s/%s"%(mapfold,i) for i in mrc_file ]
     if len(mrc_file) == 0:
-        print('warning no models in %s *.mrc, ... check youo filter setting'%mapfold)
+        print('warning no models in %s *.mrc, ... check your filter setting'%mapfold)
         print('skipping')
     
     sz = load_tomo(mrc_abspath[0])
@@ -87,7 +87,7 @@ def  writeChimeraCmd(scriptName, pathToMap, col, clN, voxelSize, offSet, pos, in
         fid = open(scriptName.replace('.cmd',  '_marker.cmm'  ), 'w')
         print('<marker_set name=\"marker set avg info\">',file = fid)
     else:
-        fid = oepn(markerName, 'a')
+        fid = open(markerName, 'a')
     offFromCorner = np.array([0,0, np.round(sz/2)*voxelSize])
     posAbs = pos*-1*voxelSize
     posAbs = posAbs + offFromCorner

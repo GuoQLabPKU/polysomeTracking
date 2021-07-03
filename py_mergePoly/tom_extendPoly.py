@@ -26,8 +26,8 @@ def tom_extendPoly(tailRiboInfo, avgRot, avgShift, particleStar , pruneRad,
     
     '''
     polyN = tailRiboInfo.shape[0]
-    newExtendRibos  = np.array([]).reshape(-1, 7)
-    gapRibos = np.array([]).reshape(-1, 7)
+    fillUpRibos  = np.array([]).reshape(-1, 7)
+    fillUpMiddleRibos = np.array([]).reshape(-1, 7)
     for i in range(polyN):
         ang1 = tailRiboInfo[i,4:]
         pos1 = tailRiboInfo[i,1:4]
@@ -45,13 +45,13 @@ def tom_extendPoly(tailRiboInfo, avgRot, avgShift, particleStar , pruneRad,
         if checkRibo(particleStar,pos2,pruneRad) == 1:
             continue
         
-        gapRibo = np.array([]).reshape(-1, 7)
+        fillUpmiddleRibo = np.array([]).reshape(-1, 7)
         cycles = NumAddRibo - 1
         while cycles > 0:
             
             ang1 = ang2
             pos1 = pos2
-            gapRibo = np.concatenate((gapRibo, 
+            fillUpmiddleRibo = np.concatenate((fillUpmiddleRibo, 
                                       np.array([[tailRiboInfo[i,0], pos1[0], pos1[1], pos1[2],
                                                 ang1[0], ang1[1], ang1[2]]])), axis = 0)
             compare_array[1,:] = ang1
@@ -65,12 +65,12 @@ def tom_extendPoly(tailRiboInfo, avgRot, avgShift, particleStar , pruneRad,
                 continue
             cycles = cycles - 1
         #put new ribosomes into data        
-        newExtendRibos = np.concatenate((newExtendRibos, 
+        fillUpRibos = np.concatenate((fillUpRibos, 
                                 np.array([[tailRiboInfo[i,0], pos2[0], pos2[1],pos2[2],
                                  ang2[0],ang2[1], ang2[2]]])
                                   ), axis = 0)
-        gapRibos = np.concatenate((gapRibos, gapRibo), axis = 0)
-    return newExtendRibos, gapRibos #returned 2-2D arrays
+        fillUpMiddleRibos = np.concatenate((fillUpMiddleRibos, fillUpmiddleRibo), axis = 0)
+    return fillUpRibos, fillUpMiddleRibos #returned 2-2D arrays
                  
 
 def checkRibo(particleStar, riboCor, pruneRad):

@@ -73,8 +73,8 @@ def writeStarFile(list_):
     header["title"] = "data_"
     header["fieldNames"] = [ ]
     for i,j in enumerate(list_.columns):
-        if j == 'polysome':
-            continue
+#        if j == 'polysome':
+#            continue
         header["fieldNames"].append('_%s #%d'%(j,i+1))
     tom_starwrite('sim.star', list_, header)
     id_ = np.random.permutation(list_.shape[0])
@@ -91,6 +91,7 @@ def writeStarFile(list_):
     #save the dict 
     np.save('./py_test/ori_polysome.npy', ori_polysome)      
     list_.drop('polysome',axis = 1,inplace = True)
+    header['fieldNames'] = header['fieldNames'][0:-1]
     tom_starwrite('simOrderRandomized.star',list_, header)
     
 def genVects(list_,tomoName, increPos, increAng, startPos, startAng, nrRep, branch=0):
@@ -105,11 +106,13 @@ def genVects(list_,tomoName, increPos, increAng, startPos, startAng, nrRep, bran
     
     for i in range(nrRep):
         angNoise = np.random.rand(3)*2
+        #angNoise = np.zeros(3)
         
         ang,_,_ = tom_sum_rotation( np.array([list(increAng), list(angOld), list(angNoise)]),
                                          np.zeros((3,3)))
         
         vnoise = np.random.rand(3)
+        #vnoise = np.zeros(3)
         vTr = tom_pointrotate(increPos + vnoise, ang[0], ang[1], ang[2])
         pos = posOld + vTr
         

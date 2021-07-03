@@ -1,5 +1,5 @@
 import numpy as np
-\
+
 def tom_quaternion2rotMatrix(Qrotation):
     '''
     

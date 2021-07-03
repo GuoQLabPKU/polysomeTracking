@@ -151,7 +151,8 @@ def extractFromRelionStar(starfile):
     data_dict["p1"]["classes"] = starfile["rlnClassNumber"].values
     data_dict["p1"]["tomoName"] = starfile["rlnMicrographName"].values
     data_dict["p1"]["psfs"] = starfile["rlnCtfImage"].values
-    data_dict["p1"]["pixs"] = starfile["rlnDetectorPixelSize"].values/starfile["rlnMagnification"].values*10000
+    data_dict['p1']['pixs'] = np.repeat(3.42,starfile.shape[0])
+    #data_dict["p1"]["pixs"] = starfile["rlnDetectorPixelSize"].values/starfile["rlnMagnification"].values*10000
     data_dict["label"]["tomoName"] = starfile["rlnMicrographName"].values
     
     return data_dict 

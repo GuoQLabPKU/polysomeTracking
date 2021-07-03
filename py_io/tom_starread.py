@@ -54,7 +54,9 @@ def tom_starread(starfile):
             
             else:
                 if "\n" in line_content_clean[-1]:
-                    if len(line_content_clean) != len(colname_dict.keys()):                  
+                    if len(line_content_clean) != len(colname_dict.keys()): 
+#                        print(len(line_content_clean),line_content_clean)
+#                        print(len(colname_dict.keys()),colname_dict.keys())
                         raise TypeError("the star data is not consistent!")
                         break
                         #os._exit(1)

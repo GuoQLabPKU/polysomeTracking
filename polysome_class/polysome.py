@@ -278,10 +278,9 @@ class Polysome:
         allTomos = self.transList['pairTomoID'].values
         allTomosU = np.unique(allTomos)
         
-        br = np.zeros(len(allClassesU), dtype = np.int) #1D-array, check if this tomogram has branch
-        if 0 not in allClassesU:
-            br = np.append(br,0)
+        br = {} #1D-array, check if this tomogram has branch
         for single_class in allClassesU:
+            br[single_class] = 0
             if single_class == 0:  #also should aviod single_class == -1
                 continue  ##no cluster occur with class == 0  
             if single_class == -1:
@@ -294,7 +293,7 @@ class Polysome:
                 idx = np.intersect1d(idx1, idx2)
                 #track the single polysome in the same tomogram 
                 if len(idx) > 1:
-                    self.transList.loc[idx,:], _, br[single_class-1], offset_PolyID = tom_linkTransforms(self.transList.iloc[idx,:],
+                    self.transList.loc[idx,:], _, br[single_class], offset_PolyID = tom_linkTransforms(self.transList.iloc[idx,:],
                                       self.transForm['branchDepth'], offset_PolyID)
                 elif len(idx) == 1:
                     offset_PolyID += 1
@@ -305,7 +304,7 @@ class Polysome:
         
         #only track the polysomes with class > 0 as well as in each tomo
         #those with class 0 will have pairLabel == -1
-        len_branch = np.where(br > 0)[0]
+        len_branch = [key for key in br.keys() if br[key] == 1]
         if len(len_branch) > 0:
             print('Warning: found branches in these class: %s'%(str(len_branch)))
             print('==> make smaller classes')
@@ -551,7 +550,7 @@ class Polysome:
         plt.show()
         plt.close()
         
-    def link_ShortPoly(self):
+    def link_ShortPoly(self, fillupRiboN = 1):
         if isinstance(self.fillPoly, str):
             print('Fill up polysome gaps in all cluster classes')
             classList = np.unique(self.transList['pairClass'].values)
@@ -565,8 +564,7 @@ class Polysome:
         else:
             print('lacking file:%s, please run analyseTransFromPopulation!'%classSummaryList)   
             return
-        #rename the starfile and alltransform.star file 
-        
+        #rename the starfile and alltransform.star file       
         os.rename('%s/allTransforms.star'%self.io['classifyFold'],
                   '%s/allTransformsB4FillUp.star'%self.io['classifyFold'])
    
@@ -593,17 +591,18 @@ class Polysome:
                                    ['meanTransAngPhi','meanTransAngPsi','meanTransAngTheta']].values[0] #1D array
             cmbDiffMean = classSummary[classSummary['classNr'] == pairClass]['meanCNDist'].values[0]
             cmbDiffStd  = classSummary[classSummary['classNr'] == pairClass]['stdCNDist'].values[0] 
-            print('hey',cmbDiffMean,cmbDiffStd)
-            print('shift',avgShift)
-            print('ang', avgRot)
+            print('linking polys from class:%d'%pairClass)
+            print('average distance Max&Min:',cmbDiffMean,cmbDiffStd)
+            print('avg shift',avgShift)
+            print('avg ang', avgRot)
             self.transList = tom_addTailRibo(self.transList, pairClass, avgRot, 
                                              avgShift,cmbDiffMean,cmbDiffStd,
                                              self.io['posAngList'], 
                                              self.transForm['maxDist']/self.transForm['pixS'],                                         
                                              transListOutput,  particleOutput,
-                                             2)                
+                                             fillupRiboN)                
 
-        #retrack the polysomes
+        #retrack the polysomes 
         self.transList['pairLabel'] = -1
         self.transList['pairPosInPoly1'] = -1
         self.transList['pairPosInpoly2'] = -1

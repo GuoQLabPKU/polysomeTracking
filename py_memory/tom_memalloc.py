@@ -1,5 +1,5 @@
 import numpy as np
-def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None):
+def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None, Chunk = 3000):
     '''
     TOM_MEMALLOC returns the maxChunck for tom_pdist parallel computation 
 
@@ -35,7 +35,7 @@ def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None):
                 print('Warning: the given memory is larger than available memory %.2f'%mem_free)
             else:
                 mem_free = freeMem
-        maxChunk = np.uint64(mem_free*5000/worker_n) #if memory error, reduce this number(6500),uint64
+        maxChunk = np.uint64(mem_free*Chunk/worker_n) #if memory error, reduce this number(6500),uint64
         print('Free memory: %.2f mib'%mem_free)
         return maxChunk
     else: #using gpu
@@ -60,7 +60,7 @@ def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None):
                 
             maxChunk_dict = {}
             for gpu_id in freeMem_dict.keys():
-                maxChunk_dict[gpu_id] = np.uint64(freeMem_dict[gpu_id]*5000) #if memory error, reduce this number(6500),uint64
+                maxChunk_dict[gpu_id] = np.uint64(freeMem_dict[gpu_id]*Chunk) #if memory error, reduce this number(6500),uint64
             return maxChunk_dict
                 
                 

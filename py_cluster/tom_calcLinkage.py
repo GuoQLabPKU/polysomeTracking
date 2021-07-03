@@ -59,7 +59,7 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
             from py_cluster.tom_pdist_gpu import tom_pdist
             
        
-    distsVect = tom_pdist(transVect,  maxChunk ,worker_n, gpu_list,'euc', transVectInv)
+    distsVect = tom_pdist(transVect,  maxChunk ,worker_n, gpu_list,'euc', transVectInv )
     del transVect, transVectInv
     gc.collect()
     

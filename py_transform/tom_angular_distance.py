@@ -60,14 +60,15 @@ def qGetQInt(R):
         Ryx = R[1,0]; Ryy = R[1,1]; Ryz = R[1,2]
         Rzx = R[2,0]; Rzy = R[2,1]; Rzz = R[2,2]
         #calculate rotation angle
-        w = np.sqrt(np.trace(R) + 1)/2
+        w = np.sqrt(abs(np.trace(R) + 1))/2
         #check if w is real number. If it is, then zero it
         if np.iscomplex(w) == True:
             w = 0
         
-        x = np.sqrt( 1 + Rxx - Ryy - Rzz ) / 2
-        y = np.sqrt( 1 + Ryy - Rxx - Rzz ) / 2
-        z = np.sqrt( 1 + Rzz - Ryy - Rxx ) / 2
+        
+        x = np.sqrt( abs(1 + Rxx - Ryy - Rzz) ) / 2
+        y = np.sqrt( abs(1 + Ryy - Rxx - Rzz )) / 2
+        z = np.sqrt( abs(1 + Rzz - Ryy - Rxx) ) / 2
 
         idx  = np.argmax( [w,x,y,z] )
 

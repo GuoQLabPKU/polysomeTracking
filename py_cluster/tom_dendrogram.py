@@ -58,7 +58,7 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
     
     if len(groupIdx) == 0:
         groups = ''
-        return groups, cmap, groupIdx, ColorThreshold, ''  #if the threshold is too high/0,
+        return groups, cmap, groupIdx, ColorThreshold  #if the threshold is too high/0,
     
     groups = []                                                       #no classes can be checked
     dlabels = np.array(['c0']*nrObservation)   #it should be nrObservation = size(cluster_tree) + 1
@@ -108,8 +108,7 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
             h_label.append('cl:%d(%d)'%(single_dict['id'], len(single_dict['members'])))
         plt.legend(h_plot,labels = h_label,fontsize = 10,bbox_to_anchor=(1.15, 1),
                    title = 'class')  
-        plt.tight_layout()
-        
+        plt.tight_layout()   
     if dsp:        
         return groups, cmap, groupIdx, ColorThreshold,hline
     else:

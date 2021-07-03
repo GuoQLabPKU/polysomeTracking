@@ -31,15 +31,16 @@ def tom_pointrotate(r, phi, psi, the):
     tom_psi = psi*np.pi/180
     tom_theta = the*np.pi/180
     #calculate the roation matrix
-    rotarray = np.dot( np.dot(np.array([[np.cos(tom_psi), -np.sin(tom_psi), 0],
-                                   [np.sin(tom_psi), np.cos(tom_psi), 0],
-                                   [0, 0, 1]]),
-                          np.array([[1, 0, 0],
-                                   [0, np.cos(tom_theta),-np.sin(tom_theta)],
-                                   [0, np.sin(tom_theta), np.cos(tom_theta)]])),
-                          np.array([[np.cos(tom_phi), -np.sin(tom_phi), 0],
-                                   [np.sin(tom_phi), np.cos(tom_phi), 0],
-                                   [0, 0, 1]]))
-    
+    rotarray = np.linalg.multi_dot([
+            np.array([[np.cos(tom_psi), -np.sin(tom_psi), 0],
+                      [np.sin(tom_psi), np.cos(tom_psi), 0],
+                      [0, 0, 1]]),
+            np.array([[1, 0, 0],
+                      [0, np.cos(tom_theta),-np.sin(tom_theta)],
+                      [0, np.sin(tom_theta), np.cos(tom_theta)]]),
+           np.array([[np.cos(tom_phi), -np.sin(tom_phi), 0],
+                     [np.sin(tom_phi), np.cos(tom_phi), 0],
+                     [0, 0, 1]])])
+       
     r = np.dot(rotarray, r)
     return r

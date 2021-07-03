@@ -1,9 +1,12 @@
 import numpy as np
-import time
+import timeit as ti
 import os
 import pandas as pd
 import multiprocessing as mp
 import shutil
+import gc
+from alive_progress import alive_bar 
+
 from py_io.tom_starread import tom_starread
 from py_io.tom_extractData import tom_extractData
 from py_io.tom_starwrite import tom_starwrite
@@ -65,9 +68,9 @@ def tom_calcTransforms(posAng,  maxDist, tomoNames='', dmetric='exact', outputNa
     
     if worker_n == 1:
         for i in range(len_tomo):
-            time1 = time.time()
+            time1 = ti.default_timer()
             print("####################################################")
-            print("Calculating transformations for tomo %s.........."%allTomoNames[i])
+            print("Calculating transformations for tomo %s.........."%uTomoId[i])
             idx = list(np.where(st["label"]["tomoID"] == uTomoId[i])[0])
             idxAct = idx
             posAct = st["p1"]["positions"][idx,:]
@@ -77,7 +80,7 @@ def tom_calcTransforms(posAng,  maxDist, tomoNames='', dmetric='exact', outputNa
             #transListAct[:,0:2] = transListAct[:,0:2] + idxOffSet
             transList = np.concatenate((transList, transListAct),axis=0)
             #idxOffSet = idxOffSet + posAct.shape[0]
-            time2 = time.time()
+            time2 = ti.default_timer()
             time_gap = (time2-time1)
             print("Finish calculating transformations for tomo %d with %d pairs, %.5f seconds consumed."%(i,transListAct.shape[0],
                                                                                                          time_gap))
@@ -101,20 +104,22 @@ def tom_calcTransforms(posAng,  maxDist, tomoNames='', dmetric='exact', outputNa
             
         #using parallel
         print('Using parallel cpus to calculate transformations.')
-        t1 = time.time()
+        t1 = ti.default_timer()
         processes = dict()
         spl_ids = np.array_split(uTomoId,npr) #one cpu process one tomogram, save the consuming of creating processes
         #remove the empty spl_ids
         spl_ids = [i for i in spl_ids if len(i) > 0]
         
         for pr_id, spl_id in enumerate(spl_ids):
-            pr = mp.Process(target = pr_worker, args=(pr_id, st, spl_id, maxDist, dmetric, temp_dir))
+            pr = mp.Process(target = pr_worker, args=(pr_id, st, spl_id, maxDist, dmetric, temp_dir, verbose))
             pr.start()
             processes[pr_id] = pr
         for pr_id, pr in zip(processes.keys(), processes.values()):
             pr.join()
             if pr_id != pr.exitcode:
                 raise RuntimeError('the process %d ended usuccessfully [%d]'%(pr_id, pr.exitcode))
+                
+        gc.collect() #free the memory
         
         for single_id in uTomoId:
             transListAct = np.load('%s/tomo%d_trans.npy'%(temp_dir, single_id))
@@ -122,7 +127,7 @@ def tom_calcTransforms(posAng,  maxDist, tomoNames='', dmetric='exact', outputNa
         #delete the temp files       
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-        t2 = time.time()
+        t2 = ti.default_timer()
         print('Finish calulating transformations with %.5f seconds consumed.'%(t2-t1))
         
     if outputName == '':
@@ -131,15 +136,16 @@ def tom_calcTransforms(posAng,  maxDist, tomoNames='', dmetric='exact', outputNa
         startSt = genStarFile(transList, allTomoNames, st, maxDist, oriPartList, outputName)  
         return startSt 
 
-def pr_worker(pr_id, st, tomo_ids, maxDist, dmetric, temp_dir):
+def pr_worker(pr_id, st, tomo_ids, maxDist, dmetric, temp_dir,verbose):
     for i in tomo_ids:
         idx = list(np.where(st["label"]["tomoID"] == i)[0])
         idxAct = idx
         posAct = st["p1"]["positions"][idx,:]
         anglesAct = st["p1"]["angles"][idx,:]
-        transListAct = calcTransforms(posAct, anglesAct, maxDist, dmetric, i, idxAct, verbose=0)
+        transListAct = calcTransforms(posAct, anglesAct, maxDist, dmetric, i, idxAct, verbose)
         np.save('%s/tomo%d_trans.npy'%(temp_dir, i), transListAct)
-        
+        print("Finish calculating transformations for tomo %d with %d pairs."%(i,transListAct.shape[0] ))
+                                                                                                       
     os._exit(pr_id)
               
     
@@ -162,24 +168,24 @@ def calcTransforms(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose):
     if jobList.shape[0] == 0:
         raise RuntimeError("the distances between ribosomes are bigger than %d pixels! Set bigger maxDist and try again!"%pruneRad)  
     transListAct_inner = np.zeros([jobList.shape[0],29], dtype = np.float)#this will store the transformation results   
-    for i in range(jobList.shape[0]):             
-        icmb0,icmb1 = jobList[i,:]
-        pos1 = pos[icmb0,:]
-        pos2 = pos[icmb1,:]
-        ang1 = angles[icmb0,:]
-        ang2 = angles[icmb1,:]
-        posTr1, angTr1, lenPosTr1, lenAngTr1 = tom_calcPairTransForm(pos1,ang1,pos2,ang2,dmetric)
-        posTr2, angTr2, _, _ = tom_calcPairTransForm(pos2,ang2,pos1,ang1,dmetric)
-        transListAct_inner[i,:] = np.array([idxAct[icmb0], idxAct[icmb1],tomoID,
-                                             posTr1[0], posTr1[1], posTr1[2], angTr1[0], angTr1[1], angTr1[2],                                        
-                                             posTr2[0], posTr2[1], posTr2[2], angTr2[0], angTr2[1], angTr2[2],
-                                             lenPosTr1, lenAngTr1,
-                                             pos1[0],pos1[1],pos1[2],ang1[0],ang1[1],ang1[2],
-                                             pos2[0],pos2[1],pos2[2],ang2[0],ang2[1],ang2[2]])
-        if verbose == 1:
-            if i%100 == 0:
-                print("Calculating transfromation for %d pairs..........."%(i))
-                
+    with alive_bar(int(np.floor(jobList.shape[0]/100)+1), title="calculate trans pairs") as bar:
+        for i in range(jobList.shape[0]):             
+            icmb0,icmb1 = jobList[i,:]
+            pos1 = pos[icmb0,:]
+            pos2 = pos[icmb1,:]
+            ang1 = angles[icmb0,:]
+            ang2 = angles[icmb1,:]
+            posTr1, angTr1, lenPosTr1, lenAngTr1 = tom_calcPairTransForm(pos1,ang1,pos2,ang2,dmetric)
+            posTr2, angTr2, _, _ = tom_calcPairTransForm(pos2,ang2,pos1,ang1,dmetric)
+            transListAct_inner[i,:] = np.array([idxAct[icmb0], idxAct[icmb1],tomoID,
+                                                 posTr1[0], posTr1[1], posTr1[2], angTr1[0], angTr1[1], angTr1[2],                                        
+                                                 posTr2[0], posTr2[1], posTr2[2], angTr2[0], angTr2[1], angTr2[2],
+                                                 lenPosTr1, lenAngTr1,
+                                                 pos1[0],pos1[1],pos1[2],ang1[0],ang1[1],ang1[2],
+                                                 pos2[0],pos2[1],pos2[2],ang2[0],ang2[1],ang2[2]])
+            if (verbose == 1) & (i%100 == 0):
+                bar()
+                bar.text("Calculating transfromation for %d pairs..........."%(i))
     return transListAct_inner
       
     
@@ -248,15 +254,4 @@ def genStarFile(transList, allTomoNames, st, maxDist, oriPartList, outputName):
     startSt = tom_starread(outputName)
    
     return startSt 
-    
-
-
-if __name__ == '__main__':
-    startSt  = tom_calcTransforms('./simOrderRandomized.star', 100, tomoNames='', 
-                                      dmetric='exact', outputName='./allTransforms.star', verbose=1, worker_n = 1)
-
-    
-    
-    
-    
     

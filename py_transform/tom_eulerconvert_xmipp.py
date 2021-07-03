@@ -42,39 +42,44 @@ def tom_eulerconvert_xmipp(rot, tilt, psi, flag = 'xmipp2tom'):
         psi = -rot*np.pi/180
         rot = rot2
         #ZYZ plane
-        rotarray = np.dot( np.dot( np.array([[np.cos(rot), -np.sin(rot), 0],
-                                             [np.sin(rot),  np.cos(rot), 0],
-                                             [0, 0, 1]]),                     
-                                   np.array([[np.cos(tilt), 0, np.sin(tilt)],
-                                             [0, 1, 0],
-                                             [-np.sin(tilt), 0, np.cos(tilt)]]) ),
-                                   np.array([[np.cos(psi), -np.sin(psi), 0],
-                                             [np.sin(psi), np.cos(psi), 0],
-                                             [0, 0, 1]]) )
+        rotarray = np.linalg.multi_dot([
+                np.array([[np.cos(rot), -np.sin(rot), 0],
+                          [np.sin(rot),  np.cos(rot), 0],
+                          [0, 0, 1]]),                     
+                np.array([[np.cos(tilt), 0, np.sin(tilt)],
+                          [0, 1, 0],
+                          [-np.sin(tilt), 0, np.cos(tilt)]]),
+                np.array([[np.cos(psi), -np.sin(psi), 0],
+                          [np.sin(psi), np.cos(psi), 0],
+                          [0, 0, 1]])])
+        
+
         #extract euler angles
         euler_out = np.array([np.arctan2(rotarray[2,0], rotarray[2,1]),
                      np.arctan2(rotarray[0,2], -rotarray[1,2]),
                      np.arccos(rotarray[2,2])])
-        euler_out = np.array([round(i*180/np.pi,4) for i in euler_out])
+        euler_out = np.round(euler_out*180/np.pi,4)
         
         if abs(rotarray[2,2] - 1) < 10e-8:
-            euler_out = [round(np.arctan2(rotarray[1,0], rotarray[0,0])*180/np.pi,4),
-                         0, 0]
+            euler_out = np.array([round(np.arctan2(rotarray[1,0], rotarray[0,0])*180/np.pi,4),
+                         0, 0])
     else:
         tom_phi = rot*np.pi/180
         tom_psi = tilt*np.pi/180
         tom_theta = psi*np.pi/180
         #ZXZ plane
-        rotarray = np.dot( np.dot(np.array([[np.cos(tom_psi), -np.sin(tom_psi), 0],
-                                           [np.sin(tom_psi), np.cos(tom_psi), 0],
-                                           [0, 0, 1]]),
-                                  np.array([[1, 0, 0],
-                                           [0, np.cos(tom_theta),-np.sin(tom_theta)],
-                                           [0, np.sin(tom_theta), np.cos(tom_theta)]])),
-                                  np.array([[np.cos(tom_phi), -np.sin(tom_phi), 0],
-                                           [np.sin(tom_phi), np.cos(tom_phi), 0],
-                                           [0, 0, 1]]))
-        
+        rotarray = np.linalg.multi_dot([                
+                np.array([[np.cos(tom_psi), -np.sin(tom_psi), 0],
+                          [np.sin(tom_psi), np.cos(tom_psi), 0],
+                          [0, 0, 1]]),
+                np.array([[1, 0, 0],
+                          [0, np.cos(tom_theta),-np.sin(tom_theta)],
+                          [0, np.sin(tom_theta), np.cos(tom_theta)]]),
+    
+                np.array([[np.cos(tom_phi), -np.sin(tom_phi), 0],
+                          [np.sin(tom_phi), np.cos(tom_phi), 0],
+                          [0, 0, 1]])])
+    
         if abs(rotarray[2,2]-1) < 10e-8:
             euler_out = np.array([0, 0, round(np.arctan2(rotarray[0,1], rotarray[0,0])*180/np.pi,4)])
         else:

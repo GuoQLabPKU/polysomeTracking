@@ -5,7 +5,7 @@ from py_transform.tom_angular_distance import tom_angular_distance
 from py_transform.tom_average_rotations import tom_average_rotations
 
 
-def analysePopulation(pairList): #the input shoule be a ptr
+def analysePopulation(pairList, maxDistInpix, cmb_metric = 'scale2Ang'): #the input shoule be a ptr
     
     classNr = pairList['pairClass'].values[0]
     
@@ -13,14 +13,30 @@ def analysePopulation(pairList): #the input shoule be a ptr
     stat['classNr'] = classNr
     stat['num'] = pairList.shape[0] #number of the trans of one class
     
-    vectStat = calcVectStat(pairList)
-    angStat = calcAngStat(pairList)
-    
+    vectStat, distsVect = calcVectStat(pairList)
+    angStat, distsAng = calcAngStat(pairList)
+    #merge the distance of vect/angle
+    if cmb_metric == 'scale2Ang':
+        distsVect = distsVect/(2*maxDistInpix)*180
+        distsCN = (distsAng+distsVect)/2
+    elif cmb_metric == 'scale2AngFudge':
+        distsVect = distsVect/(2*maxDistInpix)*180
+        distsCN = (distsAng+(distsVect*2))/2
+    #calculate the mean distsCN & std 
+    meanDistsCN = np.max(distsCN)
+    stdDistsCN  = np.min(distsCN)
+    print('class: %d'%classNr)
+    print('vec distance between all trans and avg trans',distsVect)
+    print('ang distance between all trans and avg trans',distsAng)
     
     polyStat = calcPolyStat(pairList)
         
     stat['stdTransVect'] = vectStat['stdTransVect']
     stat['stdTransAng'] = angStat['stdTransAng']
+    stat['meanDiffVect'] = vectStat['meanDiffVect']
+    stat['meanAngDist'] = angStat['meanAngDist']
+    stat['meanCNDist'] = meanDistsCN
+    stat['stdCNDist'] = stdDistsCN
     stat['numPolybg5'] = polyStat['numPolybg5']
     stat['numPolybg3'] = polyStat['numPolybg3']
     stat['numPolyMax'] = polyStat['numPolyMax']
@@ -48,13 +64,15 @@ def calcAngStat(pairList):
     for i in range(angs.shape[0]):
         lendiffAng[i] = tom_angular_distance(angs[i,:], meanAng)
     stdTransAng = np.std(lendiffAng)
+    meandiffAng = np.mean(lendiffAng)
     stat = { }
     stat['meanTransAngPhi'] = meanAng[0]
     stat['meanTransAngPsi'] = meanAng[1]
     stat['meanTransAngTheta'] = meanAng[2]
+    stat['meanAngDist'] = meandiffAng
     stat['stdTransAng'] = stdTransAng
     
-    return stat
+    return stat, lendiffAng
    
 def calcVectStat(pairList):
     vects = np.array([pairList['pairTransVectX'].values,
@@ -71,13 +89,15 @@ def calcVectStat(pairList):
     for i in range(diffV.shape[0]):
         lendiffV[i] = np.linalg.norm(diffV[i,:])
     stdTransVect = np.std(lendiffV)
+    meandiffV = np.mean(lendiffV)
     stat = { }
     stat['meanTransVectX'] = meanV[0]
     stat['meanTransVectY'] = meanV[1]
     stat['meanTransVectZ'] = meanV[2]
     stat['stdTransVect'] = stdTransVect
+    stat['meanDiffVect'] = meandiffV
     
-    return stat
+    return stat,lendiffV
 
 def calcPolyStat(pairList):
     allTomoID = pairList['pairTomoID'].values

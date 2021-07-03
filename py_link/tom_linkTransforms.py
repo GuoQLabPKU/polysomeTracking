@@ -145,10 +145,10 @@ def uniquePathAdd(allPath, newPath): #allPath == [], should be a ptr
         #PathUnion = PathUnion[PathUnion[:,2].argsort()]
         #PathUnion = PathUnion.astype(np.uint64)
         newPathUnion = newPathUnion[newPathUnion[:,2].argsort()]     
-        for idx in ind:
-            allPath[idx] = newPathUnion  #make the allPath has duplicate elements?
-        #allPath[ind[0]] = newPathUnion
-        #allPath_new = [allPath[i] for i in range(len(allPath)) if i not in ind[1:]] #Wenhong's idea       
+#        for idx in ind:
+#            allPath[idx] = newPathUnion  #make the allPath has duplicate elements?
+        allPath[ind[0]] = newPathUnion
+        allPath_new = [allPath[i] for i in range(len(allPath)) if i not in ind[1:]] #Wenhong's idea       
         allPath_new = [allPath[i] for i, j in enumerate(memAinN) if j==0] #discard the path which are the subset of pathnew
         return allPath_new
     

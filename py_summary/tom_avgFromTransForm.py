@@ -45,7 +45,7 @@ def tom_avgFromTransForm(transList, maxRes, pixS, classFilt = -1, outputRoot = '
 def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS):
     #list the dir for the whole classes
     wk_upup = os.path.split(os.path.split( os.path.split(wk)[0]) [0])[0]
-    d = [ i+ '/particleCenter/allPart.star' for i in os.listdir(wk_upup)]     
+    d = [ i+ '/particleCenter/allParticles.star' for i in os.listdir(wk_upup)]     
     tmp = os.path.split(os.path.split(os.path.split(wk)[0])[0])[1]
     
     if isinstance(classFilt, int) | isinstance(classFilt, float):
@@ -68,7 +68,7 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS):
             if 'maxNumPart' in classFilt.keys():
                 call = 'cat %s  | awk \"NF>5{print $0}\" | wc -l'%inputName
             else:
-                inputNameTR = inputName.replace('/particleCenter/allPart.star', '/transList.star')
+                inputNameTR = inputName.replace('/particleCenter/allParticles.star', '/transList.star')
                 call = 'cat %s  | awk \"NF>5{print $0}\" | wc -l '%inputNameTR
             
             p = subprocess.Popen(call, shell = True, stdout = subprocess.PIPE)
