@@ -109,9 +109,20 @@ def teardown():
     print('Remove simulation data.')
     if os.path.exists('sim.star'):
         os.remove('sim.star')
+    if os.path.exists('sim_drop.star'):
+        os.remove('sim_drop.star')
+    if os.path.exists('sim_dropB4FillUp.star'):
+        os.remove('sim_dropB4FillUp.star')
     if os.path.exists('simOrderRandomized.star'):
         os.remove('simOrderRandomized.star')
     if os.path.exists('cluster-simOrderRandomized/run0/allTransforms.star'):
         os.remove('cluster-simOrderRandomized/run0/allTransforms.star')
     if os.path.exists('cluster-simOrderRandomized/run0/scores/tree.npy'):
         os.remove('cluster-simOrderRandomized/run0/scores/tree.npy')
+        
+    if os.path.exists('cluster-sim_drop/run0/allTransforms.star'):
+        os.remove('cluster-sim_drop/run0/allTransforms.star')
+    if os.path.exists('cluster-sim_drop/run0/allTransformsB4FillUp.star'):
+        os.remove('cluster-sim_drop/run0/allTransformsB4FillUp.star')    
+    if os.path.exists('cluster-sim_drop/run0/scores/tree.npy'):
+        os.remove('cluster-sim_drop/run0/scores/tree.npy') 
