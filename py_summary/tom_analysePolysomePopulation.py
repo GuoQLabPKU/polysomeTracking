@@ -3,9 +3,10 @@ import pandas as pd
 from py_io.tom_starwrite import tom_starwrite
 from py_transform.tom_angular_distance import tom_angular_distance
 from py_transform.tom_average_rotations import tom_average_rotations
+import matplotlib.pyplot as plt
 
 
-def analysePopulation(pairList, maxDistInpix, cmb_metric = 'scale2Ang'): #the input shoule be a ptr
+def analysePopulation(pairList, maxDistInpix,visFolder = '', cmb_metric = 'scale2Ang'): #the input shoule be a ptr
     
     classNr = pairList['pairClass'].values[0]
     
@@ -23,12 +24,23 @@ def analysePopulation(pairList, maxDistInpix, cmb_metric = 'scale2Ang'): #the in
         distsVect = distsVect/(2*maxDistInpix)*180
         distsCN = (distsAng+(distsVect*2))/2
     #calculate the mean distsCN & std 
-    meanDistsCN = np.max(distsCN)
-    stdDistsCN  = np.min(distsCN)
-    print('class: %d'%classNr)
-    print('vec distance between all trans and avg trans',distsVect)
-    print('ang distance between all trans and avg trans',distsAng)
-    
+    meanDistsCN = np.mean(distsCN)
+    stdDistsCN  = np.std(distsCN)
+    #plot the results 
+    if len(visFolder) > 0:
+        plt.hist(distsVect,alpha = 0.5, label = 'vect distance')
+        plt.hist(distsAng,alpha = 0.5, label = 'angle distance')
+        plt.hist(distsCN, alpha = 0.5, label = 'combined distance')
+        plt.legend(fontsize = 15)
+        plt.xlabel('Distance between each transformation\nand Tavg',fontsize = 20)
+        plt.ylabel('# of transformation',fontsize = 20)
+        plt.title('Class %d\nmean:%.2f, std:%.2f of combined distance'%(classNr, meanDistsCN,stdDistsCN),fontsize = 10)
+        plt.tight_layout()
+        plt.savefig(visFolder, dpi = 300)
+        plt.show()
+        plt.close()
+        
+                     
     polyStat = calcPolyStat(pairList)
         
     stat['stdTransVect'] = vectStat['stdTransVect']
@@ -261,27 +273,3 @@ def genOutput(stat, minTransMembers):
         
     if stat.shape[0] > 20:
         print('only classes with more than %d transforms showed!'%minTransMembers)
-        
-    
-    
-
-        
-    
-     
-    
-    
-    
-                                                                   
-                                                                                 
-                                                                                 
-                                                                                 
-                
-      
-        
-        
-            
-        
-        
-    
-    
-    
