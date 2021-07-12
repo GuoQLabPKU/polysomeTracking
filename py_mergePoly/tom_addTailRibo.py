@@ -74,10 +74,10 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
     # colllect the information of the tail ribo of each polysome
     tailRiboInfo  = np.array([]).reshape(-1, 7)
     headRiboInfo = np.array([]).reshape(-1, 7)
-    tomoStarList = { }
-    tomoIdList = { }
-    headRiboIdxList = { }
-    tailRiboIdxList = { }
+    tomoStarList = { } #store the tomoName for each polysome
+    tomoIdList = { } #store the tomoId for each polysome
+    headRiboIdxList = { } #store the index of head polysome for each polysome
+    tailRiboIdxList = { } #store the index of tail polysome for each polysome
     
 
     for eachId in polyU:
@@ -85,8 +85,8 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
             continue
         polySingle = transListU.loc[transListU['pairLabel'] == eachId] #pairPosInPoly1
         #in future, if eachId == **.1, then consider pairPosInPoly2 of eachId == **
-        polySingle = polySingle.sort_values(['pairPosInPoly1'],ascending = False)
-        if polySingle['pairIDX2'].values[0] not in tailRiboIdxList.values():
+        polySingle = polySingle.sort_values(['pairPosInPoly1'],ascending = False) #find the head/tail of this polysome
+        if polySingle['pairIDX2'].values[0] not in tailRiboIdxList.values():#one ribosome can belong to different polysomes
             tailRiboInfo = np.concatenate((tailRiboInfo,
                                            np.array([[eachId,
                                                      polySingle['pairCoordinateX2'].values[0],
@@ -115,19 +115,22 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
     #add ribosome(s) to the end of each polysome
     fillUpRiboInfos, fillUpMiddleRiboInfos = tom_extendPoly(tailRiboInfo, avgRot, avgShift, particleStar, pruneRad, 
                                    NumAddRibo, xyzborder)
+    #fillUpRiboInfos store the information of filled up ribosomes which directly link another polysome
+    #the structure of fillUpRiboInfos are the same as headRiboInfo
+    #fillUpMiddleRiboInfos store the information of filled up ribsomes when we added more than one ribosome at tail of one polysome
     if fillUpRiboInfos.shape[0] == 0:
         print('Warning: can not extend polysomes! This may because hypo ribos are \
               already in the tomo but of different class OR out of the tomo border.')
         return transList
-    #calculate angle /vector distance with angshift/avgrot
+    #calculate angle /vector distance with avgshift/avgrot
     transListAct = genTransList(fillUpRiboInfos, headRiboInfo, tomoIdList, headRiboIdxList)
     if transListAct.shape[0] == 0:
         print('Can not link short polys! This may polys are in different tomos.')
         return transList
     
     transVect = transListAct[:,3:6]
-    transVect = np.append(transVect, avgShift.reshape(-1,3), axis  = 0)
-    
+    #append avgShift to vect trans array for tom_pdist
+    transVect = np.append(transVect, avgShift.reshape(-1,3), axis  = 0)   
     transAngVect = transListAct[:,6:9] 
     transAngVect = np.append(transAngVect,avgRot.reshape(-1,3), axis = 0)
     #calculate distance between hypo trans and average trans
@@ -249,7 +252,14 @@ def getCombinedDist(transSize, transVect, transAngVect, worker_n, gpu_list, cmb_
             from py_cluster.tom_pdist_gpu import tom_pdist
         tmpDir = 'tmpPdistgpu' 
         jobListdict = genJobListGpu(transSize, tmpDir, maxChunk)
-        
+    #the jobList is quite important for tom_pdist calculation. For example, we add one ribosome at end of one polysome(P1) 
+    #then link another polysome(P2),then transvect should have two rows:one is for P1->P2, another is for avgShift.Then we can 
+    #make jobList like [0,-1]. 0 reprensts the first row of transVect(p1->p2), -1 represents the last row of transVect(avgShift).
+    #Then we can make tom_pdist calculate the distance between row 0 and row -1.Therefore, the strucure of jobList should look 
+    #like [0 -1;1 -1;2 -1;3 -1;4 -1.....]. Each non -1 element in jobList will be compared with the -1 element in jobList. Therefore,
+    #each hypothetical trans will be compared with avgShif/avgRot
+    
+    
     #calculate distance of vector & angle 
     distsVect = tom_pdist(transVect,  maxChunk, worker_n, gpu_list, 'euc', 
                           '', 0, tmpDir, jobListdict, transSize, 0)
@@ -272,6 +282,8 @@ def genTransList(fillUpRiboInfos, headRiboInfo, tomoIdList, headRiboIdxList):
     for i in range(fillUpRiboInfos.shape[0]):
         for j in range(headRiboInfo.shape[0]):
             if (abs(fillUpRiboInfos[i,0] - headRiboInfo[j,0]) < 1)  |  (tomoIdList[fillUpRiboInfos[i,0]] !=  tomoIdList[headRiboInfo[j,0]]):
+                #the first condition is whether two ribosomes are from the same polysome. the second condition is whether 
+                #two ribsome are from the same tomogram
                 continue
             pos1 = fillUpRiboInfos[i,1:4]
             ang1 = fillUpRiboInfos[i,4:]
