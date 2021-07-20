@@ -3,10 +3,11 @@ import pandas as pd
 from py_io.tom_starwrite import tom_starwrite
 from py_transform.tom_angular_distance import tom_angular_distance
 from py_transform.tom_average_rotations import tom_average_rotations
+from py_stats.tom_fitDist import tom_fitDist
 import matplotlib.pyplot as plt
 
 
-def analysePopulation(pairList, maxDistInpix,visFolder = '', cmb_metric = 'scale2Ang'): #the input shoule be a ptr
+def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scale2Ang'): #the input shoule be a ptr
     
     classNr = pairList['pairClass'].values[0]
     
@@ -23,44 +24,32 @@ def analysePopulation(pairList, maxDistInpix,visFolder = '', cmb_metric = 'scale
     elif cmb_metric == 'scale2AngFudge':
         distsVect = distsVect/(2*maxDistInpix)*180
         distsCN = (distsAng+(distsVect*2))/2
-    #calculate the mean distsCN & std 
-    meanDistsCN = np.mean(distsCN)
-    stdDistsCN  = np.std(distsCN)
-    #plot the results 
-    if len(visFolder) > 0:
-        plt.hist(distsVect,alpha = 0.5, label = 'vect distance')
-        plt.hist(distsAng,alpha = 0.5, label = 'angle distance')
-        plt.hist(distsCN, alpha = 0.5, label = 'combined distance')
-        plt.legend(fontsize = 15)
-        plt.xlabel('Distance between each transformation\nand Tavg',fontsize = 20)
-        plt.ylabel('# of transformation',fontsize = 20)
-        plt.title('Class %d\nmean:%.2f, std:%.2f of combined distance'%(classNr, meanDistsCN,stdDistsCN),fontsize = 10)
-        plt.tight_layout()
-        plt.savefig(visFolder, dpi = 300)
-        plt.show()
-        plt.close()
+    #plot the results and fit the distancecombined to different distribution model  
+    visFit(distsVect, distsAng, distsCN, visFolder, classNr, distModel = ['lognorm']) 
         
-                     
+    #analysis the state of each polysome  
     polyStat = calcPolyStat(pairList)
         
     stat['stdTransVect'] = vectStat['stdTransVect']
     stat['stdTransAng'] = angStat['stdTransAng']
     stat['meanDiffVect'] = vectStat['meanDiffVect']
     stat['meanAngDist'] = angStat['meanAngDist']
-    stat['meanCNDist'] = meanDistsCN
-    stat['stdCNDist'] = stdDistsCN
+    stat['meanCNDist'] = np.mean(distsCN)
+    stat['stdCNDist'] = np.std(distsCN)
+    stat['minCNDist'] = np.min(distsCN)
+    stat['maxCNDist'] = np.max(distsCN)
     stat['numPolybg5'] = polyStat['numPolybg5']
     stat['numPolybg3'] = polyStat['numPolybg3']
     stat['numPolyMax'] = polyStat['numPolyMax']
     stat['numBranch'] = polyStat['numBranch']
     stat['tomoNrPolyMax'] = polyStat['tomoNrPolyMax']
     stat['polyIDMax'] = polyStat['polyIDMax']
-    stat['meanTransVectX'] =vectStat['meanTransVectX']
-    stat['meanTransVectY'] =vectStat['meanTransVectY']
-    stat['meanTransVectZ'] =vectStat['meanTransVectZ']
-    stat['meanTransAngPhi'] =angStat['meanTransAngPhi']
-    stat['meanTransAngPsi'] =angStat['meanTransAngPsi']
-    stat['meanTransAngTheta'] =angStat['meanTransAngTheta']
+    stat['meanTransVectX'] = vectStat['meanTransVectX']
+    stat['meanTransVectY'] = vectStat['meanTransVectY']
+    stat['meanTransVectZ'] = vectStat['meanTransVectZ']
+    stat['meanTransAngPhi'] = angStat['meanTransAngPhi']
+    stat['meanTransAngPsi'] = angStat['meanTransAngPsi']
+    stat['meanTransAngTheta'] = angStat['meanTransAngTheta']
     
     return stat
     
@@ -96,10 +85,8 @@ def calcVectStat(pairList):
     else:
         meanV = vects    
     diffV = vects - meanV
-    
-    lendiffV = np.zeros(diffV.shape[0])
-    for i in range(diffV.shape[0]):
-        lendiffV[i] = np.linalg.norm(diffV[i,:])
+    lendiffV = np.linalg.norm(diffV,axis = 1)
+    assert len(lendiffV) == diffV.shape[0]
     stdTransVect = np.std(lendiffV)
     meandiffV = np.mean(lendiffV)
     stat = { }
@@ -273,3 +260,24 @@ def genOutput(stat, minTransMembers):
         
     if stat.shape[0] > 20:
         print('only classes with more than %d transforms showed!'%minTransMembers)
+        
+        
+def  visFit(distsVect, distsAng, distsCN, saveDir, clusterClass, distModel):    
+    #plot the distance distribution
+    if len(saveDir) > 0:
+        plt.hist(distsVect,alpha = 0.5, label = 'vect distance')
+        plt.hist(distsAng,alpha = 0.5, label = 'angle distance')
+        plt.hist(distsCN, alpha = 0.5, label = 'combined distance')
+        plt.legend(fontsize = 15)
+        plt.xlabel('Distance between each transformation\nand Tavg',fontsize = 15)
+        plt.ylabel('# of transformation',fontsize = 15)
+        plt.title('Class %d\nmean:%.2f, std:%.2f of combined distance'%(clusterClass, np.mean(distsCN),
+                                                                        np.std(distsCN)),fontsize = 10)
+        plt.tight_layout()
+        plt.savefig('%s/distVsTavg/c%d.png'%(saveDir,clusterClass), dpi = 300)
+        plt.show()
+        plt.close()
+        
+    #fit to different distribution models 
+    if len(distsCN) > 50:# I amo not sure if this is a good metric to cutoff, small sample will make fit meanningfulless
+        tom_fitDist(distsCN, distModel, clusterClass,'%s/fitDist'%(saveDir))

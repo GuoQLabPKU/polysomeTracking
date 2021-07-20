@@ -47,6 +47,8 @@ def tom_extendPoly(tailRiboInfo, avgRot, avgShift, particleStar , pruneRad,
         
         fillUpmiddleRibo = np.array([]).reshape(-1, 7)
         cycles = NumAddRibo - 1
+        
+        #add more than one ribosomes at end of each polysome
         while cycles > 0:
             
             ang1 = ang2
@@ -64,12 +66,13 @@ def tom_extendPoly(tailRiboInfo, avgRot, avgShift, particleStar , pruneRad,
             if checkRibo(particleStar,pos2,pruneRad) == 1:
                 continue
             cycles = cycles - 1
-        #put new ribosomes into data        
+        #put new ribosomes into data 
+        fillUpMiddleRibos = np.concatenate((fillUpMiddleRibos, fillUpmiddleRibo), axis = 0)
         fillUpRibos = np.concatenate((fillUpRibos, 
                                 np.array([[tailRiboInfo[i,0], pos2[0], pos2[1],pos2[2],
                                  ang2[0],ang2[1], ang2[2]]])
                                   ), axis = 0)
-        fillUpMiddleRibos = np.concatenate((fillUpMiddleRibos, fillUpmiddleRibo), axis = 0)
+        
     return fillUpRibos, fillUpMiddleRibos #returned 2-2D arrays
                  
 
@@ -80,8 +83,9 @@ def checkRibo(particleStar, riboCor, pruneRad):
         particleStar = particleStar
     #I think linear numpy is faster than for loop   
     posAll = particleStar.loc[:,['rlnCoordinateX', 'rlnCoordinateY', 'rlnCoordinateZ']].values 
-    difflen = np.linalg.norm(posAll - riboCor)
-    if np.sum(difflen <= pruneRad) > 0:
+    difflen = np.linalg.norm(posAll - riboCor, axis = 1)
+    assert len(difflen) == posAll.shape[0]
+    if np.sum(difflen <= pruneRad/2) > 0:
         return 1
     else:
         return 0

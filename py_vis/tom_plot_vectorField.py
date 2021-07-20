@@ -43,15 +43,14 @@ def plot_vectField(posAng, repVect, scale, col, cmbInd, classNr, polyNr, onlySel
             for i in range(len(uTomoID)):
                 tmpInd = np.where(allTomoID == uTomoID[i])[0]
                 print('tomoID: %d  tomoName: %s'%(uTomoID[i], allTomoLabel[tmpInd[0]]))
-        if (len(uTomoID) > 5) & (tomoID == -1) & (len(outputFolder) ==0):  ##TomoID  = -1 ==> All tomo
+        if (len(uTomoID) > 5) & (tomoID[0] == -1) & (len(outputFolder) ==0):  ##TomoID  = -1 ==> All tomo
             print('warning found %d tomograms reducing to 5'%len(uTomoID))
             print('use tomoID parameter to select specific tomograms')
             uTomoID = uTomoID[:5]
             
-        plotClassZero =   len(np.where(classNr == 0)[0]) > 0
+        plotClassZero = len(np.where(classNr == 0)[0]) > 0
         print('rendering vector fields')
         
- 
         for i in range(len(uTomoID)):
             tmpInd = np.where(allTomoID == uTomoID[i])[0]
             tomoName = allTomoLabel[tmpInd[0]]
@@ -72,7 +71,7 @@ def doRender(st, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleLi
         if i >= 0:
             ax = plt.figure().gca(projection ='3d')
             
-    idx = filterList(st,classNr, polyNr, uTomoID[i])
+    idx = filterList(st, classNr, polyNr, uTomoID[i])
     if len(idx) == 0:
         plt.close()
         return 
@@ -98,10 +97,11 @@ def doRender(st, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleLi
         plt.title(fTitle)
         plt.savefig('%s/%s.png'%(outputFolder,fnameTmp), dpi = 300)
         plt.show()
-        plt.close()
+        #plt.close()
     else:
+        plt.title(fTitle)
         plt.show()
-        plt.close()
+        #plt.close()
 
 def filterList(st, classNr, polyNr, tomoID):
     if 'pairClass' in st['label'].keys():
@@ -171,7 +171,7 @@ def plotPairs(st, idx, plotClassZero, ax):
         labelPosInPoly1 = np.repeat('-1',len(tmpIdx)) 
         labelPosInPoly2 = np.repeat('-1',len(tmpIdx))
         for ii in range(len(tmpIdx)):
-            labelPoly[ii] = 'c%d,p%d'%(uClasses[i],  allLabel[tmpIdx[ii]])
+            labelPoly[ii] = 'c%d,p%d'%(uClasses[i],  int(allLabel[tmpIdx[ii]]))
             labelPosInPoly1[ii] = '%d/%d'%(posInPoly1[ii], classInPoly1[ii])
             labelPosInPoly2[ii] = '%d/%d'%(posInPoly2[ii], classInPoly2[ii])
         
@@ -183,8 +183,29 @@ def plotPairs(st, idx, plotClassZero, ax):
         for x,y,z,lbl in zip(p2Pos[:,0],p2Pos[:,1],p2Pos[:,2], 
                 labelPosInPoly2):
             ax.text(x,y,z, lbl, size = 10)
-    
+        
+        
+        #plot for fillUp ribos
+        allColClass = allCol[tmpIdx,:]
+        fillIdx = np.where((allColClass == np.array([0,0,1])).all(1))[0]
+        if len(fillIdx) == 0:
+            del labelPoly, labelPosInPoly1, labelPosInPoly2
+            continue
+        conPosfill = conPos[fillIdx,:]
+        connVectfill = connVect[fillIdx,:]
+        ax.quiver(conPosfill[:,0], conPosfill[:,1], conPosfill[:,2],
+                  connVectfill[:,0], connVectfill[:,1], connVectfill[:,2], linewidths = 8,
+                  color = np.array([1.0,0.0,0.0]))
+        #change the color of label 
+        for sIdx in fillIdx:
+            ax.text(midPos[sIdx,0],midPos[sIdx,1],midPos[sIdx,2],labelPoly[sIdx], size = 15,color = 'red')
+           
+
         del labelPoly, labelPosInPoly1, labelPosInPoly2
+        
+        
+        
+        
         
 def plotRepVects(pos,angles, repVect, scale, col,ax):
     for i in range(repVect.shape[0]):

@@ -2,24 +2,26 @@ import numpy as np
 import pandas as pd
 import os
 import shutil
+from ast import literal_eval
+
 
 from py_io.tom_starread import tom_starread
 from py_io.tom_starwrite import tom_starwrite
 from py_mergePoly.tom_extendPoly import tom_extendPoly
 from py_transform.tom_calcPairTransForm import tom_calcPairTransForm
 from py_memory.tom_memalloc import tom_memalloc
-from py_cluster.tom_pdist_gpu2 import fileSplit
-from py_cluster.tom_pdist_gpu2 import genjobsList_oneGPU
+from py_cluster.tom_pdist_gpu2 import fileSplit,genjobsList_oneGPU
 from py_cluster.tom_calc_packages import tom_calc_packages
 from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
+from py_stats.tom_calcPvalues import tom_calcPvalues
 
 def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
-                    cmbDiffMean, cmbDiffStd,
+                    cmbDiffLimit,cmbMeanStd, param, 
                     oriPartList, pruneRad, 
                     tranListOutput = '',  particleOutput = '',                 
-                    NumAddRibo = 1, addRiboInfoPrint=1, worker_n = 1, gpu_list = None, 
-                    xyzborder = None, cmb_metric = 'scale2Ang',
-                    method = 'mean+2std'):
+                    NumAddRibo = 1, verbose=1, method = 'extreme',
+                    worker_n = 1, gpu_list = None, 
+                    xyzborder = None, cmb_metric = 'scale2Ang'):
     '''
     TOM_ADDTAILRIBO put one/two/.. ribosomes at the end of each polysome to try 
     to link shorter polysome.
@@ -36,9 +38,9 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
                          np.array([phi, psi, theta])
         avgShift         the avg shifts from ribo1 ==> ribo2 
                          np.array([x,y,z])
-        cmbDiffMean      the mean of forward  distance 
+        cmbDiffLimit     the (min,max) of forward  distance 
                                        
-        cmbDiffStd       the  std of forward  distance 
+        cmbDiffStd       the (mean,std) of forward  distance 
                        
         oriPartList      starfile of particles for update (add fillup ribos) 
         pruneRad         check if two ribsomes are close to each other(also for
@@ -46,15 +48,19 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
         
         transListOutput  ('', Opt)the pathway to store the transList
         particleOutput   ('', Opt)the pathway to store the particle.star
-        worker_n/gpu_list    computation for distance(vect/angle) calculation
         NumAddRibo       (1,Opt)# of ribosomes to add at the end of each polysome
+        verbose          (1,Opt) if print the information of filled up ribosomes
+        method            ('extreme',opt)the method to check if filled up ribos are in the same 
+                          cluster class,now only 'extreme' & 'lognorm' are offered
+                          extreme:[min, max]//lognorm:pvalue based on lognorm distribution
+        worker_n/gpu_list    computation for distance(vect/angle) calculation
+        
         xyzborder        the xmax/ymax/zmax of the tomo
                          np.array([xmax,ymax,zmax])
-        method            (opt)the method to check if filled up ribos are in the same 
-                          cluster class,now only 'mean+1std' & 'mean+2std' are offered
-       
-        
-    
+        cmb_metric        ('scale2Ang', Opt)the methods to combine vect&angle distance. 
+                          Now only 'scale2Ang' & 'scale2AngFudge' arer offered
+                           
+     
     OUTPUT
         transList        (dataframe) transList with fillup ribosomes transList
     
@@ -71,7 +77,7 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
     if len(polyU) == 1:
         print('Only one polysome, no need link short polys!')
         return transList
-    # colllect the information of the tail ribo of each polysome
+    # colllect the information of the tail& head ribosomes of each polysome
     tailRiboInfo  = np.array([]).reshape(-1, 7)
     headRiboInfo = np.array([]).reshape(-1, 7)
     tomoStarList = { } #store the tomoName for each polysome
@@ -83,7 +89,7 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
     for eachId in polyU:
         if eachId == -1:
             continue
-        polySingle = transListU.loc[transListU['pairLabel'] == eachId] #pairPosInPoly1
+        polySingle = transListU.loc[transListU['pairLabel'] == eachId] #pick one polysome out
         #in future, if eachId == **.1, then consider pairPosInPoly2 of eachId == **
         polySingle = polySingle.sort_values(['pairPosInPoly1'],ascending = False) #find the head/tail of this polysome
         if polySingle['pairIDX2'].values[0] not in tailRiboIdxList.values():#one ribosome can belong to different polysomes
@@ -115,66 +121,71 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
     #add ribosome(s) to the end of each polysome
     fillUpRiboInfos, fillUpMiddleRiboInfos = tom_extendPoly(tailRiboInfo, avgRot, avgShift, particleStar, pruneRad, 
                                    NumAddRibo, xyzborder)
-    #fillUpRiboInfos store the information of filled up ribosomes which directly link another polysome
+    #fillUpRiboInfos store the information of filled up ribosomes which link another polysome
     #the structure of fillUpRiboInfos are the same as headRiboInfo
-    #fillUpMiddleRiboInfos store the information of filled up ribsomes when we added more than one ribosome at tail of one polysome
+    #fillUpMiddleRiboInfos store the information of filled up ribsomes when we added more than one ribosome 
+    #at tail of one polysome
     if fillUpRiboInfos.shape[0] == 0:
         print('Warning: can not extend polysomes! This may because hypo ribos are \
-              already in the tomo but of different class OR out of the tomo border.')
+              already in the tomo  OR out of the tomo border.')
         return transList
-    #calculate angle /vector distance with avgshift/avgrot
+    #calculate angle /vector distance between hypothetical trans and  avgshift/avgrot
     transListAct = genTransList(fillUpRiboInfos, headRiboInfo, tomoIdList, headRiboIdxList)
     if transListAct.shape[0] == 0:
-        print('Can not link short polys! This may polys are in different tomos.')
+        print('Can not link short polys! This may to be linked polys are in different tomos.')
         return transList
     
     transVect = transListAct[:,3:6]
-    #append avgShift to vect trans array for tom_pdist
     transVect = np.append(transVect, avgShift.reshape(-1,3), axis  = 0)   
     transAngVect = transListAct[:,6:9] 
     transAngVect = np.append(transAngVect,avgRot.reshape(-1,3), axis = 0)
     #calculate distance between hypo trans and average trans
     distsCN = getCombinedDist(transListAct.shape[0], transVect, transAngVect, worker_n, gpu_list, cmb_metric, pruneRad)
     
-    if method == 'mean+2std':
-        index = np.argwhere(distsCN < (cmbDiffMean + 2*cmbDiffStd)).reshape(1,-1)[0]
-    elif method  == 'mean+_1std':
-        index = np.argwhere(distsCN < (cmbDiffMean + 1*cmbDiffStd)).reshape(1,-1)[0]
-#    index1 = np.argwhere(distsCN <= (cmbDiffMean)).reshape(1,-1)[0]
-#    index2 = np.argwhere(distsCN >= cmbDiffStd).reshape(1,-1)[0]
-#    index  = np.intersect1d(index1, index2)
+    if method == 'extreme':
+        index1 = np.argwhere(distsCN <= cmbDiffLimit[1]).reshape(1,-1)[0]
+        index2 = np.argwhere(distsCN >= cmbDiffLimit[0]).reshape(1,-1)[0]
+        index  = np.intersect1d(index1, index2)
+                
+    else:
+        params = literal_eval(param)
+        distCNNor = (distsCN - cmbMeanStd[0])/cmbMeanStd[1]
+        pvalues = tom_calcPvalues( distCNNor 
+                , 'lognorm',params)
+        index = np.argwhere(pvalues > 0.05).reshape(1,-1)[0]
+        
     transList_filter = transListAct[index]
     if transList_filter.shape[0] == 0:
         print('Warning: can not add fillup ribos at tail of polysomes')
         return transList
     #debug for ribosome info output
-    if addRiboInfoPrint:
-        debug_output(transList_filter, distsCN, index)        
+    if verbose:
+        debug_output(transList_filter, distsCN[index])        
     ##################################################
     ##################################################
     ##################################################
     #generate particle infos for fill up ribos
     #update the transList and starfile
-    tomoFillUpRibo = []
+    tomoOfFillUpRibo = []
     lastId = -1
     for eachId in transList_filter[:,0]:
         if eachId == lastId:
             continue
         lastId = eachId
-        tomoFillUpRibo.append(tomoStarList[eachId]) #find tha tomoname of each fill up ribos according to polyID
+        tomoOfFillUpRibo.append(tomoStarList[eachId]) #find tha tomoname of each fill up ribos according to polyID
             
-    appendRiboStruct,idxFillUpRiboDict = genParticleFile(particleStar.columns, 
+    appendRiboStruct,idxOfFillUpRiboDict = genParticleFile(particleStar.columns, 
                                                      transList_filter, 
-                                                     particleStar.iloc[0,:], tomoFillUpRibo, 
+                                                     particleStar.iloc[0,:], tomoOfFillUpRibo, 
                                                      particleStar.shape[0])
     particleStar = pd.concat([particleStar, appendRiboStruct], axis = 0)
     particleStar.reset_index(drop = True, inplace = True)
     
     #generate transList and append into transList
-    idxFillUpRibo = np.array([idxFillUpRiboDict[i] for i in transList_filter[:,0]])
-    tomoFillUpRibo = [tomoStarList[i] for i in transList_filter[:,0]]
-    transListFillUp = genStarFile(transList_filter, idxFillUpRibo, transList_filter[:, 1],  
-                                  tomoFillUpRibo, particleStar, 
+    idxOfFillUpRibo = np.array([idxOfFillUpRiboDict[i] for i in transList_filter[:,0]])
+    tomoOfFillUpRibo = [tomoStarList[i] for i in transList_filter[:,0]]
+    transListFillUp = genStarFile(transList_filter, idxOfFillUpRibo, transList_filter[:, 1],  
+                                  tomoOfFillUpRibo, particleStar, 
                                   pruneRad, oriPartList, pairClass, 
                                     '0.00-0.00-1.00') #transListU['pairClassColour'].values[0])
     transList = pd.concat([transList, transListFillUp], axis = 0)
@@ -187,7 +198,7 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
                                                                         fillUpRiboInfos,
                                                                         transList_filter[:,0],                                      
                                                                         particleStar.shape[0],avgShift, avgRot ,
-                                                                        tomoIdList, tomoStarList, idxFillUpRiboDict)  
+                                                                        tomoIdList, tomoStarList, idxOfFillUpRiboDict)  
         
         fillUpRiboStruct, _ = genParticleFile(particleStar.columns, transListFillupMiddle, 
                            particleStar.iloc[0,:], tomoNameFillUpMiddle, -1)
@@ -199,12 +210,12 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
                                       transListFillupMiddle[:,1], tomoNameFillUpMiddle, 
                                       particleStar, pruneRad, oriPartList,
                                       pairClass,
-                                      '0.00-0.00-1.00')#, transListU['pairClassColour'].values[0])
+                                      '1.00-0.00-0.00')#, transListU['pairClassColour'].values[0])
         
         transList = pd.concat([transList, transListFUData], axis = 0)
         transList.reset_index(drop = True, inplace = True)    
        
-        #remember update the translist for each tail ribo of one poly to head fillup ribo of the same poly
+        #update the translist: each tail ribo of one poly -> first filluped ribo of the same poly
         transListT2F, tomoNameT2F = genTransTailToExtend(transList_filter[:,0], 
                                                               tailRiboInfo,fillUpMiddleRiboInfos, 
                                                               tailRiboIdxList, fillUpMiddleIdx, 
@@ -214,7 +225,7 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
                                       transListT2F[:,1], tomoNameT2F, 
                                       particleStar, pruneRad, oriPartList,
                                       pairClass, 
-                                      '0.00-0.00-1.00')#transListU['pairClassColour'].values[0])
+                                      '1.00-0.00-0.00')#transListU['pairClassColour'].values[0])
         
         transList = pd.concat([transList, transListT2FillUpData], axis = 0)
         transList.reset_index(drop = True, inplace = True)
@@ -222,14 +233,14 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
         #remember update the translist for each tail ribo of one poly to head fillup ribo of the same poly
         transListT2F, tomoNameT2F = genTransTailToExtend(transList_filter[:,0], 
                                                               tailRiboInfo,fillUpRiboInfos, 
-                                                              tailRiboIdxList, idxFillUpRiboDict, 
+                                                              tailRiboIdxList, idxOfFillUpRiboDict, 
                                                               tomoIdList, tomoStarList,
                                                               avgShift,avgRot)
         transListT2AddData = genStarFile(transListT2F, transListT2F[:,0],
                                       transListT2F[:,1], tomoNameT2F, 
                                       particleStar, pruneRad, oriPartList,
                                       pairClass,
-                                      '0.00-0.00-1.00')#transListU['pairClassColour'].values[0])        
+                                      '1.00-0.00-0.00')#transListU['pairClassColour'].values[0])        
         
         transList = pd.concat([transList, transListT2AddData], axis = 0)
         transList.reset_index(drop = True, inplace = True)        
@@ -238,7 +249,7 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
     return transList
 
 
-def getCombinedDist(transSize, transVect, transAngVect, worker_n, gpu_list, cmb_metric, pruneRad):    
+def getCombinedDist(transSize, transVect, transAng, worker_n, gpu_list, cmb_metric, pruneRad):    
     maxChunk = tom_memalloc(None, worker_n, gpu_list)#maxChunk can be uint64:cpu or dict:gpus
     #using gpu or cpu & make jobList
     if isinstance(worker_n, int):
@@ -263,8 +274,8 @@ def getCombinedDist(transSize, transVect, transAngVect, worker_n, gpu_list, cmb_
     #calculate distance of vector & angle 
     distsVect = tom_pdist(transVect,  maxChunk, worker_n, gpu_list, 'euc', 
                           '', 0, tmpDir, jobListdict, transSize, 0)
-    distsAng =  tom_pdist(transAngVect,  maxChunk ,worker_n, gpu_list,'ang',
-                          '', 0, tmpDir, jobListdict, transSize,1)
+    distsAng =  tom_pdist(transAng,  maxChunk ,worker_n, gpu_list,'ang',
+                          '', 0, tmpDir, jobListdict, transSize, 1)
     #check if distsvect & distsang compared with avgRot/avgShift are within mean+2std
     #combined the vect/trans distance 
     if cmb_metric == 'scale2Ang':
@@ -277,8 +288,8 @@ def getCombinedDist(transSize, transVect, transAngVect, worker_n, gpu_list, cmb_
 
 def genTransList(fillUpRiboInfos, headRiboInfo, tomoIdList, headRiboIdxList):
     transListAct  =  np.array([]).reshape(-1, 29)
-    #check if fillUpRibo can link the head of other polysomes, get the translist data 
-    count = 0
+    #check if fillUpRibo can link the head of another polysomes, get the translist data 
+
     for i in range(fillUpRiboInfos.shape[0]):
         for j in range(headRiboInfo.shape[0]):
             if (abs(fillUpRiboInfos[i,0] - headRiboInfo[j,0]) < 1)  |  (tomoIdList[fillUpRiboInfos[i,0]] !=  tomoIdList[headRiboInfo[j,0]]):
@@ -301,7 +312,7 @@ def genTransList(fillUpRiboInfos, headRiboInfo, tomoIdList, headRiboIdxList):
                                        pos1[0],pos1[1],pos1[2],ang1[0],ang1[1],ang1[2],
                                        pos2[0],pos2[1],pos2[2],ang2[0],ang2[1],ang2[2]]])),
                                         axis = 0)
-            count += 1
+           
     return transListAct    
 
 def saveStruct(filename,starfile):
@@ -351,7 +362,7 @@ def genTransTailToExtend(polyIdx, tailInfo,fillUpInfo, tailIdxList, fillUpIdx,
 
 def genFillupMiddleTrans(fillUpRiboMiddleInfos, fillUpRiboInfos, polyIds, 
                          particleN ,avgShift, avgRot ,
-                         tomoIdList, tomoStarList, idxFillUpRiboDict):
+                         tomoIdList, tomoStarList, idxOfFillUpRiboDict):
    
     keepIdx = []
     tomoNames = []
@@ -387,10 +398,10 @@ def genFillupMiddleTrans(fillUpRiboMiddleInfos, fillUpRiboInfos, polyIds,
             transList_singlePoly[i,23:26] = fillUpMiddleRibosPerPoly[i+1,1:4] #pos 
             transList_singlePoly[i,26:29] = fillUpMiddleRibosPerPoly[i+1,4:]#angle 
             begin += 1
-       #fillup the final row 
+        #fillup the final row: from middle filled up ribosome => filled uo ribosome
         fillUpRibo = fillUpRiboInfos[fillUpRiboInfos[:,0] == single_poly][0]
         
-        transList_singlePoly[-1,:] =  np.array([particleN + begin, idxFillUpRiboDict[single_poly], tomoIdList[single_poly],
+        transList_singlePoly[-1,:] =  np.array([particleN + begin, idxOfFillUpRiboDict[single_poly], tomoIdList[single_poly],
                 avgShift[0],avgShift[1], avgShift[2], avgRot[0], avgRot[1], avgRot[2],
                 -1,-1,-1, -1,-1,-1,-1,-1,
                 fillUpMiddleRibosPerPoly[-1, 1], fillUpMiddleRibosPerPoly[-1, 2], 
@@ -472,8 +483,8 @@ def genStarFile(transList, idx1, idx2, tomoName12, particleStar, maxDist, oriPar
     
 
 def genParticleFile(colName, transList, example_info, tomoName, particleN): 
-    particleStruct = { }
-    idxFillUpRibo = { } #this dict store the idx of each fill up ribo
+    particleStruct = { } #store the infotmation of filled up ribo
+    idxOfFillUpRibo = { } #this dict store the idx of each filled up ribo
     for single_name in colName:
         particleStruct[single_name] = []
          
@@ -497,7 +508,7 @@ def genParticleFile(colName, transList, example_info, tomoName, particleN):
         particleStruct['rlnAnglePsi'].append(angles[2])
         particleStruct['rlnImageName'].append('notImplemented.mrc')
         particleStruct['rlnCtfImage'].append('notImplemented.mrc')
-        idxFillUpRibo[polyId] = count + particleN
+        idxOfFillUpRibo[polyId] = count + particleN
         if 'rlnOriginX' in colName:
             particleStruct['rlnOriginX'].append(0)
             particleStruct['rlnOriginY'].append(0)
@@ -525,7 +536,7 @@ def genParticleFile(colName, transList, example_info, tomoName, particleN):
     particleStruct['rlnMicrographName'] = tomoName
     appendRibo = pd.DataFrame(particleStruct)
     
-    return appendRibo,idxFillUpRibo
+    return appendRibo,idxOfFillUpRibo
 
 def genJobListGpu(lenJobs, tmpDir, maxChunk): #maxChunk is one dict for gpu(gpuindex be the key)
     jobList = np.zeros([lenJobs,2], dtype = np.int) 
@@ -571,7 +582,7 @@ def genJobListCPU(lenJobs, tmpDir, maxChunk):
         np.save(jobListSt[i]["file"], jobListChunk)  
     return jobListSt  
 
-def debug_output(transList_filter, dists, idx):
+def debug_output(transList_filter, dists):
     print('Sucessfully fill up these ribos')
     print('euler angle:Rot      Tilt       Psi, position:X          Y           Z ')
     for i in range(transList_filter.shape[0]):
@@ -581,6 +592,6 @@ def debug_output(transList_filter, dists, idx):
     for i in range(transList_filter.shape[0]):
         print('%.3f  %.3f  %.3f    %.3f    %.3f    %.3f'%(transList_filter[i,6],transList_filter[i,7],transList_filter[i,8], 
                                                           transList_filter[i,3],transList_filter[i,4],transList_filter[i,5]))   
-    print('the distscmb with Tavg is:')
-    print(dists[idx])
+    print('the filled up ribosomes have distscmb with Tavg:')
+    print(dists)
        

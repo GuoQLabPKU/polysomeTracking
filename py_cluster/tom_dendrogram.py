@@ -46,7 +46,7 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
         tree = np.load(tree)
         
     if ColorThreshold == -1:
-        ColorThreshold = np.max(tree[:,2])*0.7 #default threshold for matlab
+        ColorThreshold = np.max(tree[:,2])*0.7 #default threshold for hierachical clustering
     if ColorThreshold == 'auto':
         del ColorThreshold
         ColorThreshold = np.max(tree[:,2])*0.7
@@ -90,12 +90,14 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
             figure_title = "clustering %d of %d shown"%(maxLeaves, nrObservation)
             plt.title(figure_title)
             with plt.rc_context({'lines.linewidth': 0.5}):
-                hline = dendrogram(tree,  p=maxLeaves, color_threshold= ColorThreshold)
+                hline = dendrogram(tree,  p=maxLeaves, color_threshold= ColorThreshold,
+                                   above_threshold_color = (0.7,0.7,0.7))
         else:
             figure_title  = 'clustering'
             plt.title(figure_title)
             with plt.rc_context({'lines.linewidth': 0.5}):
-                hline = dendrogram(tree,  p = nrObservation, color_threshold=ColorThreshold, labels= dlabels)
+                hline = dendrogram(tree,  p = nrObservation, color_threshold=ColorThreshold, labels= dlabels,
+                                   above_threshold_color = (0.7,0.7,0.7))
             plt.xticks(fontsize = 5)
     #add the legend
     if dsp & (len(groups) > 0) & (maxLeaves>0):
@@ -200,17 +202,7 @@ def traceback(Z,b):
         
     
 def gen_colors(clusters_n): #one cluster one color
-    colorm = [cm.hsv(i/clusters_n, 1) for i in range(clusters_n)]
+    colorm = [cm.hsv(i/clusters_n, 1) for i in range(1,clusters_n+1)]
     return np.array(colorm)[:,0:3]        
     
         
-#if __name__ == '__main__' :
-#    #%matplotlib qt #put this into ipython if you want to play the figure
-#    groups, cmap, groupIdx, ColorThreshold, hline =  tom_dendrogram('tree.npy',   
-#                                                                    ColorThreshold = 0.01,
-#                                                                    nrObservation =  756,
-#                                                                    maxLeaves = 700)
-            
-        
-   
-       
