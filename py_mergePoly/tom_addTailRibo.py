@@ -16,7 +16,7 @@ from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_stats.tom_calcPvalues import tom_calcPvalues
 
 def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
-                    cmbDiffLimit,cmbMeanStd, param, 
+                    cmbDiffMax,cmbMeanStd, param, 
                     oriPartList, pruneRad, 
                     tranListOutput = '',  particleOutput = '',                 
                     NumAddRibo = 1, verbose=1, method = 'extreme',
@@ -38,7 +38,7 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
                          np.array([phi, psi, theta])
         avgShift         the avg shifts from ribo1 ==> ribo2 
                          np.array([x,y,z])
-        cmbDiffLimit     the (min,max) of forward  distance 
+        cmbDiffMax       the max of forward  distance 
                                        
         cmbDiffStd       the (mean,std) of forward  distance 
                        
@@ -65,6 +65,7 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
         transList        (dataframe) transList with fillup ribosomes transList
     
     '''
+    #method = 'extreme'
     if isinstance(transList, str):
         transList = tom_starread(transList)
     if isinstance(oriPartList, str):
@@ -141,12 +142,9 @@ def tom_addTailRibo(transList, pairClass, avgRot, avgShift,
     transAngVect = np.append(transAngVect,avgRot.reshape(-1,3), axis = 0)
     #calculate distance between hypo trans and average trans
     distsCN = getCombinedDist(transListAct.shape[0], transVect, transAngVect, worker_n, gpu_list, cmb_metric, pruneRad)
-    
     if method == 'extreme':
-        index1 = np.argwhere(distsCN <= cmbDiffLimit[1]).reshape(1,-1)[0]
-        index2 = np.argwhere(distsCN >= cmbDiffLimit[0]).reshape(1,-1)[0]
-        index  = np.intersect1d(index1, index2)
-                
+        index = np.argwhere(distsCN <= cmbDiffMax).reshape(1,-1)[0]
+               
     else:
         params = literal_eval(param)
         distCNNor = (distsCN - cmbMeanStd[0])/cmbMeanStd[1]

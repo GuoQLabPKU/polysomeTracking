@@ -268,7 +268,7 @@ class Polysome:
         print('Align the transform pairs')
         self.transList = tom_align_transformDirection(self.transList)
     
-    def find_connectedTransforms(self, allClassesU = None):
+    def find_connectedTransforms(self, allClassesU = None, saveFlag = 1):
         #the input should be the translist with classes confered and directon aligned
         '''
         track the polyribosomes
@@ -316,11 +316,12 @@ class Polysome:
             print('Warning: found branches in these class: %s'%(str(len_branch)))
             print('==> make smaller classes')
         print('Polysome tracking finished with %.5f seconds consumed'%(ti.default_timer() - t1))
-        header = { }
-        header["is_loop"] = 1
-        header["title"] = "data_"
-        header["fieldNames"]  = ["_%s"%i for i in self.transList.columns]
-        tom_starwrite('%s/allTransforms.star'%self.io['classifyFold'], self.transList, header)
+        if saveFlag:
+            header = { }
+            header["is_loop"] = 1
+            header["title"] = "data_"
+            header["fieldNames"]  = ["_%s"%i for i in self.transList.columns]
+            tom_starwrite('%s/allTransforms.star'%self.io['classifyFold'], self.transList, header)
         
     def analyseTransFromPopulation(self,  outputFolder = '', visFolder = '', classNr = -1, verbose = 1,
                                    cmb_metric = 'scale2Ang'):
@@ -607,21 +608,19 @@ class Polysome:
             
             if isinstance(fitData,str):
                 method = 'extreme'
-                cmbDiffLimit = (classSummary[classSummary['classNr'] == pairClass]['minCNDist'].values[0],
-                                classSummary[classSummary['classNr'] == pairClass]['maxCNDist'].values[0])
-                cmbMeanStd = (0,0)
-                
+                cmbDiffMax = classSummary[classSummary['classNr'] == pairClass]['maxCNDist'].values[0]                             
+                cmbMeanStd = (0,0)              
                 param = ''
             else:
                 method = 'lognorm'
-                cmbDiffLimit = (0,0)
+                cmbDiffMax = 0        
                 cmbMeanStd = (classSummary[classSummary['classNr'] == pairClass]['meanCNDist'].values[0],
                                 classSummary[classSummary['classNr'] == pairClass]['stdCNDist'].values[0])
                 param = fitData['fit_params'][0]
             print('Linking polys of class:%d using %s'%(pairClass, method))  
     
             self.transList = tom_addTailRibo(self.transList, pairClass, avgRot, 
-                                             avgShift,cmbDiffLimit,cmbMeanStd,param,
+                                             avgShift,cmbDiffMax,cmbMeanStd,param,
                                              self.io['posAngList'], 
                                              self.transForm['maxDist']/self.transForm['pixS'],                                         
                                              transListOutput,  particleOutput,
@@ -631,7 +630,7 @@ class Polysome:
         self.transList['pairLabel'] = -1
         self.transList['pairPosInPoly1'] = -1
         self.transList['pairPosInPoly2'] = -1
-        self.find_connectedTransforms(classList)
+        self.find_connectedTransforms(classList, 0)
         #save the transList 
         saveStruct(transListOutput,self.transList)
         
