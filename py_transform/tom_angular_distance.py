@@ -50,6 +50,7 @@ def tom_angular_distance(euler1, euler2, conv = 'zxz'):
 def qGetQInt(R):
     '''
     qGetQ: convert 3x3 rotation matrix into quaternion of ZXZ plane
+    
     '''
     r, c = R.shape
     if (r!=3) | (c!=3):

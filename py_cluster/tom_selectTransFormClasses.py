@@ -139,8 +139,3 @@ def filterList(st, classNr, polyNr):
     
     return idx #1D array
             
-        
-        
-    
-    
-        

@@ -31,6 +31,7 @@ def setup(conf=None):
         zz0['startAng']= np.array([40, 10, 30])
         zz0['minDist']=50
         zz0['searchRad']=100
+        zz0['branch']=1
         conf.append(zz0)
         
         zz1 = { }
@@ -43,6 +44,7 @@ def setup(conf=None):
         zz1['startAng']= np.array([-20, -10, -30])
         zz1['minDist']=50
         zz1['searchRad']=100
+        zz1['branch']=1
         conf.append(zz1)
         
         zz2 = { }
@@ -64,6 +66,7 @@ def setup(conf=None):
         zz3['startAng']= np.array([50, 10, -30])
         zz3['minDist']=50
         zz3['searchRad']=100
+        zz3['branch']=0
         conf.append(zz3)
         
         zz4 = { }

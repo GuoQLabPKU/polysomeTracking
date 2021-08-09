@@ -1,6 +1,6 @@
 import os
 import numpy as np
-import os
+import pandas as pd
 import re
 import matplotlib.pyplot as plt
 
@@ -95,7 +95,7 @@ def genOutputTable(statM, resSt, outputFolder):
         tom_starwrite('%s/patternCounts.star'%outputFolder, stat, header)
         
 
-def plotResults(statM, resSt, outputfolder):
+def plotResults(statM, resSt, outputFolder):
     plt.figure()
     plt.title('clustering')
     idx = np.where(resSt['fCount'] > 0)[0]
@@ -117,10 +117,10 @@ def plotResults(statM, resSt, outputfolder):
     plt.xticks(statM['patternNr'][0:len(idx)],
                statM['Xlabel'][idx])
     
-    if len(outputfolder) > 0:
+    if len(outputFolder) > 0:
         if  not os.path.exists(outputFolder):
             os.mkdir(outputFolder)
-        plt.savefig('%s/patternCounts.fig'%outputfolder, dpi = 300)
+        plt.savefig('%s/patternCounts.fig'%outputFolder, dpi = 300)
     plt.show()
     plt.close()
     
@@ -190,14 +190,14 @@ def genRandomMatrix(vbos, numRepeats):
         oStart = oStop + 1
     
     vbosRand = [ ]
-    obsRanM = [ ]
+    obsRandM = [ ]
     for i in range(numRepeats):
         randTmpIdx = np.random.permutation(len(obsPool))
         for ii in range(len(obsLenVect)):
             randTmp = obsPool[randTmpIdx[obsLenStartStop[ii][0]:obsLenStartStop[ii][1]  +1              ]]
             vbosRand.append(randTmp)
         obsRandM.append(vbosRand)
-    return obsRanM
+    return obsRandM
             
         
             
@@ -216,7 +216,7 @@ def searchOneObs(vbos, pattern):
         pat = "-".join([str(i) for i in pattern[ipat]])
         for ibos in range(len(vbos)):
             obs = "-".join([str(i) for i in vbos[ibos]])
-            nrFound = len([r.span()[0] for i in re.finditer(pat, pbs)])
+            nrFound = len([i.span()[0] for i in re.finditer(pat, obs)])
             fCount[ipat, 0] = fCount[ipat, 0] + nrFound
     resSt = { }
     resSt['fCount'] = fCount
@@ -258,7 +258,7 @@ def genPattern(vbos, patternFlag):
     nrCmb = 0
     for i in range(2, len(allClU)+1):
         nrCmb += np.max(allClU)**i  ###WHY?
-    print('Found %d ribosomes classes ===> patterns will be generated!'%(len(allClU), len(nrCmb )))
+    print('Found %d ribosomes classes ===> %d patterns will be generated!'%(len(allClU), len(nrCmb )))
     zz = 1
     pattern = [ ]  #three cycles,very time consuming
     for i in range(2,len(allClU)+1):
@@ -272,27 +272,4 @@ def genPattern(vbos, patternFlag):
             del patV
             zz += 1
     return pattern
-    
-            
-        
-                
-                
-        
-        
-        
-        
-        
-        
-        
-        
-        
-    
-    
-            
-            
-            
-        
-        
-    
-        
         

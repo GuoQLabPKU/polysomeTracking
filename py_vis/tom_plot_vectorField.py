@@ -187,7 +187,7 @@ def plotPairs(st, idx, plotClassZero, ax):
         
         #plot for fillUp ribos
         allColClass = allCol[tmpIdx,:]
-        fillIdx = np.where((allColClass == np.array([0,0,1])).all(1))[0]
+        fillIdx = np.where((allColClass == np.array([1,0,0])).all(1))[0]
         if len(fillIdx) == 0:
             del labelPoly, labelPosInPoly1, labelPosInPoly2
             continue
@@ -195,7 +195,7 @@ def plotPairs(st, idx, plotClassZero, ax):
         connVectfill = connVect[fillIdx,:]
         ax.quiver(conPosfill[:,0], conPosfill[:,1], conPosfill[:,2],
                   connVectfill[:,0], connVectfill[:,1], connVectfill[:,2], linewidths = 8,
-                  color = np.array([1.0,0.0,0.0]))
+                  color = np.array([1,0,0]))
         #change the color of label 
         for sIdx in fillIdx:
             ax.text(midPos[sIdx,0],midPos[sIdx,1],midPos[sIdx,2],labelPoly[sIdx], size = 15,color = 'red')

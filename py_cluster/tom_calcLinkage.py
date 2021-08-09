@@ -1,5 +1,4 @@
 import numpy as np
-import gc
 import timeit as ti
 from scipy.cluster.hierarchy import linkage
 from py_memory.tom_memalloc import tom_memalloc
@@ -59,13 +58,8 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
             from py_cluster.tom_pdist_gpu import tom_pdist
             
        
-    distsVect = tom_pdist(transVect,  maxChunk ,worker_n, gpu_list,'euc', transVectInv )
-    del transVect, transVectInv
-    gc.collect()
-    
-    distsAng =  tom_pdist(transAngVect,  maxChunk ,worker_n, gpu_list,'ang', transAngVectInv)
-    del transAngVect, transAngVectInv, maxChunk
-    gc.collect()       
+    distsVect = tom_pdist(transVect,  maxChunk , worker_n, gpu_list, 'euc', transVectInv)
+    distsAng =  tom_pdist(transAngVect,  maxChunk ,worker_n, gpu_list, 'ang', transAngVectInv)      
     print("Using %s to combine angles and shifts"%cmb_metric)
     
     if cmb_metric == 'scale2Ang':

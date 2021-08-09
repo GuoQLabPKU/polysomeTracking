@@ -93,10 +93,3 @@ def writeParticleCenterList(st, listFlav, outFold):
     
     tom_starwrite('%s/allParticles.star'%outFold, starNew, header)
     
-    
-
-    
-              
-        
-        
-        

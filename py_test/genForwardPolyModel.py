@@ -5,7 +5,7 @@ from py_transform.tom_sum_rotation import tom_sum_rotation
 from py_transform.tom_pointrotate import tom_pointrotate
 from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_io.tom_starwrite import tom_starwrite
-def genForwardPolyModel(conf = None):
+def genForwardPolyModel(conf = None, if_branch = 0):
     '''
     Parameters
     ----------
@@ -50,7 +50,8 @@ def genForwardPolyModel(conf = None):
                 shape0 = list_.shape[0]
             list_ = genVects(list_, single_conf['tomoName'], single_conf['increPos'],
                              single_conf['increAng'], single_conf['startPos'],
-                              single_conf['startAng'], single_conf['numRepeats'])
+                              single_conf['startAng'], single_conf['numRepeats'], 
+                              single_conf['branch'])
             shape1 = list_.shape[0]
             polysome_flag[polysome_Nr] = (shape0, shape1)
             polysome_Nr += 1
@@ -105,14 +106,14 @@ def genVects(list_,tomoName, increPos, increAng, startPos, startAng, nrRep, bran
     angOld = startAng
     
     for i in range(nrRep):
-        angNoise = np.random.rand(3)*2
-        #angNoise = np.zeros(3)
+        #angNoise = np.random.rand(3)*2
+        angNoise = np.zeros(3)
         
         ang,_,_ = tom_sum_rotation( np.array([list(increAng), list(angOld), list(angNoise)]),
                                          np.zeros((3,3)))
         
-        vnoise = np.random.rand(3)
-        #vnoise = np.zeros(3)
+        #vnoise = np.random.rand(3)
+        vnoise = np.zeros(3)
         vTr = tom_pointrotate(increPos + vnoise, ang[0], ang[1], ang[2])
         pos = posOld + vTr
         
@@ -128,14 +129,60 @@ def genVects(list_,tomoName, increPos, increAng, startPos, startAng, nrRep, bran
         
         posOld = pos
         angOld = ang
-    
-    
-    list_ = pd.concat((listIn,list_),axis = 0)
+        
+    #generate branch from position8:
+    if branch == 1:
+        pos = list_.loc[5, ['rlnCoordinateX', 'rlnCoordinateY', 'rlnCoordinateZ']].values
+        ang = list_.loc[5, ['rlnAngleRot', 'rlnAngleTilt', 'rlnAnglePsi']].values
+        _, ang = tom_eulerconvert_xmipp(ang[0], ang[1], ang[2], 'xmipp2tom')
+        listBranch = genBranch(pos, ang, increAng, increPos, nrRep-5, tomoName)
+        
+        list_ = pd.concat((listIn, list_, listBranch),axis = 0)
+    else:
+        list_ = pd.concat((listIn, list_),axis = 0)
+        
     list_.reset_index(inplace = True, drop = True)
     
     return list_   
         
-
+def genBranch(pos, ang, increAng, increPos, nrRep, tomoName):
+    
+    list_ = allocListFrame(tomoName, nrRep, 'relion')
+    posOld = pos
+    angOld = ang  
+    
+    for i in range(nrRep):
+        if i == 0:
+            angNoise = np.zeros(3)
+        else:
+            angNoise = np.random.rand(3)*5
+            
+        ang,_,_ = tom_sum_rotation( np.array([list(increAng), list(angOld), list(angNoise)]),
+                                         np.zeros((3,3)))
+        
+        if i == 0:
+            vnoise = np.zeros(3)
+        else:
+            vnoise = np.random.rand(3)
+        vTr = tom_pointrotate(increPos + vnoise, ang[0], ang[1], ang[2])
+        pos = posOld + vTr
+        
+        list_.loc[i,'rlnCoordinateX'] = pos[0]
+        list_.loc[i,'rlnCoordinateY'] = pos[1]
+        list_.loc[i,'rlnCoordinateZ'] = pos[2]
+        
+        
+        _, angC = tom_eulerconvert_xmipp(ang[0], ang[1], ang[2], 'tom2xmipp')
+        list_.loc[i,'rlnAngleRot'] =  angC[0]
+        list_.loc[i,'rlnAngleTilt'] = angC[1]
+        list_.loc[i,'rlnAnglePsi'] =  angC[2]
+        
+        posOld = pos
+        angOld = ang   
+        
+    return list_
+    
+       
 def addNoisePoints(list_, tomoName, nrNoisePoints, minDist, searchRad):
     listNoise = allocListFrame(tomoName, nrNoisePoints, 'relion')#listNoise should be one dataframe initilaized 
     for i in range(listNoise.shape[0]):
@@ -248,8 +295,3 @@ def allocListFrame(tomoName, nrItem, flavour):
                        'rlnNrOfSignificantSamples':rlnNrOfSignificantSamples
                        })
     return st
-            
-            
-        
-    
-    

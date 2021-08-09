@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
+
 from py_io.tom_starwrite import tom_starwrite
 from py_transform.tom_angular_distance import tom_angular_distance
 from py_transform.tom_average_rotations import tom_average_rotations
 from py_stats.tom_fitDist import tom_fitDist
-import matplotlib.pyplot as plt
+from py_vis.tom_visDist import tom_visDist
 
 
 def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scale2Ang'): #the input shoule be a ptr
@@ -19,11 +20,11 @@ def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scal
     angStat, distsAng = calcAngStat(pairList)
     #merge the distance of vect/angle
     if cmb_metric == 'scale2Ang':
-        distsVect = distsVect/(2*maxDistInpix)*180
-        distsCN = (distsAng+distsVect)/2
+        distsVect2 = distsVect/(2*maxDistInpix)*180
+        distsCN = (distsAng+distsVect2)/2
     elif cmb_metric == 'scale2AngFudge':
-        distsVect = distsVect/(2*maxDistInpix)*180
-        distsCN = (distsAng+(distsVect*2))/2
+        distsVect2 = distsVect/(2*maxDistInpix)*180
+        distsCN = (distsAng+(distsVect2*2))/2
     #plot the results and fit the distancecombined to different distribution model  
     visFit(distsVect, distsAng, distsCN, visFolder, classNr, distModel = ['lognorm']) 
         
@@ -32,7 +33,7 @@ def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scal
         
     stat['stdTransVect'] = vectStat['stdTransVect']
     stat['stdTransAng'] = angStat['stdTransAng']
-    stat['meanDiffVect'] = vectStat['meanDiffVect']
+    stat['meanVectDist'] = vectStat['meanVectDist']
     stat['meanAngDist'] = angStat['meanAngDist']
     stat['meanCNDist'] = np.mean(distsCN)
     stat['stdCNDist'] = np.std(distsCN)
@@ -94,9 +95,9 @@ def calcVectStat(pairList):
     stat['meanTransVectY'] = meanV[1]
     stat['meanTransVectZ'] = meanV[2]
     stat['stdTransVect'] = stdTransVect
-    stat['meanDiffVect'] = meandiffV
+    stat['meanVectDist'] = meandiffV
     
-    return stat,lendiffV
+    return stat, lendiffV
 
 def calcPolyStat(pairList):
     allTomoID = pairList['pairTomoID'].values
@@ -240,6 +241,7 @@ def writeOutputStar(stat, statPoly, outputFolder = ''): #the two inputs shoule b
         header["fieldNames"]  = ["_%s"%i for i in statPoly.columns]  
         tom_starwrite('%s/statPerPoly.star'%outputFolder, statPoly, header)
         
+             
 def genOutput(stat, minTransMembers):
     if stat.shape[0] > 20: #the number of this represent the class numbers!
         stat = stat[stat['num'] > minTransMembers] #each row represent one class, this number represent the #transformation in this class
@@ -262,22 +264,10 @@ def genOutput(stat, minTransMembers):
         print('only classes with more than %d transforms showed!'%minTransMembers)
         
         
-def  visFit(distsVect, distsAng, distsCN, saveDir, clusterClass, distModel):    
+def visFit(distsVect, distsAng, distsCN, saveDir, clusterClass, distModel):    
     #plot the distance distribution
     if len(saveDir) > 0:
-        plt.hist(distsVect,alpha = 0.5, label = 'vect distance')
-        plt.hist(distsAng,alpha = 0.5, label = 'angle distance')
-        plt.hist(distsCN, alpha = 0.5, label = 'combined distance')
-        plt.legend(fontsize = 15)
-        plt.xlabel('Distance between each transformation\nand Tavg',fontsize = 15)
-        plt.ylabel('# of transformation',fontsize = 15)
-        plt.title('Class %d\nmean:%.2f, std:%.2f of combined distance'%(clusterClass, np.mean(distsCN),
-                                                                        np.std(distsCN)),fontsize = 10)
-        plt.tight_layout()
-        plt.savefig('%s/distVsTavg/c%d.png'%(saveDir,clusterClass), dpi = 300)
-        plt.show()
-        plt.close()
-        
+        tom_visDist(distsVect, distsAng, distsCN, '%s/distVSavg'%saveDir, 'class%d'%clusterClass)       
     #fit to different distribution models 
     if len(distsCN) > 50:# I amo not sure if this is a good metric to cutoff, small sample will make fit meanningfulless
         tom_fitDist(distsCN, distModel, clusterClass,'%s/fitDist'%(saveDir))

@@ -47,11 +47,11 @@ class Polysome:
         self.io['classificationRun'] = run_time 
         self.io['classifyFold'] = None  #should be modify only after run input
         
-        #for geting transformation of ribosome pairs
+        #for geting transformation of ribosome pairs and polysome
         self.transForm = { }
         self.transForm['pixS'] = 3.42
         self.transForm['maxDist'] = 342 #the searching region of adjacent ribosomes
-        self.transForm['branchDepth'] = 2 #searching the depeth of branch of ribosomes
+        self.transForm['branchDepth'] = 2 #searching the depeth of branch of ribosomes;using 0 to clean branch
         
         #for classify
         self.classify = { }
@@ -62,10 +62,10 @@ class Polysome:
         #for select the clean polysomes
         self.sel = [ ]  #shoule be a list
         self.sel.append({})
-        self.sel[0]['classNr'] = np.array([-1]) #select the class of transform
-        self.sel[0]['polyNr'] = np.array([-1])   #select the polysome
+        self.sel[0]['classNr'] = np.array([-1])  #select the whole classes of transform
+        self.sel[0]['polyNr'] = np.array([-1])   #select the polysome (by polyID)
         self.sel[0]['list'] = 'Classes-Sep'
-        #we can add more requirement to select the clusters
+        #we can add more requirement to select the clusters/polysome
         
         #for vis
         self.vis  = { }
@@ -78,6 +78,7 @@ class Polysome:
         self.vis['vectField']['repVect'] = np.array([[0,1,0]]) #how to represents the ribosomes(angle + position)
                                                                #must be 2D array
         self.vis['vectField']['repVectLen'] = 20 
+        
         #for avg
         self.avg = { }
         self.avg['command'] = 'tom'
@@ -90,7 +91,7 @@ class Polysome:
         #for fw, create the forward model
         self.fw = { } 
         self.fw['Map'] = 'vol4forward.mrc'
-        self.fw['minNumTransform'] = 0
+        self.fw['minNumTransform'] = 0 #threshold for transform class to generate formodel
         self.fw['pixS'] = self.transForm['pixS']
         
         #for Conf class Analysis
@@ -144,7 +145,7 @@ class Polysome:
         os.mkdir('%s/vis/vectfields'%classificationFolder)
         os.mkdir('%s/vis/clustering'%classificationFolder)
         os.mkdir('%s/vis/averages'%classificationFolder)
-        os.mkdir('%s/vis/distVsTavg'%classificationFolder)
+        os.mkdir('%s/vis/distVSavg'%classificationFolder)
         os.mkdir('%s/vis/fitDist'%classificationFolder)
         os.mkdir('%s/stat'%classificationFolder)
         os.mkdir('%s/avg'%classificationFolder)
@@ -156,7 +157,7 @@ class Polysome:
     def calcTransForms(self, worker_n = 1):
         '''
         give the input ribosomes input star,
-        generate the transforms 
+        generate the transformList
         worker_n: the number of cpus to process
         '''
         maxDistInPix = self.transForm['maxDist']/self.transForm['pixS']
@@ -173,7 +174,7 @@ class Polysome:
     
     def groupTransForms(self, worker_n = 1, gpu_list = None, freeMem = None):
         '''
-        give transforms,
+        give transformList,
         generate the clustering results(trees/classes of transforms) 
         maxChunk: the threshold to split the transformation data and 
                   parallel process
@@ -190,19 +191,15 @@ class Polysome:
         else:
             ll = tom_calcLinkage(self.transList, outputFold, maxDistInPix,
                                 self.classify['cmb_metric'], worker_n, gpu_list,freeMem) #how to calculate the linkage 
+        
         #ll should be a float32 n*4 ndarray, should consider GPU version
-        clusters, _, _, thres= tom_dendrogram(ll, 
-                                                 self.classify['clustThr'],
-                                                 self.transList.shape[0], 0, 0)
-
-        #groups shoud be a list with dicts stored
-        #threshold is to kept transforms with distance less than this threshold
-        #large distance represents less similariity to form new cluster            
-        self.classify['clustThr'] = thres  #this is differnt from matlab clusterThrAct
+        clusters, _, _, thres= tom_dendrogram(ll, self.classify['clustThr'],
+                                              self.transList.shape[0], 0, 0)
+         
+        self.classify['clustThr'] = thres  
         if len(clusters) == 0:
             print("Warninig: no classes! Check the threshold you input! This usually you put \
                   a very high or very low threshold.")
-            #dendrogram(ll) #using default parameters to show the tree
         else:
             #this step give the cluster id for each transform
             for single_dict in clusters:
@@ -215,7 +212,8 @@ class Polysome:
                                            single_dict['color'][2])
                 self.transList.loc[idx, "pairClass"] = classes
                 self.transList.loc[idx, 'pairClassColour'] = colour
-        print('Finishing clustering with %d seconds consumed'%(ti.default_timer()-t1))          
+        print('Finishing clustering with %d seconds consumed'%(ti.default_timer()-t1))  
+        
     def selectTransFormClasses(self, worker_n = 1, gpu_list = None, itrClean = 1):
         #now the translist has pairclass label as well as colour  label 
         '''
@@ -224,8 +222,7 @@ class Polysome:
         '''
         transListSel = ''
         selFolds = ''
-        
-        
+                
         if self.classify['relinkWithoutSmallClasses']:  
             for _ in range(itrClean):  
                 #this step can keep classes we want for further analysis as well as remove class 0                 
@@ -247,14 +244,13 @@ class Polysome:
             header["title"] = "data_"
             header["fieldNames"]  = ["_%s"%i for i in self.transList.columns]
             tom_starwrite('%s/allTransforms.star'%self.io['classifyFold'], self.transList,
-                          header) #and also use the transforms to generate the tree.npy
+                          header) 
                 
         transListSel, selFolds, _ = tom_selectTransFormClasses(self.transList,
-                                       self.sel[0]['list'],
-                                        self.sel[0]['minNumTransform'], #just remove small classes[0] w/o relink
-                                       '%s/classes'%(self.io['classifyFold'])) 
-
-           #the transListSel & selFolds can be [] with empty or with elements    
+                                                               self.sel[0]['list'],
+                                                               self.sel[0]['minNumTransform'],
+                                                               '%s/classes'%(self.io['classifyFold'])) 
+           
         if len(transListSel) == 0:
             print('Warning: no translist has been selected for further analysis!')
         return transListSel, selFolds  #transListSel be empty when on clustering performs  
@@ -268,7 +264,9 @@ class Polysome:
         print('Align the transform pairs')
         self.transList = tom_align_transformDirection(self.transList)
     
-    def find_connectedTransforms(self, allClassesU = None, saveFlag = 1):
+    def find_connectedTransforms(self, allClassesU = None, saveFlag = 1, 
+                                 worker_n = 1, gpu_list = None, 
+                                 cmd_metric = 'scale2Ang', pruneRad = 100):
         #the input should be the translist with classes confered and directon aligned
         '''
         track the polyribosomes
@@ -278,6 +276,8 @@ class Polysome:
         warnings.filterwarnings('ignore')
         print('Tracking the polysomes.')
         t1 = ti.default_timer()
+        cmd_metric = self.classify['cmb_metric']
+        pruneRad = self.transForm['maxDist']/self.transForm['pixS']
         allClasses = self.transList['pairClass'].values
         if allClassesU is None:
             allClassesU = np.unique(allClasses)
@@ -285,46 +285,72 @@ class Polysome:
         allTomos = self.transList['pairTomoID'].values
         allTomosU = np.unique(allTomos)
         
-        br = {} #1D-array, check if this tomogram has branch
-        for single_class in allClassesU:
+        #load the information of avgshift/rot
+        classSummaryList = '%s/stat/statPerClass.star'%self.io['classifyFold']
+        if os.path.exists(classSummaryList):
+            classSummaryList = tom_starread(classSummaryList)
+       
+        br = {} #1D-array, check if this cluster class has branch 
+        for single_class in allClassesU:           
             br[single_class] = 0
             if single_class == 0:  #also should aviod single_class == -1
                 continue  ##no cluster occur with class == 0  
             if single_class == -1:
-                print('Warning: track the polysomes w/o any cluster classes.')
+                print('Warning: track the polysomes w/o any cluster classes.\n  ==> Highly suggest to do groupTransForms before this step')
                 
             idx1 = np.where(allClasses == single_class)[0]
+            
+            #calculate the average shift and rotation for each class
+            if isinstance(classSummaryList, str):
+                vectStat, _ = calcVectStat(self.transList.iloc[idx1,:])
+                angStat, _ = calcAngStat(self.transList.iloc[idx1,:])
+                #extract the shift and rot 
+                avgShift = np.array([vectStat['meanTransVectX'], vectStat['meanTransVectY'], vectStat['meanTransVectZ']])
+                avgRot = np.array([angStat['meanTransAngPhi'], angStat['meanTransAngPsi'], angStat['meanTransAngTheta']])
+            else:
+                avgShift = classSummaryList[classSummaryList['classNr'] == single_class].loc[:,
+                                   ['meanTransVectX','meanTransVectY','meanTransVectZ']].values[0] #1D array
+                avgRot = classSummaryList[classSummaryList['classNr'] == single_class].loc[:,
+                                   ['meanTransAngPhi','meanTransAngPsi','meanTransAngTheta']].values[0] #1D array
             offset_PolyID = 0
+            count = 0
             for single_tomo in allTomosU:
                 idx2 = np.where(allTomos == single_tomo)[0]
                 idx = np.intersect1d(idx1, idx2)
                 #track the single polysome in the same tomogram 
                 if len(idx) > 1:
-                    self.transList.loc[idx,:], _, br[single_class], offset_PolyID = tom_linkTransforms(self.transList.iloc[idx,:],
-                                      self.transForm['branchDepth'], offset_PolyID)
+                    self.transList.loc[idx,:], _, ifBranch, offset_PolyID = tom_linkTransforms(self.transList.iloc[idx,:],
+                                      self.transForm['branchDepth'], offset_PolyID,
+                                      avgShift, avgRot, worker_n, gpu_list,
+                                      cmd_metric, pruneRad)
+                    count += ifBranch
                 elif len(idx) == 1:
                     offset_PolyID += 1
                     self.transList.loc[idx,'pairLabel'] = offset_PolyID  #begin with 1
                     self.transList.loc[idx,'pairPosInPoly1'] = 1 #the order in each polysome, begin with 1
                     self.transList.loc[idx,'pairPosInPoly2'] = 2 #the order in branch, ~= poly1 +1 
-                    
+                
+            br[single_class] = count
         
         #only track the polysomes with class > 0 as well as in each tomo
-        #those with class 0 will have pairLabel == -1
-        len_branch = [key for key in br.keys() if br[key] == 1]
+        #those with class 0 will have pairLabel == -1 
+        #this step is clean the transform which has pairLabel == 0
+        self.transList = self.transList[self.transList['pairLabel'] != 0 ]
+        len_branch = [key for key in br.keys() if br[key] > 0]
         if len(len_branch) > 0:
             print('Warning: found branches in these class: %s'%(str(len_branch)))
             print('==> make smaller classes')
+            
         print('Polysome tracking finished with %.5f seconds consumed'%(ti.default_timer() - t1))
+        
         if saveFlag:
             header = { }
             header["is_loop"] = 1
             header["title"] = "data_"
             header["fieldNames"]  = ["_%s"%i for i in self.transList.columns]
             tom_starwrite('%s/allTransforms.star'%self.io['classifyFold'], self.transList, header)
-        
-    def analyseTransFromPopulation(self,  outputFolder = '', visFolder = '', classNr = -1, verbose = 1,
-                                   cmb_metric = 'scale2Ang'):
+    
+    def analyseTransFromPopulation(self,  outputFolder = '', visFolder = '', classNr = -1, verbose = 1):
         '''
         this method gives a summary of the polysomes track in each 
         transforms class, like if has branch/the length of the polysome/the order, 
@@ -336,6 +362,8 @@ class Polysome:
         if visFolder == '':
             visFolder = '%s/vis'%self.io['classifyFold']
         maxDistInpix = self.transForm['maxDist']/self.transForm['pixS']
+        cmb_metric = self.classify['cmb_metric']
+        
         allClasses = self.transList['pairClass']
         allClassesU = np.unique(allClasses)
         stat = [ ]
@@ -441,7 +469,7 @@ class Polysome:
             return 
         inputFile = '%s/stat/statPerPoly.star'%self.io['classifyFold']
         outputFold = '%s/stat/confAnalysis'%self.io['classifyFold']
-        if  not os.path.exists(outputFold):
+        if not os.path.exists(outputFold):
             os.mkdir(outputFold)
         tom_findPattern(inputFile, 99.0, 1000, outputFold, self.clSt['findPat'])
         
@@ -573,7 +601,7 @@ class Polysome:
         else:
             print('Fill up these polysome classes %s.'%str(self.fillPoly['class']))
             classList = self.fillPoly['class']
-        #load summary star file
+#        #load summary star file
         classSummaryList = '%s/stat/statPerClass.star'%self.io['classifyFold']
         if os.path.exists(classSummaryList):
             classSummary = tom_starread(classSummaryList)
@@ -583,8 +611,8 @@ class Polysome:
         
         (filepath,tempfilename) = os.path.split(self.io['posAngList'])
         (shotname,extension) = os.path.splitext(tempfilename)
-            
-        #give the store name & path of the particle star and transList
+#            
+#        #give the store name & path of the particle star and transList
         transListOutput = '%s/allTransformsFillUp.star'%self.io['classifyFold']
         particleOutput = '%s/%sFillUp.star'%(filepath,shotname)
         for pairClass in classList:
@@ -592,8 +620,7 @@ class Polysome:
                 print('Warning: can not detect transformation classes!')
                 return
             if pairClass == 0:
-                continue
-            
+                continue          
             #load the fit summary data 
             fitData = '%s/vis/fitDist/distFit_c%d.csv'%(self.io['classifyFold'], pairClass)
             if os.path.exists(fitData):
@@ -604,23 +631,22 @@ class Polysome:
             avgRot = classSummary[classSummary['classNr'] == pairClass].loc[:,
                                    ['meanTransAngPhi','meanTransAngPsi','meanTransAngTheta']].values[0] #1D array
                        
-            #automatically choose the method 1.extreme ,2.lognorm
-            
+            #automatically choose the method 1.extreme ,2.lognorm           
             if isinstance(fitData,str):
                 method = 'extreme'
-                cmbDiffMax = classSummary[classSummary['classNr'] == pairClass]['maxCNDist'].values[0]                             
-                cmbMeanStd = (0,0)              
-                param = ''
+                cmbDistMax = classSummary[classSummary['classNr'] == pairClass]['maxCNDist'].values[0]                             
+                cmbDistMeanStd = (0,0)              
+                fitParam = ''
             else:
                 method = 'lognorm'
-                cmbDiffMax = 0        
-                cmbMeanStd = (classSummary[classSummary['classNr'] == pairClass]['meanCNDist'].values[0],
+                cmbDistMax =  0   
+                cmbDistMeanStd = (classSummary[classSummary['classNr'] == pairClass]['meanCNDist'].values[0],
                                 classSummary[classSummary['classNr'] == pairClass]['stdCNDist'].values[0])
-                param = fitData['fit_params'][0]
+                fitParam = fitData['fit_params'][0]
             print('Linking polys of class:%d using %s'%(pairClass, method))  
     
             self.transList = tom_addTailRibo(self.transList, pairClass, avgRot, 
-                                             avgShift,cmbDiffMax,cmbMeanStd,param,
+                                             avgShift,cmbDistMax,cmbDistMeanStd,fitParam,
                                              self.io['posAngList'], 
                                              self.transForm['maxDist']/self.transForm['pixS'],                                         
                                              transListOutput,  particleOutput,
@@ -630,6 +656,7 @@ class Polysome:
         self.transList['pairLabel'] = -1
         self.transList['pairPosInPoly1'] = -1
         self.transList['pairPosInPoly2'] = -1
+        self.transForm['branchDepth'] = 0
         self.find_connectedTransforms(classList, 0)
         #save the transList 
         saveStruct(transListOutput,self.transList)
@@ -639,6 +666,7 @@ class Polysome:
         this method is aimed to vis all polysomes with length longer than 5
         '''
         #keep_idx = [ ]
+        
         transList  = self.transList
         classU = np.unique(transList['pairClass'])
         for singleClass in classU:
@@ -653,8 +681,8 @@ class Polysome:
             polyLenBig = np.asarray(polyLenList[polyLenList>lenPoly].index)
             if len(polyLenBig) == 0:
                 continue
-            #keep_row = np.where(transListClass['pairLabel'].values == polyLenBig[:,None])[-1]
-            #keepIdxSingle = list(transListClass.index[keep_row])
+            keep_row = np.where(transListClass['pairLabel'].values == polyLenBig[:,None])[-1]
+#            keepIdxSingle = list(transListClass.index[keep_row])
             for singlePoly in polyLenBig:
                 print('Class', singleClass, ':', singlePoly)
                 keep_row = np.where(transListClass['pairLabel'].values == singlePoly)[0]                
@@ -662,11 +690,11 @@ class Polysome:
                 tom_plot_vectorField(transListPlot)
                 del transListPlot
             del transListClass          
-#            keep_idx.extend(keepIdxSingle)
+            #keep_idx.extend(keepIdxSingle)
 #        if len(keep_idx) == 0:
 #            print('It seems that no polysome longer than %d'%lenPoly)
 #            return
 #        transList = transList.loc[keep_idx,:]
-#        tom_plot_vectorField(transList)
+        tom_plot_vectorField(transList)
         
         

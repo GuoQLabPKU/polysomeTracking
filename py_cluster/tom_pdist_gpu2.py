@@ -9,10 +9,8 @@ from py_transform.tom_sum_rotation_gpu import tom_sum_rotation
 
 
 #@profile
-def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None, 
-              dmetric = 'euc', in_Inv = '', 
-              makeJob = 1, tmpDir = '', jobListdict = None, 
-              lenJobs = None, clean = 1):
+def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc', 
+              in_Inv = '', jobListSt = None,  tmpDir = '',  cleanTmpDir = 1):
     '''
     dists=tom_pdist(in_Fw,dmetric,in_Inv,maxChunk)
 
@@ -22,7 +20,8 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
        in_Fw                inputdata nxdimension for angles OR distance nx3 in zxz 
        dmetric        ('euc') for euclidean distance metric or  
                             'ang'   for angles
-       in_Inv           ('')  inverse data neede for needed for transformations    
+       in_Inv           ('')  inverse data neede for needed for transformations 
+       makeJob          if make joblist (1,make; 0 no. If 0 is input, must provide jobList)
        maxChunk         max chunk size  #shoud modity accoring to the cpus/gpus & memory
        worker_n        # of cpus (not used in this function)
        gpu_list        gpus (not used in this function)
@@ -47,17 +46,19 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
         in_Inv = in_Inv.astype(cp.single) #save the memory
         print("Using inverse transforms")
         
-    if makeJob == 1:
-        tmpDir = 'tmpPdistgpu'
-        jobListdict = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
-        lenJobs = int(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)
+    if jobListSt is None:
+        lenJobs = np.uint64(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)
+        tmpDir = 'tmpPdistcpu'
+        jobListSt = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
+    else:
+        lenJobs = np.uint64(in_Fw.shape[0] - 1)
         
     dists = cp.zeros(lenJobs, dtype = cp.single) # the distance between pairs of ribosomes , one dimention array
     print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
-    if dmetric == 'euc':        
-      
+    
+    if dmetric == 'euc':             
         print("Using single gpu") 
-        dists = calcVectDist_mp(jobListdict[main_gpu], in_Fw, in_Inv, dists) 
+        dists = calcVectDist_mp(jobListSt[main_gpu], in_Fw, in_Inv, dists) 
         print("Finishing calculating euc transforms distance!")      
       
              
@@ -71,9 +72,9 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
       
      
         print("Using single gpu")
-        dists = calcAngDist_mp(jobListdict[main_gpu], Rin, Rin_Inv,dists)                          
+        dists = calcAngDist_mp(jobListSt[main_gpu], Rin, Rin_Inv,dists)                          
         print("Finishing calculating ang transforms distance!")  
-    if clean == 1:    
+    if cleanTmpDir == 1:    
         shutil.rmtree(tmpDir) #remove the dirs 
     
     dists = cp.asnumpy(dists) 
@@ -207,12 +208,12 @@ def genJobList(szIn, tmpDir, maxChunk): #maxChunk is one dict
                 bar()      
         
     #split the jobsList into different GPUs
-    gpu_list, start_site, file_size  = fileSplit(maxChunk, lenJobs)  
+    gpu_list, startSiteList, fileSizeList  = fileSplit(maxChunk, lenJobs)  
     if os.path.isdir(tmpDir):
         shutil.rmtree(tmpDir) #remove the .npy anyway
     os.mkdir(tmpDir)
     jobsListSt_dict = { }
-    for gpu_id, startsite, filesize in zip(gpu_list, start_site, file_size):
+    for gpu_id, startsite, filesize in zip(gpu_list, startSiteList, fileSizeList):
         packages = genjobsList_oneGPU(startsite, filesize, maxChunk[gpu_id])
         jobListSt = [ ] # is one list with dicts stored
          
@@ -234,13 +235,12 @@ def fileSplit(maxChunk, lenJobs):
     for key in maxChunk.keys():
         gpulist.append(key)
         file_size.append(maxChunk[key]) 
-    sumF = sum(file_size)
+    sumF = np.sum(file_size)
     file_size = [np.uint64(i/sumF*lenJobs) for i in file_size]
     #give the start sites of lenJobs for each gpu
-    start_site.append(0)
+    start_site.append(np.uint64(0))
     forward_site = np.uint64(0) 
-    for file_len in file_size[:-1]:
-        
+    for file_len in file_size[:-1]:       
         site = forward_site + file_len
         start_site.append(site)
         forward_site = site
@@ -252,11 +252,3 @@ def genjobsList_oneGPU(startsite, lenJobs, maxChunk):
     numOfPackages = int(np.ceil(lenJobs/maxChunk))       
     packages = tom_calc_packages(numOfPackages, lenJobs, startsite) #split the jobList into different size, the packages is one array
     return packages
-  
-    
-    
-        
-    
-        
-        
-    

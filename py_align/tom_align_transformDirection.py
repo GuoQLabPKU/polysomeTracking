@@ -11,25 +11,28 @@ def alignDir(pairList): #the input is subset of one dataframe pointer
                          pairList['pairInvTransVectY'].values,
                          pairList['pairInvTransVectZ'].values])
     vectsInv = vectsInv.transpose()
+    
     if vects.shape[0] > 1:
         np.random.seed(1)
         #no need to call whiten functions
         centroids,_ = kmeans(vects,2) #the cis and trans order
+        
         cl, _ = vq(vects, centroids)            
     else:
         cl = 0        
-    if np.sum(cl==0) > np.sum(cl==1):
-        useCl = 0
-    else:
-        useCl = 1
-    idx = np.where(cl == useCl)[0]
-    meanV = np.mean(vects[idx,:], axis = 0)
+#    if np.sum(cl==0) > np.sum(cl==1):
+#        useCl = 0
+#    else:
+#        useCl = 1
+#    idx = np.where(cl == useCl)[0]
+#    meanV = np.mean(vects[idx,:], axis = 0)
+    meanV = getCluster(vects, cl)
     diffV = vects - np.tile(meanV, (vects.shape[0],1))
     diffV = np.linalg.norm(diffV, axis = 1)
     diffVInv = vectsInv - np.tile(meanV, (vects.shape[0],1))
     diffVInv = np.linalg.norm(diffVInv, axis = 1)
     
-    idxSwap = np.where(diffV < diffVInv)[0]
+    idxSwap = np.where(diffV > diffVInv)[0]
 #    for single_idx in idxSwap:
 #        swapPairOrderEntry(pairList.iloc[single_idx,:])  #the input is one pointer  
     rowNames = pairList._stat_axis.values.tolist()
@@ -56,6 +59,22 @@ def alignDir(pairList): #the input is subset of one dataframe pointer
     
     return pairList.values
 
+def getCluster(vects, cl):
+    idx1 = np.where(cl == 1)[0]
+    idx0 = np.where(cl == 0)[0]
+    
+    meanV1 = np.mean(vects[idx1,:], axis = 0)
+    diffV1 = vects[idx1,:] - np.tile(meanV1, (len(idx1),1))
+    diffV1 = np.linalg.norm(diffV1, axis = 1)
+ 
+    meanV0 = np.mean(vects[idx0,:], axis = 0)
+    diffV0 = vects[idx0,:] - np.tile(meanV0, (len(idx0),1))
+    diffV0 = np.linalg.norm(diffV0, axis = 1)
+    
+    if np.mean(diffV0) > np.mean(diffV1):
+        return meanV1
+    else:
+        return meanV0
     
     
 def tom_align_transformDirection(transList):

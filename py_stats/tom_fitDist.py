@@ -62,6 +62,7 @@ def tom_fitDist(inputData, distModel, clusterClass = '',saveDir = '', verbose = 
     #normalize the inputData with mean:0 and std:1
     norData = normalizeData(inputData)
     # Set up 20 bins for chi-square test, so that each bin can have more than 5 samples
+    # the idea is that the least # of trans in each class > 100
     # Observed data will be approximately evenly distrubuted aross all bins
     binN = int(np.ceil(len(norData)/5))
     binN = np.min((binN,21))
@@ -153,7 +154,7 @@ def createFitPlot(inputData, dist_names, fit_params,clusterClass, saveDir):
     if len(saveDir) > 0:
         plt.savefig('%s/c%d_fitDis.png'%(saveDir, clusterClass), dpi = 300)
     plt.show()
-    #plt.close()
+    plt.close()
     createQQ_PP(inputData, dist_names, fit_params, clusterClass, saveDir)
 
 def createQQ_PP(inputData, distName, fitParams, clusterClass, saveDir):
@@ -211,7 +212,7 @@ def createQQ_PP(inputData, distName, fitParams, clusterClass, saveDir):
         if len(saveDir) > 0:
             plt.savefig('%s/c%d%s_QP.png'%(saveDir, clusterClass, distribution), dpi = 300)
         plt.show()
-        #plt.close()
+        plt.close()
     
 def normalizeData(inputData):
     inputMean = np.mean(inputData)

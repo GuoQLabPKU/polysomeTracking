@@ -10,12 +10,12 @@ def runPoly(input_star, clustThr, relinkWithoutSmallClasses, lenPolyVis, fillPol
     polysome1 = Polysome(input_star = input_star, run_time = 'run0')
     polysome1.classify['clustThr'] = clustThr
     polysome1.classify['relinkWithoutSmallClasses'] = relinkWithoutSmallClasses
-    polysome1.sel[0]['minNumTransform'] = 50
+    polysome1.sel[0]['minNumTransform'] = 100
     polysome1.creatOutputFolder()  
     polysome1.transForm['pixS'] = 3.42 # in Ang
     polysome1.transForm['maxDist'] = 342 # in Ang
     polysome1.calcTransForms(worker_n = 2) #the number of CPUs to process the data(#cpu == #tomograms)   
-    polysome1.groupTransForms(gpu_list = [0]) # if you have GPUs, can do: polysome1.groupTransForms(gpu_list = [1,2])
+    polysome1.groupTransForms(worker_n = 5) # if you have GPUs, can do: polysome1.groupTransForms(gpu_list = [1,2])
     transListSel, selFolds = polysome1.selectTransFormClasses()  
     polysome1.alignTransforms()   
     polysome1.find_connectedTransforms()   
@@ -25,11 +25,12 @@ def runPoly(input_star, clustThr, relinkWithoutSmallClasses, lenPolyVis, fillPol
     #polysome1.generateTrClassAverages()
     #polysome1.genTrClassForwardModels()   
     
-    polysome1.visResult()    
-    polysome1.visPoly(lenPoly = lenPolyVis)   
-    polysome1.fillPoly = fillPoly
-    polysome1.link_ShortPoly() #you can also try to add more than one hypo ribo at the end of each poly by pass  fillupRiboN = 2   
-    polysome1.visPoly(lenPoly = lenPolyVis)
+    #polysome1.visResult()    
+    #polysome1.visPoly(lenPoly = lenPolyVis)   
+    #polysome1.fillPoly = fillPoly
+    #polysome1.link_ShortPoly() #you can also try to add more than one hypo ribo at the end of each poly by pass  fillupRiboN = 2   
+    #polysome1.visPoly(lenPoly = lenPolyVis)
+    #polysome1.analyseTransFromPopulation()  
 
 def generateDeletPoly():
     setup()
@@ -51,10 +52,10 @@ def generateDeletPoly():
     
 
 if __name__ == '__main__':
-    input_star = './sim_drop.star'
-    clustThr = 5
-    relinkWithoutSmallClasses = 0
-    lenPolyVis = 10
+    input_star = './particles.star'
+    clustThr = 35
+    relinkWithoutSmallClasses = 1
+    lenPolyVis = 5
     fillPoly = { }
     fillPoly['class'] = np.array([-2]) #-2:fillup ribosomes for all transformation classes
     fillPoly['riboinfo'] = 1
@@ -65,6 +66,6 @@ if __name__ == '__main__':
     if os.path.exists('cluster-sim_drop/run0/scores/tree.npy'):
         os.remove('cluster-sim_drop/run0/scores/tree.npy')
         
-    generateDeletPoly()
+    #generateDeletPoly()
     runPoly(input_star, clustThr, relinkWithoutSmallClasses, lenPolyVis, fillPoly)
-    teardown()
+    #teardown()
