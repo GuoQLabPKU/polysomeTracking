@@ -47,13 +47,13 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
         print("Using inverse transforms")
         
     if jobListSt is None:
-        lenJobs = np.uint64(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)
-        tmpDir = 'tmpPdistcpu'
+        lenJobs = in_Fw.shape[0]*(in_Fw.shape[0]-1)/2
+        tmpDir = 'tmpPdistgpu'
         jobListSt = genJobList(in_Fw.shape[0], tmpDir, maxChunk) #jobList store each dict for each node
     else:
-        lenJobs = np.uint64(in_Fw.shape[0] - 1)
-        
-    dists = cp.zeros(lenJobs, dtype = cp.single) # the distance between pairs of ribosomes , one dimention array
+        lenJobs = in_Fw.shape[0] - 1
+      
+    dists = cp.zeros(int(lenJobs), dtype = cp.single) # the distance between pairs of ribosomes , one dimention array
     print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
     
     if dmetric == 'euc':             
