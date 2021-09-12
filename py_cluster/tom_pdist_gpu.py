@@ -49,7 +49,7 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
     else:
         lenJobs = np.uint64(in_Fw.shape[0] - 1)
        
-    dists = np.zeros(int(lenJobs), dtype = np.single) # the distance between pairs of ribosomes , one dimention array
+    dists = np.zeros(lenJobs, dtype = np.single) # the distance between pairs of ribosomes , one dimention array
     print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
     job_n = len(jobListSt) #number of cores to use
     if dmetric == 'euc':
