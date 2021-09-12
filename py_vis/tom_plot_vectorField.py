@@ -8,22 +8,23 @@ from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_transform.tom_pointrotate import tom_pointrotate
 
 def tom_plot_vectorField(posAng, tomoID = np.array([-1]), classNr = np.array([-1]), \
-                         polyNr = np.array([-1]), onlySelected = 1, scale=20, \
+                         polyNr = np.array([-1]), onlySelected = 1, scale=50, \
                          repVect = np.array([[1,0,0]]), col = np.array([0,0,1]), cmbInd = '', outputFolder=''):
     
     type_ang = type(posAng)
-    if (type_ang.__name__ == 'ndarry') | (type_ang.__name__ == 'str') | (type_ang.__name__ == 'DataFrame'):
+    if (type_ang.__name__ == 'ndarray') | (type_ang.__name__ == 'str') | (type_ang.__name__ == 'DataFrame'):
         plot_vectField(posAng, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder, type_ang)
     if type_ang == 'list':
         for posAngAct in posAng:
             plot_vectField(posAngAct, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder,type_ang)
 
 def plot_vectField(posAng, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder, type_ang):
-    if type_ang.__name__ == 'ndarry':
-        fTitle = ''
+    if type_ang.__name__ == 'ndarray':
         pos = posAng[:,0:3]
         angles = posAng[:,3:6]
-        plotRepVects(pos,angles,repVect, scale, col, fTitle)
+        ax = plt.figure().gca(projection ='3d')
+        plotRepVects(pos,angles, repVect, scale, col, ax)
+#        plt.show()
         return 
     if (type_ang.__name__ == 'str') | (type_ang.__name__ == 'DataFrame'):
         fTitleList = ''

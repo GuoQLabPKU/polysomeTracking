@@ -6,7 +6,9 @@ def tom_kdeEstimate(dist1, dist1Label, fTitle = '', save_dir = '', ifDisplay = 1
                     cdfValue = 0.05, dist2 = '', dist2Label = ''):
     '''
     TOM_KDEESTIMATE is aimed to fit a gauss based KDE estimator to one distribution, 
-    if more than one distribution is given, two fitting KDE will be returned
+    if more than one distribution is given, two fitting KDE will be returned. And
+    the border with cdf = 1-cdfValue. And the p-value of overlapped region of these 
+    two distribution
     '''
     
     kde1 = sps.gaussian_kde(dist1)

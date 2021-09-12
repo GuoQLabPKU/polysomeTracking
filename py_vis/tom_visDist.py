@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def tom_visDist(distVect, distsAng, distsCN, saveDir, classLabel):  
+    plt.figure()
     if len(distVect) > 0:
         plt.hist(distVect,alpha = 0.5, label = 'vect distance')
     if len(distsAng) > 0:
@@ -18,6 +19,6 @@ def tom_visDist(distVect, distsAng, distsCN, saveDir, classLabel):
     plt.tight_layout()
     if len(saveDir) > 0:
         plt.savefig('%s/%s.png'%(saveDir,classLabel), dpi = 300)
-    plt.show()
-    plt.close() 
+    plt.close()
+ 
 

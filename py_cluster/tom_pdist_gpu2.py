@@ -74,6 +74,7 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
         print("Using single gpu")
         dists = calcAngDist_mp(jobListSt[main_gpu], Rin, Rin_Inv,dists)                          
         print("Finishing calculating ang transforms distance!")  
+        
     if cleanTmpDir == 1:    
         shutil.rmtree(tmpDir) #remove the dirs 
     
@@ -188,9 +189,7 @@ def calcAngDist(Rs,RsInv):
     dists = (dists.real).astype(cp.single)
    
     return dists #one dimention arrsy float32)
-    
-    
-    
+   
 def genJobList(szIn, tmpDir, maxChunk): #maxChunk is one dict 
     lenJobs = np.uint64(szIn*(szIn-1)/2)
     jobList = np.zeros([lenJobs,2], dtype = np.uint32) #expand the range of positive int save memory(no negative int)

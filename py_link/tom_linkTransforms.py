@@ -1,9 +1,7 @@
 import numpy as np
-from py_link.tom_find_optimalBranch import tom_find_optimalBranch
 
-def tom_linkTransforms(pairList, maxBranchDepth, offset_PolyID, shift, rot,
-                       worker_n = 1, gpu_list = None,cmd_metric = 'scale2Ang', 
-                       pruneRad = 100):
+
+def tom_linkTransforms(pairList, maxBranchDepth, offset_PolyID):
     '''
     TOM_FIND_CONNECTEDTANSFORMS finds connedted transform 
 
@@ -28,17 +26,11 @@ def tom_linkTransforms(pairList, maxBranchDepth, offset_PolyID, shift, rot,
     
     '''
     #the input is one dataframe with the same class as well as the same tomo 
-    if maxBranchDepth == 0:
-        cleanIdx1 = tom_find_optimalBranch(pairList, shift, rot, 'idx1', worker_n , 
-                           gpu_list, cmd_metric, pruneRad)
-        cleanIdx2 = tom_find_optimalBranch(pairList, shift, rot, 'idx2', worker_n, 
-                           gpu_list, cmd_metric, pruneRad) 
-    else:
-        cleanIdx1 = None; cleanIdx2 = None
-        
     indList = pairListToIndList(pairList)
     branchDepth, branchFound = findBranchDepth(indList, maxBranchDepth)
-    IndListByPath = searchPathForEachEntry(indList, branchDepth, maxBranchDepth, cleanIdx1, cleanIdx2)
+    if maxBranchDepth == 0:
+        assert branchFound == 0
+    IndListByPath = searchPathForEachEntry(indList, branchDepth)
     indList = addLabelToIndList(indList, IndListByPath, offset_PolyID)
     pairList = updatePairListByIndList(pairList, indList)
     offset_PolyID = np.max(np.unique(indList[:,2]))
@@ -70,17 +62,17 @@ def findBranchDepth(indList, brDepth):
     return branchDepth, branchFound
 
 
-def searchPathForEachEntry(indList, branchDepth, maxBranchDepth, cleanIdx1, cleanIdx2):
+def searchPathForEachEntry(indList, branchDepth):
     allPathN = [ ]  
     for brNum in range(branchDepth):
         for searchStart in range(indList.shape[0]):
-            tmpPath = searchPathForward(indList, searchStart, brNum, cleanIdx1) #searchStart should be the head of the polysome
-            allPathN = uniquePathAdd(allPathN, tmpPath, cleanIdx2)
+            tmpPath = searchPathForward(indList, searchStart, brNum) #searchStart should be the head of the polysome
+            allPathN = uniquePathAdd(allPathN, tmpPath)
             
     return allPathN  #record information of polysome pathways 
             
 
-def searchPathForward(cmbInd, zz, branchNr, cleanIdx1):  #branch begin with 0 end with the branch number - 1
+def searchPathForward(cmbInd, zz, branchNr):  #branch begin with 0 end with the branch number - 1
     # zz:the row number in the pairindex dataframe. Remember that cmbInd should has very long rows , zz ~= inf
     zzPath = 1 #not begin with 0
     tmpPath = np.array([[cmbInd[zz, 0], cmbInd[zz,1], zz, zzPath, 1]], dtype = np.int)
@@ -94,14 +86,8 @@ def searchPathForward(cmbInd, zz, branchNr, cleanIdx1):  #branch begin with 0 en
         idxT1 = np.where(cmbInd[:,0] == idx2Search)[0]
         
         
-        if len(idxT1) > 1:
-            if cleanIdx1 is None:
-                idxT1 = idxT1[branchNr] #more than one branch
-            else:
-                idxT1 = np.intersect1d(cleanIdx1, idxT1, assume_unique = True)
-                assert len(idxT1) == 1
-                idxT1 = idxT1[0]
-                
+        if len(idxT1) > 1: 
+            idxT1 = idxT1[branchNr] #more than one branch                
             zz = idxT1
             
         elif len(idxT1) == 1:
@@ -115,15 +101,14 @@ def searchPathForward(cmbInd, zz, branchNr, cleanIdx1):  #branch begin with 0 en
             break
         
         zzPath += 1
-
         tmpPath = np.concatenate((tmpPath, np.array([[cmbInd[zz, 0], cmbInd[zz,1], zz, zzPath, 1]],dtype = np.int)
                                   ), axis = 0)
     if (i+1) == maxTrials:
-        print('Warning: max tries reached in searchPathForward,\nwhich means a long polysome detected.')
+        print('Warning: max tries reached in searchPathForward,\nwhich means an unexpected  long polysome detected.')
     
     return tmpPath  #the unit64 class 
 
-def uniquePathAdd(allPath, newPath, cleanIdx2): #allPath == [], should be a ptr
+def uniquePathAdd(allPath, newPath): #allPath == [], should be a ptr
     if len(newPath) == 0: #this should be impossible
         return allPath
     
@@ -140,48 +125,32 @@ def uniquePathAdd(allPath, newPath, cleanIdx2): #allPath == [], should be a ptr
     newPath_sort = newPath[newPath[:,2].argsort()]
     for i in range(len(allPath)):  #never try to modify a list when cycle it!! You can cylce another thing to modity one list 
         actPath = allPath[i]
-        actPath = actPath[:,2] #YOU SORTED THIS COL
-        interSNPathactPATH = fastIntersect(newPathP, actPath)
+        actPathP = actPath[:,2] #YOU SORTED THIS COL
+        interSNPathactPATH = fastIntersect(newPathP, actPathP)
         memNinA[i] = (len(interSNPathactPATH) == len(newPathP))  #newPathP is subset of allPath[i]
-        memAinN[i] = (len(interSNPathactPATH) == len(actPath))  #allPath[i] is subset of newPath
-    
-        
-        if (len(interSNPathactPATH) > 0)  &  (len(interSNPathactPATH) < len(actPath)) & (memNinA[i] == 0):
+        memAinN[i] = (len(interSNPathactPATH) == len(actPathP))  #allPath[i] is subset of newPath
+      
+        if (len(interSNPathactPATH) > 0)  &  (len(interSNPathactPATH) < len(actPathP)) & (memNinA[i] == 0):
             memBranch[i] = 1
 
     if np.sum(memBranch) > 0:
         ind = np.where(memBranch == 1)[0]
-        if cleanIdx2 is None:
-            PathUnion = np.array([],dtype = np.int).reshape(-1, 5)
-            for single_ind in ind:
-                actPath = allPath[single_ind]
-                actPathP = actPath[:,2]
-                diff_path = np.setdiff1d(actPathP, newPathP, assume_unique = True)
-                idxAadd = np.where(actPathP == diff_path[:,None])[-1]
-                actPath[idxAadd, 4] = 2                  
-                pathUnion = np.concatenate((PathUnion, actPath[idxAadd, :]), axis = 0)
-            newPathUnion = np.concatenate((newPath_sort, pathUnion ), axis = 0)         
-            newPathUnion = newPathUnion[newPathUnion[:,2].argsort()]
-    #        for idx in ind:
-    #            allPath[idx] = newPathUnion  #make the allPath has duplicate elements
-            memclean = memAinN + memBranch
-            ind = np.where(memclean == 1)[0]
-            allPath[ind[0]] = newPathUnion
-            allPath = [allPath[i] for i in range(len(allPath)) if i not in ind[1:]] #Wenhong's idea 
-        else:
-            assert len(ind) == 1
-            newPathP = newPath[:,2]
-            actPath = allPath[ind[0]]
+        PathUnion = np.array([],dtype = np.int).reshape(-1, 5)
+        for single_ind in ind:
+            actPath = allPath[single_ind]
             actPathP = actPath[:,2]
-            diff_path = np.setdiff1d(newPathP, actPathP, assume_unique = True)
-            diff_path_branch_idx = np.max(np.where(newPathP == diff_path[:,None])[1])
-            diff_path_branch = newPathP[diff_path_branch_idx]
-            
-            if diff_path_branch in cleanIdx2:
-                allPath[ind[0]] = newPath_sort          
-                allPath = [allPath[i] for i, j in enumerate(memAinN) if j==0]
-                
-        return allPath
+            diff_path = np.setdiff1d(actPathP, newPathP, assume_unique = True)
+            idxAadd = np.where(actPathP == diff_path[:,None])[-1]
+            actPath[idxAadd, 4] = 2                  
+            pathUnion = np.concatenate((PathUnion, actPath[idxAadd, :]), axis = 0)
+        newPathUnion = np.concatenate((newPath_sort, pathUnion), axis = 0)         
+        newPathUnion = newPathUnion[newPathUnion[:,2].argsort()]
+
+        memclean = memAinN + memBranch
+        ind = np.where(memclean == 1)[0]
+        allPath[ind[0]] = newPathUnion
+        allPath_new = [allPath[i] for i in range(len(allPath)) if i not in ind[1:]] #Wenhong's idea             
+        return allPath_new
     
     if ((np.sum(memNinA) == 0)  & (np.sum(memAinN) == 0)):
         allPath.append(newPath_sort)
@@ -230,8 +199,6 @@ def updatePairListByIndList(pairList, indList):
         
     return pairList
         
-        
-        
 def getPathSortedindListByLabel(indList, idxTmp):
     indListByLabel = indList[idxTmp,:]
     idx = indListByLabel[:,3].argsort()
@@ -239,7 +206,7 @@ def getPathSortedindListByLabel(indList, idxTmp):
     idxPair = idxTmp[idx]
     return idxPair, indListByLabel
     
-def updatePairListOneLabel(pairList,indListByLabel, uLabel, rowNamesSel):
+def updatePairListOneLabel(pairList,indListByLabel, uLabel, rowNamesSel): #shold write a function to directly get circular polysomes
      '''
      the debug plot function is developing 
      '''
@@ -253,11 +220,11 @@ def updatePairListOneLabel(pairList,indListByLabel, uLabel, rowNamesSel):
          pairList.loc[j, 'pairPosInPoly1'] = indListByLabel[i,3]
         
          if (i == (pairList_len-1)) & (indListByLabel[-1, 1] == indListByLabel[0,0] )  & (pairList_len > 1 ):
-            #circular
+             #circular
              pairList.loc[j,'pairPosInPoly2'] = 1
              isLinear = 0
          if (i == (pairList_len-1)) & (indListByLabel[-1, 1] == indListByLabel[0,1] )  & (pairList_len > 1):
-            #circular + extended
+             #circular + extended
              pairList.loc[j,'pairPosInPoly2'] = 2
              isLinear = 0
          if isLinear:

@@ -14,7 +14,7 @@ def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scal
     
     stat = { }
     stat['classNr'] = classNr
-    stat['num'] = pairList.shape[0] #number of the trans of one class
+    stat['num'] = pairList.shape[0] #number of the transformation of one class
     
     vectStat, distsVect = calcVectStat(pairList)
     angStat, distsAng = calcAngStat(pairList)
@@ -25,7 +25,7 @@ def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scal
     elif cmb_metric == 'scale2AngFudge':
         distsVect2 = distsVect/(2*maxDistInpix)*180
         distsCN = (distsAng+(distsVect2*2))/2
-    #plot the results and fit the distancecombined to different distribution model  
+    #plot the results and fit the distance combined to different distribution model  
     visFit(distsVect, distsAng, distsCN, visFolder, classNr, distModel = ['lognorm']) 
         
     #analysis the state of each polysome  
@@ -120,7 +120,7 @@ def calcPolyStat(pairList):
         for i in range(len(allLabelU)):
             idx = np.where(allLabel_fix == allLabelU[i])[0]
             allNum[i] = len(idx) #the length of for each polysome with branch
-            allPolyHasBranch[i] = np.sum(  (allLabel[idx] - allLabel_fix[idx]    ) > 0.05   ) > 0 #if this polysome has branch
+            allPolyHasBranch[i] = np.sum(  (allLabel[idx] - allLabel_fix[idx]) > 0.05   ) > 0 #if this polysome has branch
         
         stat['numPolybg5'] = np.sum(allNum > 5)
         stat['numPolybg3'] = np.sum(allNum > 3)
@@ -138,8 +138,7 @@ def calcPolyStat(pairList):
     return stat
         
 def analysePopulationPerPoly(pairList):
-    classNr = pairList['pairClass'].values[0]
-    
+    classNr = pairList['pairClass'].values[0]    
     allTomoID = pairList['pairTomoID'].values
     allLabel = pairList['pairLabel'].values
     allLabel_fix = np.fix(allLabel)
@@ -166,13 +165,12 @@ def analysePopulationPerPoly(pairList):
                 idx = idxbB1
             stat.append({})
             stat[i]['num'] = len(idx)
-            if stat[i]['num'] == 20:
+            if stat[i]['num'] >= 20:
                 print(' ')
             stat[i]['tomoNr'] = allTomoID[idx[0]]
             stat[i]['classNr'] = classNr
-            stat[i]['polyID'] = np.round(pairList['pairLabel'].values[idx[0]])
-            idx2 = np.where(allLabel_fix == allLabelU[i])[0]
-            stat[i]['hasBranch'] = np.int(np.sum(  (allLabel[idx2] - allLabel_fix[idx2]    ) > 0.05   ) > 0)
+            stat[i]['polyID'] = allLabelU[i]
+            stat[i]['hasBranch'] = np.int(len(idxbB1) > 0)
             
             posInPolyVect = np.array([], dtype = np.int)
             confClassVect = np.array([], dtype = np.int)
@@ -180,11 +178,12 @@ def analysePopulationPerPoly(pairList):
             
             for ii in range(len(idx)):#only analysis one branch which longer than another branch
                 posInPolyVect = np.concatenate((posInPolyVect, np.array([pairList['pairPosInPoly1'].values[idx[ii]],
-                                                                        pairList['pairPosInPoly2'].values[idx[ii]] ]) ))
+                                                                        pairList['pairPosInPoly2'].values[idx[ii]]])))
                 confClassVect = np.concatenate((confClassVect, np.array([pairList['pairClass1'].values[idx[ii]],
-                                                                         pairList['pairClass2'].values[idx[ii]]], dtype = np.int)))
+                                                                         pairList['pairClass2'].values[idx[ii]]], 
+                                                                         dtype = np.int)))
                 posInListVect = np.concatenate((posInListVect, np.array([pairList['pairIDX1'].values[idx[ii]],
-                                                                         pairList['pairIDX2'].values[idx[ii]] ])))
+                                                                         pairList['pairIDX2'].values[idx[ii]]])))
             _, indices = np.unique(posInPolyVect, return_index = True)
             if len(indices) < stat[i]['num']:
                 stat[i]['num'] = len(indices)  #the unique polysome w/o any branch
@@ -221,8 +220,6 @@ def sortStat(stat):
         stat_frame[k] = [C[k] for C in stat]
         
     stat_frame = pd.DataFrame(stat_frame)
-        
-
     return stat_frame
     
     
@@ -248,7 +245,7 @@ def genOutput(stat, minTransMembers):
         stat.reset_index(inplace = True, drop = True)
 
     select_col = ['classNr',  'num', 'stdTransVect', 'stdTransAng', 
-                'numPolybg5', 'numPolybg3', 'numPolyMax', 'numBranch']
+                  'numPolybg5', 'numPolybg3', 'numPolyMax', 'numBranch']
     #print the whole data set
     for i in select_col:
         print(i, end = "\t")
@@ -258,8 +255,7 @@ def genOutput(stat, minTransMembers):
                                                         stat['stdTransAng'].values[row], stat['numPolybg5'].values[row],
                                                         stat['numPolybg3'].values[row], stat['numPolyMax'].values[row],
                                                         stat['numBranch'].values[row]))
-        
-        
+               
     if stat.shape[0] > 20:
         print('only classes with more than %d transforms showed!'%minTransMembers)
         

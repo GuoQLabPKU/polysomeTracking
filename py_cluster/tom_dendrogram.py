@@ -50,6 +50,8 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
     if ColorThreshold == 'auto':
         del ColorThreshold
         ColorThreshold = np.max(tree[:,2])*0.7
+    if nrObservation == -1:
+        nrObservation = tree.shape[0] + 1
 
     tree_cp = deepcopy(tree)  #this is necessary, I will change the tree following 
     groupIdx, _, cmap = genColorLookUp(tree_cp, ColorThreshold) #the tree changed!
@@ -90,13 +92,13 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
             figure_title = "clustering %d of %d shown"%(maxLeaves, nrObservation)
             plt.title(figure_title)
             with plt.rc_context({'lines.linewidth': 0.5}):
-                hline = dendrogram(tree,  p=maxLeaves, color_threshold= ColorThreshold,
+                dendrogram(tree,  p=maxLeaves, color_threshold= ColorThreshold,
                                    above_threshold_color = (0.7,0.7,0.7))
         else:
             figure_title  = 'clustering'
             plt.title(figure_title)
             with plt.rc_context({'lines.linewidth': 0.5}):
-                hline = dendrogram(tree,  p = nrObservation, color_threshold=ColorThreshold, labels= dlabels,
+                dendrogram(tree,  p = nrObservation, color_threshold=ColorThreshold, labels= dlabels,
                                    above_threshold_color = (0.7,0.7,0.7))
             plt.xticks(fontsize = 5)
     #add the legend
@@ -111,10 +113,8 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
         plt.legend(h_plot,labels = h_label,fontsize = 10,bbox_to_anchor=(1.15, 1),
                    title = 'class')  
         plt.tight_layout()   
-    if dsp:        
-        return groups, cmap, groupIdx, ColorThreshold,hline
-    else:
-        return groups, cmap, groupIdx, ColorThreshold
+
+    return groups, cmap, groupIdx, ColorThreshold
         
         
     

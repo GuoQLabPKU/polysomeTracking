@@ -3,12 +3,12 @@ import random
 
 
 from py_transform.tom_calcPairTransForm import tom_calcPairTransForm
-from py_cluster.tom_pdist_All2One import tom_pdist_All2One
+from py_cluster.tom_A2Odist import tom_A2Odist
 
 
 
 def tom_noiseRandomRotate(coord, eulerAngle, coordTarget, 
-                  shift, rot,worker_n = 1, gpu_list = None, 
+                  shift, rot, worker_n = 1, gpu_list = None, 
                   cmb_metric = 'scale2Ang', pruneRad = 100,
                   repeats = 500):
 
@@ -42,7 +42,7 @@ def tom_noiseRandomRotate(coord, eulerAngle, coordTarget,
                                        ]])),axis = 0)
       
     #calculate distance with the mean transform
-    _, distsAng, distsCN = tom_pdist_All2One(transListAct[:,0:3], 
+    _, distsAng, distsCN = tom_A2Odist(transListAct[:,0:3], 
                                              transListAct[:,3:6],
                                              shift,rot,
                                              worker_n, gpu_list, 

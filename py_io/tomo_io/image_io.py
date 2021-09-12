@@ -4,23 +4,19 @@ Contains class ImageIO for image file read/write.
 # Author: Vladan Lucic (Max Planck Institute for Biochemistry)
 # $Id: image_io.py 1504 2019-01-28 17:06:59Z vladan $
 """
-
 __version__ = "$Revision: 1504 $"
-
+from io import IOBase
 import sys
 import struct
 import re
 import os.path
 import logging
 #import warnings
-from copy import copy, deepcopy
-
+from copy import copy
 import numpy
-import scipy
-import scipy.ndimage as ndimage
 
 from py_io.tomo_io.local_exceptions import FileTypeError
-import py_io.tomo_io.microscope_db
+import py_io.tomo_io.microscope_db as microscope_db
 
 class ImageIO():
     """
@@ -92,7 +88,7 @@ class ImageIO():
         if file is not None:
             if isinstance(file, str):
                 self.fileName = file
-            elif isinstance(file, file):
+            elif isinstance(file, IOBase):
                 self.file_ = file
         
         return
@@ -123,14 +119,14 @@ class ImageIO():
         For reading em and mrc files (having correct extension) only file
         argument is necessary:
 
-          image = Image()
+          image = ImageIO()
           image.read(file='myfile.em')
-        or to prvent reading the whole file into memory:
+        or to prevent reading the whole file into memory:
           image.read(file='myfile.em', memmap=True)
 
         Alternatively, file name can be given in the constructor:
 
-          image = Image(file='myfile.em')
+          image = ImageIO(file='myfile.em')
           image.read()
 
         If other arguments are given they will override the corresponding
@@ -361,7 +357,7 @@ class ImageIO():
     em = { 'headerSize': 512,
            'headerFormat': '4b 3i 80s 40i 20s 8s 228s',
            'defaultByteOrder': machineByteOrder,
-           'arrayOrder': 'FORTRAN'
+           'arrayOrder': 'F'
                  }
     emHeaderFields = (
         'machine', 'newOS9', 'noHeader', 'dataTypeCode', 'lengthX', 'lengthY',
@@ -604,8 +600,18 @@ class ImageIO():
             raise
 
         # convert emHeader to a string and write it
+        # convert header to a string and write it
+        byte_transferHeader = [ ]
+        for i in self.emHeader:
+            if isinstance(i, str):
+                byte_transferHeader.append(i.encode('utf-8'))
+            else:
+                byte_transferHeader.append(i)
+                
+        #test_input = [i.encode('utf-8') for i in self.mrcHeader]
         self.headerString = struct.pack(ImageIO.em['headerFormat'],
-                                        *tuple(self.emHeader))
+                                        *tuple(byte_transferHeader))
+
         self.file_.write(self.headerString)
 
         # write data if exist
@@ -625,7 +631,7 @@ class ImageIO():
     mrc = { 'headerSize': 1024,
            'headerFormat': '10i 6f 3i 3f 2i h 30s 4h 6f 6h 12f i 800s',
             'defaultByteOrder': machineByteOrder,
-            'defaultArrayOrder': 'FORTRAN',
+            'defaultArrayOrder': 'F', #F:'FORTRAN'
             'defaultAxisOrder': (1,2,3)
             }
     mrcDefaultShape = [1,1,1]
@@ -716,8 +722,8 @@ class ImageIO():
         # read and unpack the header
         format = self.byteOrder + ImageIO.mrc['headerFormat']
         self.headerString = self.file_.read(ImageIO.mrc['headerSize'])
+        
         self.mrcHeader = list( struct.unpack(format, self.headerString) )
-
         # check the data type
         data_type = ImageIO.mrcDataTypeTab.get(self.mrcHeader[3], None)
         if data_type is None:
@@ -783,7 +789,6 @@ class ImageIO():
         if header is None:
             self.extendedHeaderString = self.file_.read(
                 self.extendedHeaderLength)
-       
         return
 
     def writeMRC(self, file=None, header=None, byteOrder=None, shape=None,
@@ -972,8 +977,18 @@ class ImageIO():
             self.mrcHeader[21] = self.data.mean()
         
         # convert header to a string and write it
+        byte_transferHeader = [ ]
+        for i in self.mrcHeader:
+            if isinstance(i, str):
+                byte_transferHeader.append(i.encode('utf-8'))
+            else:
+                byte_transferHeader.append(i)
+                
+        #test_input = [i.encode('utf-8') for i in self.mrcHeader]
         self.headerString = struct.pack(ImageIO.mrc['headerFormat'],
-                                        *tuple(self.mrcHeader))
+                                        *tuple(byte_transferHeader))
+#        self.headerString = struct.pack(ImageIO.mrc['headerFormat'],
+#                                        *tuple(self.mrcHeader))
         if extended is not None:
             self.headerString = self.headerString + extended
         self.file_.write(self.headerString)
@@ -994,7 +1009,7 @@ class ImageIO():
     # raw file format properties
     raw = { 'defaultHeaderSize': 0,
             'defaultByteOrder': machineByteOrder,
-            'defaultArrayOrder': 'FORTRAN'
+            'defaultArrayOrder': 'F'
             }
 
     def readRaw(
@@ -1183,7 +1198,6 @@ class ImageIO():
         if shape is not None:
             self.shape = shape
         self.data = self.data.reshape(self.shape, order=self.arrayOrder)
-
         # chage byte order (to little-endian) if needed
         if self.byteOrder == '>': 
             if memmap:
@@ -1284,9 +1298,9 @@ class ImageIO():
         # open the file if not opened already
         if isinstance(file_, str):  # file_ is a string
             self.fileName = file_
-            self.file_ = open(file_, mode)  
+            self.file_ = open(file_, '%sb'%mode) 
 
-        elif isinstance(file_, file):  # file already open
+        elif isinstance(file_, IOBase):  # file already open
             self.file_ = file_  
 
         else:

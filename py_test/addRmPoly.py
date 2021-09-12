@@ -1,12 +1,13 @@
 import numpy as np
 import os
-from py_test.genForwardPolyModel import genForwardPolyModel
-def setup(conf=None):
+import shutil
+from py_test.genSimForwardPolyModel import genForwardPolyModel
+def setup(conf=None, noizeDregree = 2, branch = 0):
     '''
     Parameters
     ----------
     conf :dict, optional
-        dict with polysomes information stored. The default is None.
+          dict with polysomes information stored. The default is None.
 
     Returns 
     -------
@@ -19,6 +20,8 @@ def setup(conf=None):
         os.remove('sim.star')
     if os.path.exists('simOrderRandomized.star'):
         os.remove('simOrderRandomized.star')
+    if os.path.exists('sim_drop.star'):
+        os.remove('sim_drop.star')
     if conf == None:
         conf = [ ]
         zz0 = { }
@@ -31,7 +34,11 @@ def setup(conf=None):
         zz0['startAng']= np.array([40, 10, 30])
         zz0['minDist']=50
         zz0['searchRad']=100
-        zz0['branch']=1
+        if branch:
+            zz0['branch']=1
+        else:
+            zz0['branch']=0
+        zz0['noizeDregree'] = noizeDregree
         conf.append(zz0)
         
         zz1 = { }
@@ -44,13 +51,14 @@ def setup(conf=None):
         zz1['startAng']= np.array([-20, -10, -30])
         zz1['minDist']=50
         zz1['searchRad']=100
-        zz1['branch']=1
+        zz1['branch']=0
+        zz1['noizeDregree'] = noizeDregree
         conf.append(zz1)
         
         zz2 = { }
         zz2['type']='noise'
         zz2['tomoName']='100.mrc'
-        zz2['numRepeats']=550
+        zz2['numRepeats']=150
         zz2['minDist']=50
         zz2['searchRad']=100
         conf.append(zz2)
@@ -66,13 +74,17 @@ def setup(conf=None):
         zz3['startAng']= np.array([50, 10, -30])
         zz3['minDist']=50
         zz3['searchRad']=100
-        zz3['branch']=0
+        if branch:
+            zz3['branch']=1
+        else:
+            zz3['branch']=0
+        zz3['noizeDregree'] = noizeDregree
         conf.append(zz3)
         
         zz4 = { }
         zz4['type']='noise'
         zz4['tomoName']='101.mrc'
-        zz4['numRepeats']=500
+        zz4['numRepeats']=100
         zz4['minDist']=50
         zz4['searchRad']=100
         conf.append(zz4)
@@ -97,35 +109,36 @@ def setup(conf=None):
 #        zz6['minDist']=50
 #        zz6['searchRad']=100
 #        conf.append(zz6)
-        genForwardPolyModel(conf)
+        idxBranches = genForwardPolyModel(conf)
     else:
-        genForwardPolyModel(conf)
+        idxBranches = genForwardPolyModel(conf)
+    return idxBranches
         
 def teardown():
     '''
     Returns
     -------
     None.
-
     '''
     #remove the previous sim.star and order random.star
     print('Remove simulation data.')
     if os.path.exists('sim.star'):
         os.remove('sim.star')
+        
     if os.path.exists('sim_drop.star'):
         os.remove('sim_drop.star')
-    if os.path.exists('sim_dropB4FillUp.star'):
-        os.remove('sim_dropB4FillUp.star')
+        
+    if os.path.exists('sim_dropFillUp.star'):
+        os.remove('sim_dropFillUp.star')
+        
     if os.path.exists('simOrderRandomized.star'):
         os.remove('simOrderRandomized.star')
-    if os.path.exists('cluster-simOrderRandomized/run0/allTransforms.star'):
-        os.remove('cluster-simOrderRandomized/run0/allTransforms.star')
-    if os.path.exists('cluster-simOrderRandomized/run0/scores/tree.npy'):
-        os.remove('cluster-simOrderRandomized/run0/scores/tree.npy')
         
-    if os.path.exists('cluster-sim_drop/run0/allTransforms.star'):
-        os.remove('cluster-sim_drop/run0/allTransforms.star')
-    if os.path.exists('cluster-sim_drop/run0/allTransformsB4FillUp.star'):
-        os.remove('cluster-sim_drop/run0/allTransformsB4FillUp.star')    
-    if os.path.exists('cluster-sim_drop/run0/scores/tree.npy'):
-        os.remove('cluster-sim_drop/run0/scores/tree.npy') 
+    if os.path.isdir('cluster-simOrderRandomized'):
+        shutil.rmtree('cluster-simOrderRandomized')
+       
+    if os.path.isdir('cluster-sim_drop'):
+        shutil.rmtree('cluster-sim_drop')
+   
+    if os.path.isdir('cluster-sim'):
+        shutil.rmtree('cluster-sim')

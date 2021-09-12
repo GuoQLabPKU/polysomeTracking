@@ -10,40 +10,36 @@ def runPoly(input_star, clustThr, relinkWithoutSmallClasses, lenPolyVis, fillPol
     polysome1 = Polysome(input_star = input_star, run_time = 'run0')
     polysome1.classify['clustThr'] = clustThr
     polysome1.classify['relinkWithoutSmallClasses'] = relinkWithoutSmallClasses
-    polysome1.sel[0]['minNumTransform'] = 100
+    polysome1.sel[0]['minNumTransform'] = 5
     polysome1.creatOutputFolder()  
-    polysome1.transForm['pixS'] = 3.42 # in Ang
-    polysome1.transForm['maxDist'] = 342 # in Ang
+    polysome1.transForm['pixS'] = 3.24 # in Ang
+    polysome1.transForm['maxDist'] = 3.24*100 # in Ang
     polysome1.calcTransForms(worker_n = 2) #the number of CPUs to process the data(#cpu == #tomograms)   
     polysome1.groupTransForms(worker_n = 5) # if you have GPUs, can do: polysome1.groupTransForms(gpu_list = [1,2])
-    transListSel, selFolds = polysome1.selectTransFormClasses()  
+    transListSel, selFolds = polysome1.selectTransFormClasses() #clean transformation
     polysome1.alignTransforms()   
-    polysome1.find_connectedTransforms()   
-    polysome1.analyseTransFromPopulation()    
-    #polysome1.analyseConfClasses()  #developing    
-    #polysome1.genOutputList(transListSel, selFolds) #summary every transformation class
-    #polysome1.generateTrClassAverages()
-    #polysome1.genTrClassForwardModels()   
+    polysome1.analyseTransFromPopulation()        
+    polysome1.visResult()  
     
-    #polysome1.visResult()    
-    #polysome1.visPoly(lenPoly = lenPolyVis)   
-    #polysome1.fillPoly = fillPoly
-    #polysome1.link_ShortPoly() #you can also try to add more than one hypo ribo at the end of each poly by pass  fillupRiboN = 2   
-    #polysome1.visPoly(lenPoly = lenPolyVis)
-    #polysome1.analyseTransFromPopulation()  
+    polysome1.fillPoly = fillPoly
+    polysome1.link_ShortPoly() #default, this step will add ribosomes and then do polysome tracking
+    polysome1.visResult()
+    polysome1.analyseTransFromPopulation()  
 
 def generateDeletPoly():
-    setup()
+    setup(None,noizeDregree = 0, branch = 1) #branch = 0:generate polysomes w/o branch
     simStar = tom_starread('./sim.star')
-    drop_index = 35
-    ribo_info = simStar.iloc[35,:]
-    print('drop the ribosome with euler angle:%.3f,%.3f,%.3f, and position:%.3f,%.3f,%.3f'%(ribo_info['rlnAngleRot'],
-                                                                                           ribo_info['rlnAngleTilt'],
-                                                                                           ribo_info['rlnAnglePsi'],
-                                                                                           ribo_info['rlnCoordinateX'],
-                                                                                           ribo_info['rlnCoordinateY'],
-                                                                                           ribo_info['rlnCoordinateZ']))
-    simStar.drop(index = [drop_index],inplace = True)
+    drop_index = [30,31]
+    ribo_info = simStar.iloc[drop_index,:]
+    for i in range(ribo_info.shape[0]):
+        print('drop the ribosome with euler angle:%.3f,%.3f,%.3f, and position:%.3f,%.3f,%.3f'%(ribo_info['rlnAngleRot'].values[i],
+                                                                                                ribo_info['rlnAngleTilt'].values[i],
+                                                                                                ribo_info['rlnAnglePsi'].values[i],
+                                                                                                ribo_info['rlnCoordinateX'].values[i],
+                                                                                                ribo_info['rlnCoordinateY'].values[i],
+                                                                                               ribo_info['rlnCoordinateZ'].values[i]))
+    print('')
+    simStar.drop(index = drop_index,inplace = True)
     header = { }
     header["is_loop"] = 1
     header["title"] = "data_"
@@ -52,20 +48,22 @@ def generateDeletPoly():
     
 
 if __name__ == '__main__':
-    input_star = './particles.star'
-    clustThr = 35
+    input_star = './sim_drop.star'
+    clustThr = 5
     relinkWithoutSmallClasses = 1
     lenPolyVis = 5
+    
+    #parameters for fillup
     fillPoly = { }
-    fillPoly['class'] = np.array([-2]) #-2:fillup ribosomes for all transformation classes
-    fillPoly['riboinfo'] = 1
-    fillPoly['addNum'] = 1
+    fillPoly['class'] = np.array([-1]) #-1:fillup all transformation classes
+    fillPoly['riboinfo'] = 1 #if print the information of filled up ribosomes
+    fillPoly['addNum'] = 2 #add one ribosomes at the end of each polysome
       
     if os.path.exists('cluster-sim_drop/run0/allTransforms.star'):
         os.remove('cluster-sim_drop/run0/allTransforms.star')   
     if os.path.exists('cluster-sim_drop/run0/scores/tree.npy'):
         os.remove('cluster-sim_drop/run0/scores/tree.npy')
         
-    #generateDeletPoly()
+    generateDeletPoly()
     runPoly(input_star, clustThr, relinkWithoutSmallClasses, lenPolyVis, fillPoly)
-    #teardown()
+    teardown()

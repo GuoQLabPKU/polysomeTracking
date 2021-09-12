@@ -49,6 +49,7 @@ def tom_starread(starfile):
             line_content_clean = [i  for i in line_content if len(i)!= 0]
             if line_content_clean[-1] == '\n':
                 if len(line_content_clean)-1 != len(colname_dict.keys()):  #because the last char shoule be "\n" 
+#                    print(single_line,line_content_clean)
                     raise TypeError("the star data is not consistent!") 
                     #os._exit(1)
             

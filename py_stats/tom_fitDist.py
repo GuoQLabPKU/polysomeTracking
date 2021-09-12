@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 def tom_fitDist(inputData, distModel, clusterClass = '',saveDir = '', verbose = 0):
     '''
     TOM_FITDIST is aimed to return the best fitted distribution 
-    of input 1D-array
+    of input 1D-array (include one dataframe with stored fitted parameters. QQ&PP plot)
     
     EXAMPLE
     transList = tom_addTailRibo(np.random.random(size=100), ['norm','gamma']);
@@ -35,8 +35,7 @@ def tom_fitDist(inputData, distModel, clusterClass = '',saveDir = '', verbose = 
         number of bins - number of parameters fit (normal distribution is 2) -1
     '''
     #check the input data 
-    dist_names = [
-                  'expon',
+    dist_names = ['expon',
                   'gamma',
                   'lognorm',
                   'norm']
@@ -135,6 +134,7 @@ def createFitPlot(inputData, dist_names, fit_params,clusterClass, saveDir):
     # Create the plot
     h = plt.hist(inputData, bins = bin_cutoffs, color='0.75')
     # Loop through the distributions ot get line fit and paraemters  
+    plt.figure()
     for dist_name,param in zip(dist_names, fit_params):
         dist = getattr(scipy.stats, dist_name)
         # Get line for each distribution (and scale to match observed data)
@@ -153,7 +153,7 @@ def createFitPlot(inputData, dist_names, fit_params,clusterClass, saveDir):
     plt.tight_layout()
     if len(saveDir) > 0:
         plt.savefig('%s/c%d_fitDis.png'%(saveDir, clusterClass), dpi = 300)
-    plt.show()
+#    plt.show()
     plt.close()
     createQQ_PP(inputData, dist_names, fit_params, clusterClass, saveDir)
 
@@ -211,7 +211,7 @@ def createQQ_PP(inputData, distName, fitParams, clusterClass, saveDir):
         plt.tight_layout(pad=4)
         if len(saveDir) > 0:
             plt.savefig('%s/c%d%s_QP.png'%(saveDir, clusterClass, distribution), dpi = 300)
-        plt.show()
+#        plt.show()
         plt.close()
     
 def normalizeData(inputData):

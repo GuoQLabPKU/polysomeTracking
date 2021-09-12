@@ -130,7 +130,8 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
             #never change a changable variant in one function
             dists = calcAngDist_mp(-1, jobListSt, Rin,Rin_Inv, dists) 
                  
-        print("Finishing calculating ang transforms distance!")  
+        print("Finishing calculating ang transforms distance!") 
+        
     if cleanTmpDir == 1:   
         shutil.rmtree(tmpDir) #remove the dirs  
     return dists  # one dimension array float 32          
@@ -236,6 +237,7 @@ def calcAngDist(Rs,RsInv):
     
     
 def genJobList(szIn, tmpDir, maxChunk):
+    
     lenJobs = np.uint64(szIn*(szIn-1)/2)
     jobList = np.zeros([lenJobs,2], dtype = np.uint32) #expand the range of positive int save memory(no negative int)
     startA = 0  
