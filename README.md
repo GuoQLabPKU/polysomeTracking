@@ -22,6 +22,8 @@ cudatoolkit: 11.0.3
 
 pytest: 6.2.4
 
+networkx:2.6.2
+
 Flatform:
 Any platform (linux/windows/macos)should be fine. But linux is largely tested to run these codes.
 
