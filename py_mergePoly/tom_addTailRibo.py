@@ -252,7 +252,7 @@ def genTransList(fillUpRiboInfos, headRiboInfo, polyInfoList):
                                            pos2[0],pos2[1],pos2[2],
                                            ang2[0],ang2[1],ang2[2]]])),
                                            axis = 0)  
-            if (i%10 == 0):
+                #add the wait bar
                 bar()
                 bar.text("Calculating transfromation for %d filluped ribos..........."%(i))   
                 
