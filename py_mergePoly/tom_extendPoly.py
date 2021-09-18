@@ -2,11 +2,9 @@ import numpy as np
 
 from py_transform.tom_sum_rotation import tom_sum_rotation
 from py_transform.tom_pointrotate import tom_pointrotate
-from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
-from py_io.tom_starread import tom_starread
 
 def tom_extendPoly(riboInfo, avgRot, avgShift, particleStar , pruneRad, 
-                   NumAddRibo = 1, xyzborder = None):
+                   numAddRibo = 1, xyzborder = None):
     '''
     TOM_EXTENDPOLY add ribosomes to the end of each polysome
     
@@ -30,7 +28,7 @@ def tom_extendPoly(riboInfo, avgRot, avgShift, particleStar , pruneRad,
     fillUpRibos  = np.array([]).reshape(-1, 8)
     fillUpMiddleRibos = np.array([]).reshape(-1, 8)
     for i in range(riboN):
-        _, ang1 = tom_eulerconvert_xmipp(riboInfo[i,5], riboInfo[i,6], riboInfo[i,7])
+        ang1 = riboInfo[i,5:]
         pos1 = riboInfo[i,2:5]
         compare_array = np.zeros([2,3])
         compare_array[0,:] = avgRot
@@ -47,7 +45,7 @@ def tom_extendPoly(riboInfo, avgRot, avgShift, particleStar , pruneRad,
             continue
         
         fillUpMiddleRibo = np.array([]).reshape(-1, 8)
-        cycles = NumAddRibo - 1
+        cycles = numAddRibo - 1
         
         #add more than one ribosomes at end of each polysome
         while cycles > 0:
@@ -80,12 +78,7 @@ def tom_extendPoly(riboInfo, avgRot, avgShift, particleStar , pruneRad,
                  
 
 def checkRibo(particleStar, riboCoord, pruneRad, factor = 10):
-    if isinstance(particleStar, str):
-        particleStar = tom_starread(particleStar)
-    else:
-        particleStar = particleStar
-    #I think linear numpy is faster than for loop   
-    posAll = particleStar.loc[:,['rlnCoordinateX', 'rlnCoordinateY', 'rlnCoordinateZ']].values 
+    posAll = particleStar['p1']['positions']
     difflen = np.linalg.norm(posAll - riboCoord, axis = 1)
     #assert len(difflen) == posAll.shape[0]
     if np.sum(difflen <= pruneRad/factor) > 0:

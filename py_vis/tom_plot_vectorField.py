@@ -8,7 +8,7 @@ from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_transform.tom_pointrotate import tom_pointrotate
 
 def tom_plot_vectorField(posAng, tomoID = np.array([-1]), classNr = np.array([-1]), \
-                         polyNr = np.array([-1]), onlySelected = 1, scale=50, \
+                         polyNr = np.array([-1]), onlySelected = 1, scale=20, \
                          repVect = np.array([[1,0,0]]), col = np.array([0,0,1]), cmbInd = '', outputFolder=''):
     
     type_ang = type(posAng)
@@ -46,7 +46,7 @@ def plot_vectField(posAng, repVect, scale, col, cmbInd, classNr, polyNr, onlySel
                 print('tomoID: %d  tomoName: %s'%(uTomoID[i], allTomoLabel[tmpInd[0]]))
         if (len(uTomoID) > 5) & (tomoID[0] == -1) & (len(outputFolder) ==0):  ##TomoID  = -1 ==> All tomo
             print('warning found %d tomograms reducing to 5'%len(uTomoID))
-            print('use tomoID parameter to select specific tomograms')
+            print('can use tomoID parameter to select specific tomograms')
             uTomoID = uTomoID[:5]
             
         plotClassZero = len(np.where(classNr == 0)[0]) > 0
@@ -90,9 +90,7 @@ def doRender(st, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleLi
         angles = st['p2']['positions'][idxRep,:]
         plotRepVects(pos, angles, repVect, scale, col, ax)
         plotPairs(st, idx, plotClassZero, ax)
-        
-    
-    
+           
     if len(outputFolder)>0:
         fnameTmp = os.path.splitext(os.path.split(tomoName)[1])[0]
         plt.title(fTitle)
@@ -151,8 +149,6 @@ def plotPairs(st, idx, plotClassZero, ax):
     for i in range(len(uClasses)):  #plot each trans class
         if uClasses[i] == 0:
             continue#I don't want to show class 0 --> noise!
-            if plotClassZero == 0:
-                continue
         
         tmpIdx = np.where(allClasses == uClasses[i])[0]  #find the specific class of trans
         connVect = allTrans[tmpIdx,:]
@@ -178,14 +174,11 @@ def plotPairs(st, idx, plotClassZero, ax):
         
         for x,y,z, lbl in zip(midPos[:,0], midPos[:, 1], midPos[:,2], labelPoly):
             ax.text(x,y,z,lbl, size = 10)
-        for x,y,z, lbl in zip(conPos[:,0], conPos[:,1],conPos[:,2],
-                labelPosInPoly1):
+        for x,y,z, lbl in zip(conPos[:,0], conPos[:,1],conPos[:,2],labelPosInPoly1):
             ax.text(x,y,z,lbl, size = 10 )
-        for x,y,z,lbl in zip(p2Pos[:,0],p2Pos[:,1],p2Pos[:,2], 
-                labelPosInPoly2):
+        for x,y,z,lbl in zip(p2Pos[:,0],p2Pos[:,1],p2Pos[:,2], labelPosInPoly2):
             ax.text(x,y,z, lbl, size = 10)
-        
-        
+                
         #plot for fillUp ribos
         allColClass = allCol[tmpIdx,:]
         fillIdx = np.where((allColClass == np.array([1,0,0])).all(1))[0]
@@ -201,7 +194,6 @@ def plotPairs(st, idx, plotClassZero, ax):
         for sIdx in fillIdx:
             ax.text(midPos[sIdx,0],midPos[sIdx,1],midPos[sIdx,2],labelPoly[sIdx], size = 15,color = 'red')
            
-
         del labelPoly, labelPosInPoly1, labelPosInPoly2
         
         
@@ -214,10 +206,9 @@ def plotRepVects(pos,angles, repVect, scale, col,ax):
         vectTmp = repVect[i,:]
         vectsRot = tom_rotVectByAng(vectTmp, angles)
         ax.quiver(pos[:,0], pos[:,1], pos[:,2], vectsRot[:,0]*scale, \
-                  vectsRot[:,1]*scale, vectsRot[:,2]*scale,length=1,color = col)
+                  vectsRot[:,1]*scale, vectsRot[:,2]*scale, length=1, color = col)
         
-        
-
+    
 def tom_rotVectByAng(vect, angs, rotFlav = 'zxz', display = None, col = np.array([0,0,1])):
     vectsRot = np.zeros((angs.shape[0], 3))
     for i in range(angs.shape[0]):

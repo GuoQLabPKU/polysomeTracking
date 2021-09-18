@@ -58,11 +58,7 @@ def alignDir(pairList, iterN): #the input is subset of one dataframe pointer
         pairList.loc[rowNamesSel, swap_name1] =  pairList.loc[rowNamesSel, swap_name2].values
         pairList.loc[rowNamesSel, swap_name2] =  backup   
         
-        iterN -= 1
-#        stat = test_distanceCalc(pairList)
-#        print('iteration:%d'%(5-iterN))
-#        print(stat)
-    
+        iterN -= 1   
     return pairList.values
 
 def getCluster(vects, cl):
@@ -94,7 +90,7 @@ def tom_align_transformDirection(transList, iterN = 1):
         if single_class == -1:
             print('Warning: no clusters classes detected. Skipping align the transform.')
             break
-        print('align class%d......'%single_class)
+        print('align class%d for %d iterations'%(single_class, iterN))
         idx = np.where(allClasses == single_class)[0]
         transList.iloc[idx,:] = alignDir(transList.iloc[idx,:], iterN) #class 0 will also be aligned and class -1
     return transList
@@ -104,8 +100,9 @@ def test_distanceCalc(pairList):
     _, distsAng = calcAngStat(pairList)
     distsVect2 = distsVect/(2*100)*180
     distsCN = (distsAng+distsVect2)/2
-    stat  = [np.mean(distsVect), np.std(distsVect), np.mean(distsAng), np.std(distsAng),
-             np.mean(distsCN), np.std(distsCN)]
+    stat  = (np.mean(distsVect), np.std(distsVect), 
+             np.mean(distsAng), np.std(distsAng),
+             np.mean(distsCN), np.std(distsCN))
     return stat
     
     

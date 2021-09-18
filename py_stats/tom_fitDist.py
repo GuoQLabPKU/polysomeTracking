@@ -132,9 +132,9 @@ def createFitPlot(inputData, dist_names, fit_params,clusterClass, saveDir):
     x = np.linspace(np.percentile(inputData,0),np.percentile(inputData,99),len(inputData))
     bin_cutoffs = np.linspace(np.percentile(inputData,0), np.percentile(inputData,99),number_of_bins)
     # Create the plot
+    plt.figure()
     h = plt.hist(inputData, bins = bin_cutoffs, color='0.75')
     # Loop through the distributions ot get line fit and paraemters  
-    plt.figure()
     for dist_name,param in zip(dist_names, fit_params):
         dist = getattr(scipy.stats, dist_name)
         # Get line for each distribution (and scale to match observed data)

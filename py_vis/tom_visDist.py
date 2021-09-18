@@ -20,5 +20,3 @@ def tom_visDist(distVect, distsAng, distsCN, saveDir, classLabel):
     if len(saveDir) > 0:
         plt.savefig('%s/%s.png'%(saveDir,classLabel), dpi = 300)
     plt.close()
- 
-

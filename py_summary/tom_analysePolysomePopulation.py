@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from py_io.tom_starwrite import tom_starwrite
+from py_io.tom_starread import generateStarInfos
 from py_transform.tom_angular_distance import tom_angular_distance
 from py_transform.tom_average_rotations import tom_average_rotations
 from py_stats.tom_fitDist import tom_fitDist
@@ -225,18 +226,13 @@ def sortStat(stat):
     
 def writeOutputStar(stat, statPoly, outputFolder = ''): #the two inputs shoule be dataframe data structure
     if outputFolder != '':
-        header = { }
-        header["is_loop"] = 1
-        header["title"] = "data_"
-        header["fieldNames"]  = ["_%s"%i for i in stat.columns]
-        tom_starwrite('%s/statPerClass.star'%outputFolder, stat, header)
-        
-        del header
-        header = { }
-        header["is_loop"] = 1
-        header["title"] = "data_"
-        header["fieldNames"]  = ["_%s"%i for i in statPoly.columns]  
-        tom_starwrite('%s/statPerPoly.star'%outputFolder, statPoly, header)
+        starInfo = generateStarInfos()
+        starInfo['data_particles'] = stat
+        tom_starwrite('%s/statPerClass.star'%outputFolder, starInfo)
+   
+        starInfo = generateStarInfos()
+        starInfo['data_particles'] = statPoly
+        tom_starwrite('%s/statPerPoly.star'%outputFolder, starInfo)
         
              
 def genOutput(stat, minTransMembers):
@@ -244,17 +240,18 @@ def genOutput(stat, minTransMembers):
         stat = stat[stat['num'] > minTransMembers] #each row represent one class, this number represent the #transformation in this class
         stat.reset_index(inplace = True, drop = True)
 
-    select_col = ['classNr',  'num', 'stdTransVect', 'stdTransAng', 
+    select_col = ['classNr', 'num', 'stdTransVect', 'stdTransAng', 
                   'numPolybg5', 'numPolybg3', 'numPolyMax', 'numBranch']
     #print the whole data set
     for i in select_col:
         print(i, end = "\t")
     print('\t')
     for row in range(stat.shape[0]):
-        print("%d\t%d\t%.1f\t%.1f\t%d\t%d\t%d\t%d"%(stat['classNr'].values[row], stat['num'].values[row], stat['stdTransVect'].values[row],
-                                                        stat['stdTransAng'].values[row], stat['numPolybg5'].values[row],
-                                                        stat['numPolybg3'].values[row], stat['numPolyMax'].values[row],
-                                                        stat['numBranch'].values[row]))
+        print("%d\t%d\t%.1f\t%.1f\t%d\t%d\t%d\t%d"%(stat['classNr'].values[row], stat['num'].values[row], 
+                                                    stat['stdTransVect'].values[row],
+                                                    stat['stdTransAng'].values[row], stat['numPolybg5'].values[row],
+                                                    stat['numPolybg3'].values[row], stat['numPolyMax'].values[row],
+                                                    stat['numBranch'].values[row]))
                
     if stat.shape[0] > 20:
         print('only classes with more than %d transforms showed!'%minTransMembers)

@@ -1,4 +1,4 @@
-from py_io.tom_starread import tom_starread
+from py_io.tom_starread import tom_starread, generateStarInfos
 from py_io.tom_starwrite import tom_starwrite
 from py_io.tom_extractData import tom_extractData
 
@@ -38,8 +38,6 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
     REFERENCES
     '''
     #DO NOT Change the changable data struct in function/anywhere
-    if isinstance(transList, str):
-        transList = tom_starread(transList)
     st = tom_extractData(transList)#st should be a dict 
     if isinstance(selList, str):
         if selList == 'Classes-Sep': 
@@ -108,14 +106,14 @@ def genOutput(transList, selList, outputFolder):
     selFolder = '%s/c%s%s'%(outputFolder, clNrStr, polyNrStr)
     os.mkdir(selFolder)
     #write starfile
-    header = { }
-    header["is_loop"] = 1
-    header["title"] = "data_"
-    header["fieldNames"]  = ["_%s"%i for i in transList.columns]
-    tom_starwrite('%s/transList.star'%selFolder, transList, header)
+    starInfo = generateStarInfos()
+    starInfo['type'] = 'relion2'
+    starInfo['pixelSize'] = transList['pairPixelSizeAng'].values[0]
+    starInfo['data_particles'] = transList
+    tom_starwrite('%s/transList.star'%selFolder, starInfo)
     return selFolder
  
-    
+
 
 
 def filterList(st, classNr, polyNr):

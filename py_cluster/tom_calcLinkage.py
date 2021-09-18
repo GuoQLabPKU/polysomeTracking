@@ -59,7 +59,7 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
             
        
     distsVect = tom_pdist(transVect,  maxChunk , worker_n, gpu_list, 'euc', transVectInv)
-    distsAng =  tom_pdist(transAngVect,  maxChunk ,worker_n, gpu_list, 'ang', transAngVectInv)      
+    distsAng =  tom_pdist(transAngVect,  maxChunk, worker_n, gpu_list, 'ang', transAngVectInv)      
     print("Using %s to combine angles and shifts"%cmb_metric)
     
     if cmb_metric == 'scale2Ang':

@@ -4,6 +4,8 @@ from py_transform.tom_sum_rotation import tom_sum_rotation
 from py_transform.tom_pointrotate import tom_pointrotate
 from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_io.tom_starwrite import tom_starwrite
+from py_io.tom_starread import generateStarInfos
+
 def genForwardPolyModel(conf = None):
     '''
     Parameters
@@ -74,15 +76,12 @@ def genForwardPolyModel(conf = None):
     
     return idxBranches
 def writeStarFile(list_):
-    header = { }
-    header["is_loop"] = 1
-    header["title"] = "data_"
-    header["fieldNames"] = [ ]
-    for i,j in enumerate(list_.columns):
-#        if j == 'polysome':
-#            continue
-        header["fieldNames"].append('_%s #%d'%(j,i+1))
-    tom_starwrite('sim.star', list_, header)
+    
+    starInfo = generateStarInfos()
+    starInfo['data_particles'] = list_
+    tom_starwrite('sim.star', starInfo) 
+    
+
     id_ = np.random.permutation(list_.shape[0])
     list_ = list_.loc[id_,:]
     list_.reset_index(drop=True,inplace = True)  
@@ -97,8 +96,8 @@ def writeStarFile(list_):
     #save the dict 
     np.save('./py_test/ori_polysome.npy', ori_polysome)      
     list_.drop('polysome',axis = 1,inplace = True)
-    header['fieldNames'] = header['fieldNames'][0:-1]
-    tom_starwrite('simOrderRandomized.star',list_, header)
+    starInfo['data_particles'] = list_
+    tom_starwrite('simOrderRandomized.star',starInfo)
     
 def genVects(list_, tomoName, increPos, increAng, startPos, startAng, nrRep, branch=0,
              noizeDregree = 2):

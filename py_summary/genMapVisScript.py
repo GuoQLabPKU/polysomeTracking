@@ -18,6 +18,7 @@ def genMapVisScript(mapfold, classFile, scriptName, transList, voxelSize, offSet
     pos = calcGrd(len(mrc_abspath), sz)  #len(mrc_abspath)*3 2D-array
     
     clInfo = tom_starread(classFile)
+    clInfo = clInfo['data_particles']
     allClnfo = clInfo['classNr'].values
     allCl = transList['pairClass'].values
     

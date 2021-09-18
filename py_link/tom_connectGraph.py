@@ -98,7 +98,7 @@ def ribo_fillUp(pairList, offset_PolyID):
     #make a dataframe & star file for further analysis
     statePoly_forFillup = pd.DataFrame({'pairTomoName':tomoName_list,
                                         'pairTomoID':tomoID_list, 'pairClass':classNr_list,
-                                        'pairIDX':riboIDX_list, 'ifWoOut':ifWoOut_list,
+                                        'pairIDX':[int(i) for i in riboIDX_list], 'ifWoOut':ifWoOut_list,
                                         'ifWoIn':ifWoIn_list, 'pairLabel':polyLabel_list})
     
     return statePoly_forFillup,offset_PolyID

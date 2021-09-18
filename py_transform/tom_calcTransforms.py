@@ -7,13 +7,13 @@ import shutil
 import gc
 from alive_progress import alive_bar 
 
-from py_io.tom_starread import tom_starread
+from py_io.tom_starread import generateStarInfos
 from py_io.tom_extractData import tom_extractData
 from py_io.tom_starwrite import tom_starwrite
 from py_transform.tom_calcPairTransForm import tom_calcPairTransForm
 
 
-def tom_calcTransforms(posAng,  maxDist, tomoNames='', dmetric='exact', outputName='', verbose=1, worker_n = 1):
+def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', outputName='', verbose=1, worker_n = 1):
     '''
     TOM_CALCTRANSFORMS calcutes pair transformations for all combinations use
     pruneRad(maxDist) to reduce calc (particles with distance > maxDist will not paired)
@@ -49,23 +49,19 @@ def tom_calcTransforms(posAng,  maxDist, tomoNames='', dmetric='exact', outputNa
     
     if isinstance(posAng, str):
         oriPartList = posAng
-        posAng = tom_starread(posAng)
     if isinstance(posAng, dict):
         if "pairTransVectX" in posAng.keys():
             print("The file already has transformation information! No need to transform.")
             return 
     # read the star file into a dict/st
-    st = tom_extractData(posAng,0)
+    st = tom_extractData(posAng,pixS)
     uTomoId = np.unique(st["label"]["tomoID"])
     #uTomoNames = np.unique(st["label"]["tomoName"])
     len_tomo = len(uTomoId) #how many tomo in this starfile
-    #transDict: store the information of transformation
-    #allTomoNames: the name of tomo
-    #idxOffset: 
+
     transList = np.array([],dtype = np.float).reshape(0, 29)
     allTomoNames = st["label"]["tomoName"]
-    #idxOffSet = 0
-    
+  
     if worker_n == 1:
         for i in range(len_tomo):
             time1 = ti.default_timer()
@@ -195,25 +191,23 @@ def genStarFile(transList, allTomoNames, st, maxDist, oriPartList, outputName):
     pixs = st["p1"]["pixs"]
     #store the header information 
     header = { }
-    header["is_loop"] = 1
-    header["title"] = "data_"
-    header["fieldNames"] = ['_pairIDX1','_pairIDX2','_pairTomoID',
-                                  '_pairTransVectX','_pairTransVectY','_pairTransVectZ',
-                                  '_pairTransAngleZXZPhi', '_pairTransAngleZXZPsi','_pairTransAngleZXZTheta',
-                                  '_pairInvTransVectX','_pairInvTransVectY','_pairInvTransVectZ',
-                                  '_pairInvTransAngleZXZPhi', '_pairInvTransAngleZXZPsi','_pairInvTransAngleZXZTheta',
-                                  '_pairLenTrans','_pairAngDist',
-                                  '_pairCoordinateX1','_pairCoordinateY1','_pairCoordinateZ1',
-                                  '_pairAnglePhi1','_pairAnglePsi1','_pairAngleTheta1',
-                                  '_pairClass1','_pairPsf1',
-                                   '_pairNeighPlus1','_pairNeighMinus1', '_pairPosInPoly1',
-                                  '_pairCoordinateX2','_pairCoordinateY2','_pairCoordinateZ2',
-                                  '_pairAnglePhi2','_pairAnglePsi2','_pairAngleTheta2',
-                                  '_pairClass2','_pairPsf2',
-                                   '_pairNeighPlus2','_pairNeighMinus2', '_pairPosInPoly2',
-                                  '_pairTomoName','_pairPixelSizeAng',
-                                  '_pairOriPartList',
-                                  '_pairMaxDist','_pairClass','_pairClassColour','_pairLabel','_pairScore']
+    header["fieldNames"] = ['pairIDX1','pairIDX2','pairTomoID',
+                                  'pairTransVectX','pairTransVectY','pairTransVectZ',
+                                  'pairTransAngleZXZPhi','pairTransAngleZXZPsi','pairTransAngleZXZTheta',
+                                  'pairInvTransVectX','pairInvTransVectY','pairInvTransVectZ',
+                                  'pairInvTransAngleZXZPhi','pairInvTransAngleZXZPsi','pairInvTransAngleZXZTheta',
+                                  'pairLenTrans','pairAngDist',
+                                  'pairCoordinateX1','pairCoordinateY1','pairCoordinateZ1',
+                                  'pairAnglePhi1','pairAnglePsi1','pairAngleTheta1',
+                                  'pairClass1','pairPsf1',
+                                  'pairNeighPlus1','pairNeighMinus1', 'pairPosInPoly1',
+                                  'pairCoordinateX2','pairCoordinateY2','pairCoordinateZ2',
+                                  'pairAnglePhi2','pairAnglePsi2','pairAngleTheta2',
+                                  'pairClass2','pairPsf2',
+                                  'pairNeighPlus2','pairNeighMinus2', 'pairPosInPoly2',
+                                  'pairTomoName','pairPixelSizeAng',
+                                  'pairOriPartList','pairMaxDist','pairClass','pairClassColour',
+                                  'pairLabel','pairScore']
     idxTmp = transList[:,0:2].astype(np.int)
     idxTmp1 = list(idxTmp[:,0].reshape(1,-1)[0])
     idxTmp2 = list(idxTmp[:,1].reshape(1,-1)[0])
@@ -249,9 +243,8 @@ def genStarFile(transList, allTomoNames, st, maxDist, oriPartList, outputName):
     startSt_data[header["fieldNames"][45:47]] = pd.DataFrame(np.tile([-1,-1],(transList.shape[0],1)))
     
     #store the starSt 
-    tom_starwrite(outputName, startSt_data, header) ###header should begin with "_"
-    #load the saved starfile
-    startSt = tom_starread(outputName)
-   
-    return startSt 
+    starInfos = generateStarInfos()
+    starInfos['data_particles'] = startSt_data
+    tom_starwrite(outputName, starInfos)      
+    return startSt_data 
     

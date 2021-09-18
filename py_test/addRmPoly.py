@@ -2,7 +2,7 @@ import numpy as np
 import os
 import shutil
 from py_test.genSimForwardPolyModel import genForwardPolyModel
-def setup(conf=None, noizeDregree = 2, branch = 0):
+def setup(conf=None, noizeDegree = 2, branch = 0):
     '''
     Parameters
     ----------
@@ -38,7 +38,7 @@ def setup(conf=None, noizeDregree = 2, branch = 0):
             zz0['branch']=1
         else:
             zz0['branch']=0
-        zz0['noizeDregree'] = noizeDregree
+        zz0['noizeDregree'] = noizeDegree
         conf.append(zz0)
         
         zz1 = { }
@@ -52,7 +52,7 @@ def setup(conf=None, noizeDregree = 2, branch = 0):
         zz1['minDist']=50
         zz1['searchRad']=100
         zz1['branch']=0
-        zz1['noizeDregree'] = noizeDregree
+        zz1['noizeDregree'] = noizeDegree
         conf.append(zz1)
         
         zz2 = { }
@@ -78,7 +78,7 @@ def setup(conf=None, noizeDregree = 2, branch = 0):
             zz3['branch']=1
         else:
             zz3['branch']=0
-        zz3['noizeDregree'] = noizeDregree
+        zz3['noizeDregree'] = noizeDegree
         conf.append(zz3)
         
         zz4 = { }
@@ -130,7 +130,7 @@ def teardown():
         
     if os.path.exists('sim_dropFillUp.star'):
         os.remove('sim_dropFillUp.star')
-        
+      
     if os.path.exists('simOrderRandomized.star'):
         os.remove('simOrderRandomized.star')
         

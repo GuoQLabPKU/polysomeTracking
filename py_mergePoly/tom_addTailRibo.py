@@ -4,8 +4,9 @@ from ast import literal_eval
 from alive_progress import alive_bar 
 
 
-from py_io.tom_starread import tom_starread
+from py_io.tom_starread import tom_starread, generateStarInfos
 from py_io.tom_starwrite import tom_starwrite
+from py_io.tom_extractData import tom_extractData
 from py_mergePoly.tom_extendPoly import tom_extendPoly
 from py_cluster.tom_A2Odist import tom_A2Odist
 from py_transform.tom_calcPairTransForm import tom_calcPairTransForm
@@ -16,7 +17,7 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
                     cmbDistMax, cmbDistMeanStd, fitParam, 
                     oriPartList, pruneRad, 
                     tranListOutput = '',  particleOutput = '',                 
-                    NumAddRibo = 1, verbose=1, method = 'extreme',
+                    numAddRibo = 1, verbose=1, method = 'extreme',
                     worker_n = 5, gpu_list = None, 
                     xyzborder = None, cmb_metric = 'scale2Ang'):
     '''
@@ -64,11 +65,14 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
     '''
     if isinstance(pairList, str):
         pairList = tom_starread(pairList)
+        pairList = pairList['data_particles']
     if isinstance(oriPartList, str):
-        particleStar = tom_starread(oriPartList)
+        particleStar = tom_starread(oriPartList, pairList['pairPixelSizeAng'].values[0])
+        particleStar_data = particleStar['data_particles']
+        particleSt = tom_extractData(oriPartList)
    
-    stateU = statePolyAll_list[statePolyAll_list['pairClass'] == pairClass]
-    polyU = np.unique(stateU['pairLabel'].values) #unique polysome with branches
+    polyStateU = statePolyAll_list[statePolyAll_list['pairClass'] == pairClass]
+    polyU = np.unique(polyStateU['pairLabel'].values) #unique polysome with branches
     if len(polyU) == 0:
         print('No polysomes detected in class%d! Check your transList!'%pairClass)
         return pairList
@@ -76,8 +80,6 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
         print('Only one polysome detected, no need link short polys!')
         return pairList
    
-
-    
     #get the head/tail ribo position & angle information
     tailRiboIdx = statePolyAll_list[statePolyAll_list['ifWoOut'] == 1]['pairIDX'].values
     headRiboIdx = statePolyAll_list[statePolyAll_list['ifWoIn'] == 1]['pairIDX'].values
@@ -90,16 +92,15 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
     headRiboInfo[:,0] = headRiboIdx  
     tailRiboInfo[:,1] = statePolyAll_list[statePolyAll_list['ifWoOut'] == 1]['pairLabel'].values
     headRiboInfo[:,1] = statePolyAll_list[statePolyAll_list['ifWoIn'] == 1]['pairLabel'].values
-    tailRiboInfo[:,2:] =  particleStar.loc[tailRiboIdx,['rlnCoordinateX', 'rlnCoordinateY', 'rlnCoordinateZ',
-                                                       'rlnAngleRot', 'rlnAngleTilt', 'rlnAnglePsi']].values
-    headRiboInfo[:,2:] = particleStar.loc[headRiboIdx, ['rlnCoordinateX', 'rlnCoordinateY', 'rlnCoordinateZ',
-                                                       'rlnAngleRot', 'rlnAngleTilt', 'rlnAnglePsi']].values
-                
+    tailRiboInfo[:,2:5] =  particleSt["p1"]["positions"][tailRiboIdx, ]   
+    headRiboInfo[:,2:5] =  particleSt["p1"]["positions"][headRiboIdx, ]
+    tailRiboInfo[:,5:] =   particleSt["p1"]["angles"][tailRiboIdx, ]   
+    headRiboInfo[:,5:] =   particleSt["p1"]["angles"][headRiboIdx, ]                
     #add ribosome(s) to the end of each polysome
     #fillUpRiboInfos store the information of filled up ribosomes which link another polysome
     #fillUpMiddleRiboInfos store the information of filled up ribsomes when we added more than one ribos
-    fillUpRiboInfos, fillUpMiddleRiboInfos = tom_extendPoly(tailRiboInfo, avgRot, avgShift, particleStar, pruneRad, 
-                                                            NumAddRibo, xyzborder)
+    fillUpRiboInfos, fillUpMiddleRiboInfos = tom_extendPoly(tailRiboInfo, avgRot, avgShift, particleSt, pruneRad, 
+                                                            numAddRibo, xyzborder)
     if fillUpRiboInfos.shape[0] == 0:
         print('Warning: can not extend polysomes! This is because hypothetical ribos are \
               already in the tomo  OR out of the tomo border!')
@@ -107,7 +108,8 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
     #calculate angle /vector distance between hypothetical trans and head ribos of other polysomes
     transListAct = genTransList(fillUpRiboInfos, headRiboInfo, statePolyAll_list)
     if transListAct.shape[0] == 0:
-        print('Can not link short polys! This may to be polys are in different tomos.')
+        print('''Can not link short polys! This may to be polys are in different tomos or 
+              in the same polysome.''')
         return pairList
     
     #calculate distance between hypo trans and average trans
@@ -127,7 +129,8 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
         
     transAct_filter = transListAct[index]
     if transAct_filter.shape[0] == 0:
-        print('Warning: can not add fillup ribos at tail of polysomes')
+        print('''Warning: can not add fillup ribos at tail of polysomes. 
+              This is because fillup ribos can't link another polysome''')
         return pairList
     #debug for filled up ribosome infos output
     if verbose:
@@ -144,23 +147,24 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
     tomoNamesOfDupFillUpRibos = [statePolyAll_list[statePolyAll_list['pairIDX'] == i]['pairTomoName'].values[0] \
                                 for i in transAct_filter[:,0]]
             
-    appendRiboStruct = updateParticle(fillRiboCoords, fillRiboAngles, 
-                                       particleStar.iloc[0,:], tomoNamesOfFillUpRibos, 
-                                       particleStar.shape[0])
+    appendRiboStruct = updateParticle( fillRiboCoords, fillRiboAngles, 
+                                       particleStar_data.iloc[0,:], tomoNamesOfFillUpRibos, 
+                                       particleStar_data.shape[0],  particleStar['type'])
     idxOfFillUpRibos = { } #this is the idx of filled up ribsomes in the particles.star
     for i,j in enumerate(keepTailRiboIdxForFillUpRibo):
-        idxOfFillUpRibos[j] = particleStar.shape[0] + i
+        idxOfFillUpRibos[j] = particleStar_data.shape[0] + i
     idxOfDupFillUpRibos = np.array([idxOfFillUpRibos[i] for i in transAct_filter[:, 0]])
     
-    particleStar = pd.concat([particleStar, appendRiboStruct], axis = 0)
-    particleStar.reset_index(drop = True, inplace = True)
+    particleStar_data = pd.concat([particleStar_data, appendRiboStruct], axis = 0)
+    particleStar_data.reset_index(drop = True, inplace = True)
     
     #update transList and append into transList  
     transAct_filter[:,1] = idxOfDupFillUpRibos
     transListOfFillUpRibo = updateTransList(transAct_filter, 
                                             tomoNamesOfDupFillUpRibos, 
-                                            particleStar, pruneRad, 
-                                            oriPartList, pairClass) 
+                                            particleStar_data, particleStar['pixelSize'],
+                                            particleStar['type'],
+                                            pruneRad, oriPartList, pairClass) 
     pairList = pd.concat([pairList, transListOfFillUpRibo], axis = 0)
     pairList.reset_index(drop = True, inplace = True)
     #####################################################
@@ -172,7 +176,7 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
                                                                                 fillUpMiddleRiboInfos, 
                                                                                 fillRiboCoords,fillRiboAngles,
                                                                                 keepTailRiboIdxForFillUpRibo,
-                                                                                particleStar.shape[0],
+                                                                                particleStar_data.shape[0],
                                                                                 avgShift, avgRot,
                                                                                 statePolyAll_list,                                                                        
                                                                                 idxOfFillUpRibos)  
@@ -180,16 +184,19 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
         
         riboCoords =  transActFillupMiddleRibo[:, 18:21]
         riboAngles = transActFillupMiddleRibo[:, 21:24]
-        fillUpRiboStruct = updateParticle(riboCoords, riboAngles, particleStar.iloc[0,:], 
-                                              tomoNameFillUpMiddleRibo, particleStar.shape[0])
+        fillUpRiboStruct = updateParticle(riboCoords, riboAngles,   particleStar_data.iloc[0,:], 
+                                          tomoNameFillUpMiddleRibo, particleStar_data.shape[0],
+                                          particleStar['type'])
         #update particlesStar
-        particleStar = pd.concat([particleStar, fillUpRiboStruct], axis = 0)
-        particleStar.reset_index(drop = True, inplace = True)   
+        particleStar_data = pd.concat([particleStar_data, fillUpRiboStruct], axis = 0)
+        particleStar_data.reset_index(drop = True, inplace = True)   
         #update transList
         transListFillupMiddleRibo = updateTransList(transActFillupMiddleRibo, 
                                                     tomoNameFillUpMiddleRibo, 
-                                                    particleStar, pruneRad, oriPartList,
-                                                    pairClass)#, transListU['pairClassColour'].values[0])
+                                                    particleStar_data, 
+                                                    particleStar['pixelSize'],
+                                                    particleStar['type'],
+                                                    pruneRad, oriPartList, pairClass)
         
         pairList = pd.concat([pairList, transListFillupMiddleRibo], axis = 0)
         pairList.reset_index(drop = True, inplace = True)    
@@ -200,8 +207,9 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
                                                         statePolyAll_list, idxFillUpMiddleRibo, 
                                                         avgShift, avgRot)
         transListT2F = updateTransList(transActT2F, tomoNameT2F, 
-                                      particleStar, pruneRad, oriPartList,
-                                      pairClass)
+                                      particleStar_data, particleStar['pixelSize'],
+                                      particleStar['type'],
+                                      pruneRad, oriPartList,pairClass)
         
         pairList = pd.concat([pairList, transListT2F], axis = 0)
         pairList.reset_index(drop = True, inplace = True)
@@ -213,18 +221,20 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
                                                         avgShift,avgRot)
     
         transListT2F = updateTransList(transActT2F, tomoNameT2F, 
-                                      particleStar, pruneRad, oriPartList,
-                                      pairClass)
+                                      particleStar_data, particleStar['pixelSize'],
+                                      particleStar['type'],
+                                      pruneRad, oriPartList,pairClass)
         pairList = pd.concat([pairList, transListT2F], axis = 0)
         pairList.reset_index(drop = True, inplace = True)        
     #save the transList and particlStar file
-    saveStruct(particleOutput,particleStar)
+    particleStar['data_particles'] = particleStar_data
+    saveStruct(particleOutput, particleStar)
     return pairList
 
 def genTransList(fillUpRiboInfos, headRiboInfo, polyInfoList):
     transListAct  =  np.array([]).reshape(-1, 30)
     #check if fillUpRibo can link the head of another polysomes, get the translist data 
-    with alive_bar(fillUpRiboInfos.shape[0]+1, title="calculate trans pairs") as bar:
+    with alive_bar(fillUpRiboInfos.shape[0], title="calculate trans pairs for fillingUp") as bar:
         for i in range(fillUpRiboInfos.shape[0]):
             for j in range(headRiboInfo.shape[0]):
                 polyId1 = fillUpRiboInfos[i,1];polyId2 = headRiboInfo[j,1]
@@ -239,7 +249,7 @@ def genTransList(fillUpRiboInfos, headRiboInfo, polyInfoList):
                 ang1 = fillUpRiboInfos[i,5:]
                 
                 pos2 = headRiboInfo[j,2:5]
-                _, ang2 = tom_eulerconvert_xmipp(headRiboInfo[j,5], headRiboInfo[j,6], headRiboInfo[j,7])          
+                ang2 = headRiboInfo[j,5:]  
                 posTr1, angTr1, lenPosTr1, lenAngTr1 = tom_calcPairTransForm(pos1,ang1,pos2,ang2,'exact')
                 transListAct = np.concatenate((transListAct, np.array([[fillUpRiboInfos[i,0],
                                            fillUpRiboInfos[i,1], headRiboInfo[j,0], 
@@ -252,24 +262,20 @@ def genTransList(fillUpRiboInfos, headRiboInfo, polyInfoList):
                                            pos2[0],pos2[1],pos2[2],
                                            ang2[0],ang2[1],ang2[2]]])),
                                            axis = 0)  
-                #add the wait bar
-                bar()
-                bar.text("Calculating transfromation for %d filluped ribos..........."%(i))   
+            #add the wait bar
+            bar()
                 
     return transListAct    
 
-def saveStruct(filename,starfile):
-    
+def saveStruct(filename,starfile):  
     if len(filename) == 0:
         return
-
-    header = { }
-    header["is_loop"] = 1
-    header["title"] = "data_"
-    header["fieldNames"] = [ ]
-    for i,j in enumerate(starfile.columns):
-        header["fieldNames"].append('_%s #%d'%(j,i+1))
-    tom_starwrite(filename, starfile, header)
+    if isinstance(starfile, dict):
+        tom_starwrite(filename, starfile)
+    else:    
+        starInfo = generateStarInfos()
+        starInfo['data_particles'] = starfile
+        tom_starwrite(filename, starInfo)
 
 
 def genTransTailToFillUp(riboIdxs, tailInfo, fillUpInfo, 
@@ -348,38 +354,42 @@ def updateTransOfMiddleFillupRibos(fillUpMiddleRiboInfos,fillRiboCoords,fillRibo
 
 
 
-def updateTransList(transList, tomoName12, particleStar, maxDist, oriPartList, 
-                     pairClass):
+def updateTransList(transList, tomoName12, particleStar, pixelSize, starType, 
+                    maxDist, oriPartList, pairClass):
     idx1 = transList[:, 1].astype(np.int)
     idx2 = transList[:, 2].astype(np.int)
     header = { }
-    header["is_loop"] = 1
-    header["title"] = "data_"
     header["fieldNames"] = ['pairIDX1','pairIDX2','pairTomoID',
-                                  'pairTransVectX','pairTransVectY','pairTransVectZ',
-                                  'pairTransAngleZXZPhi', 'pairTransAngleZXZPsi','pairTransAngleZXZTheta',
-                                  'pairInvTransVectX','pairInvTransVectY','pairInvTransVectZ',
-                                  'pairInvTransAngleZXZPhi', 'pairInvTransAngleZXZPsi','pairInvTransAngleZXZTheta',
-                                  'pairLenTrans','pairAngDist',
-                                  'pairCoordinateX1','pairCoordinateY1','pairCoordinateZ1',
-                                  'pairAnglePhi1','pairAnglePsi1','pairAngleTheta1',
-                                  'pairClass1','pairPsf1',
-                                   'pairNeighPlus1','pairNeighMinus1', 'pairPosInPoly1',
-                                  'pairCoordinateX2','pairCoordinateY2','pairCoordinateZ2',
-                                  'pairAnglePhi2','pairAnglePsi2','pairAngleTheta2',
-                                  'pairClass2','pairPsf2',
-                                   'pairNeighPlus2','pairNeighMinus2', 'pairPosInPoly2',
-                                  'pairTomoName','pairPixelSizeAng',
-                                  'pairOriPartList',
-                                  'pairMaxDist','pairClass','pairClassColour',
-                                  'pairLabel','pairScore']
+                          'pairTransVectX','pairTransVectY','pairTransVectZ',
+                          'pairTransAngleZXZPhi', 'pairTransAngleZXZPsi','pairTransAngleZXZTheta',
+                          'pairInvTransVectX','pairInvTransVectY','pairInvTransVectZ',
+                          'pairInvTransAngleZXZPhi', 'pairInvTransAngleZXZPsi','pairInvTransAngleZXZTheta',
+                          'pairLenTrans','pairAngDist',
+                          'pairCoordinateX1','pairCoordinateY1','pairCoordinateZ1',
+                          'pairAnglePhi1','pairAnglePsi1','pairAngleTheta1',
+                          'pairClass1','pairPsf1',
+                           'pairNeighPlus1','pairNeighMinus1', 'pairPosInPoly1',
+                          'pairCoordinateX2','pairCoordinateY2','pairCoordinateZ2',
+                          'pairAnglePhi2','pairAnglePsi2','pairAngleTheta2',
+                          'pairClass2','pairPsf2',
+                           'pairNeighPlus2','pairNeighMinus2', 'pairPosInPoly2',
+                          'pairTomoName','pairPixelSizeAng',
+                          'pairOriPartList',
+                          'pairMaxDist','pairClass','pairClassColour',
+                          'pairLabel','pairScore']
     idxTmp = np.array([idx1, idx2]).transpose()
-    #pixel = particleStar['rlnDetectorPixelSize'].values[0]
-    pixel = 3.42
-    classesPart1 = particleStar['rlnClassNumber'].values[idx1]
-    classesPart2 = particleStar['rlnClassNumber'].values[idx2]
-    psfsPart1 = particleStar['rlnCtfImage'].values[idx1]
-    psfsPart2 = particleStar['rlnCtfImage'].values[idx2]
+
+    if (starType == 'relion2') | (starType == 'relion3'):
+        classesPart1 = particleStar['rlnClassNumber'].values[idx1]
+        classesPart2 = particleStar['rlnClassNumber'].values[idx2]
+        psfsPart1 = particleStar['rlnCtfImage'].values[idx1]
+        psfsPart2 = particleStar['rlnCtfImage'].values[idx2]
+    elif starType == 'stopgap':
+        classesPart1 = particleStar['class'].values[idx1]
+        classesPart2 = particleStar['class'].values[idx2]
+        psfsPart1 =  ['-1']*len(idx1)
+        psfsPart2 =  ['-1']*len(idx2)
+        
     neighPMPart = np.tile(['-1:-1','-1:-1'],(transList.shape[0],1))
     posInPolyPart = np.repeat(-1,transList.shape[0])
     
@@ -399,7 +409,7 @@ def updateTransList(transList, tomoName12, particleStar, maxDist, oriPartList,
     startSt_data[header["fieldNames"][36:38]] = pd.DataFrame(neighPMPart)
     startSt_data[header["fieldNames"][38]] = posInPolyPart
     startSt_data[header["fieldNames"][39]] = tomoName12
-    startSt_data[header["fieldNames"][40]] = np.repeat([pixel], transList.shape[0])
+    startSt_data[header["fieldNames"][40]] = np.repeat([pixelSize], transList.shape[0])
     startSt_data[header["fieldNames"][41]] = np.repeat([oriPartList],transList.shape[0])
     startSt_data[header["fieldNames"][42]] = np.repeat([maxDist],transList.shape[0])
     startSt_data[header["fieldNames"][43]] = pairClass
@@ -409,56 +419,114 @@ def updateTransList(transList, tomoName12, particleStar, maxDist, oriPartList,
     return startSt_data
     
 
-def updateParticle(riboCoords, riboAngles, exampleInfo, tomoNames, particleN): 
+def updateParticle(riboCoords, riboAngles, exampleInfo, tomoNames, particleN, starType): 
     #deal with the colname of dataframe 
-    colNames =  list(exampleInfo.index)    
-    processedColNames = ['rlnCoordinateX','rlnCoordinateY','rlnCoordinateZ',
-                  'rlnAngleRot','rlnAngleTilt','rlnAnglePsi',
-                  'rlnMicrographName','rlnImageName','rlnCtfImage']
-    toProcessColNames = [ ]
-    #deal with the idx(other information) of each ribosome
-    particleStruct = { } #store the infotmation of filled up ribosomes
-    for single_name in colNames:
-        particleStruct[single_name] = []
-    
-    particleStruct['rlnCoordinateX'] = riboCoords[:,0]
-    particleStruct['rlnCoordinateY'] = riboCoords[:,1]
-    particleStruct['rlnCoordinateZ'] = riboCoords[:,2]
-    
-    count = 0
-    for i in range(riboCoords.shape[0]):
-        _,angles = tom_eulerconvert_xmipp(riboAngles[i,0], riboAngles[i,1], 
-                                          riboAngles[i,2], 'tom2xmipp')
-        particleStruct['rlnAngleRot'].append(angles[0])
-        particleStruct['rlnAngleTilt'].append(angles[1])
-        particleStruct['rlnAnglePsi'].append(angles[2])
-        particleStruct['rlnImageName'].append('notImplemented.mrc')
-        particleStruct['rlnCtfImage'].append('notImplemented.mrc')
-        if 'rlnOriginX' in colNames:
-            particleStruct['rlnOriginX'].append(0)
-            particleStruct['rlnOriginY'].append(0)
-            particleStruct['rlnOriginZ'].append(0)
-            if count == 0:
-                processedColNames.append('rlnOriginX')
-                processedColNames.append('rlnOriginY')
-                processedColNames.append('rlnOriginZ')
-                
-        if 'rlnClassNumber' in colNames:
-            particleStruct['rlnClassNumber'].append(-1) #class == -1 ==>represents added Ribos
-            if count == 0:
-                processedColNames.append('rlnClassNumber')
-        if 'rlnGroupNumber' in colNames:
-            particleStruct['rlnGroupNumber'].append(-1)
-            if count == 0:
-                processedColNames.append('rlnGroupNumber')
-        count += 1
-        #pick remaing colName
-        if len(toProcessColNames) == 0:
-            toProcessColNames = [i for i in colNames if i not in processedColNames]
-        for singleName in toProcessColNames:
-            particleStruct[singleName].append(exampleInfo[singleName])
-    #make a dataframe
-    particleStruct['rlnMicrographName'] = tomoNames
+    colNames =  list(exampleInfo.index)
+    if (starType == 'relion2')  |  (starType == 'relion3'):
+        processedColNames = ['rlnCoordinateX','rlnCoordinateY','rlnCoordinateZ',
+                             'rlnAngleRot','rlnAngleTilt','rlnAnglePsi',
+                             'rlnMicrographName','rlnImageName','rlnCtfImage']
+        toProcessColNames = [ ]
+        #deal with the idx(other information) of each ribosome
+        particleStruct = { } #store the infotmation of filled up ribosomes
+        for single_name in colNames:
+            particleStruct[single_name] = []
+        
+        particleStruct['rlnCoordinateX'] = riboCoords[:,0]
+        particleStruct['rlnCoordinateY'] = riboCoords[:,1]
+        particleStruct['rlnCoordinateZ'] = riboCoords[:,2]
+        
+        count = 0
+        for i in range(riboCoords.shape[0]):
+            _,angles = tom_eulerconvert_xmipp(riboAngles[i,0], riboAngles[i,1], 
+                                              riboAngles[i,2], 'tom2xmipp')
+            particleStruct['rlnAngleRot'].append(angles[0])
+            particleStruct['rlnAngleTilt'].append(angles[1])
+            particleStruct['rlnAnglePsi'].append(angles[2])
+            particleStruct['rlnImageName'].append('notImplemented.mrc')
+            particleStruct['rlnCtfImage'].append('notImplemented.mrc')
+            if 'rlnOriginX' in colNames:
+                particleStruct['rlnOriginX'].append(0)
+                particleStruct['rlnOriginY'].append(0)
+                particleStruct['rlnOriginZ'].append(0)
+                if count == 0:
+                    processedColNames.append('rlnOriginX')
+                    processedColNames.append('rlnOriginY')
+                    processedColNames.append('rlnOriginZ')
+                    
+            if 'rlnClassNumber' in colNames:
+                particleStruct['rlnClassNumber'].append(-1) #class == -1 ==>represents added Ribos
+                if count == 0:
+                    processedColNames.append('rlnClassNumber')
+            if 'rlnGroupNumber' in colNames:
+                particleStruct['rlnGroupNumber'].append(-1)
+                if count == 0:
+                    processedColNames.append('rlnGroupNumber')
+            count += 1
+            #pick remaing colName
+            if len(toProcessColNames) == 0:
+                toProcessColNames = [i for i in colNames if i not in processedColNames]
+            for singleName in toProcessColNames:
+                particleStruct[singleName].append(exampleInfo[singleName])
+        particleStruct['rlnMicrographName'] = tomoNames  
+        
+    elif starType == 'stopgap':
+        processedColNames = ['orig_x','orig_y','orig_z',
+                             'phi','psi','the']
+        toProcessColNames = [ ]
+        #deal with the idx(other information) of each ribosome
+        particleStruct = { } #store the infotmation of filled up ribosomes
+        for single_name in colNames:
+            particleStruct[single_name] = []
+        
+        particleStruct['orig_x'] = riboCoords[:,0]
+        particleStruct['orig_y'] = riboCoords[:,1]
+        particleStruct['orig_z'] = riboCoords[:,2]
+        
+        particleStruct['phi'] = riboAngles[:,0]
+        particleStruct['psi'] = riboAngles[:,1]
+        particleStruct['the'] = riboAngles[:,2]
+        
+        count = 0
+        for i in range(riboCoords.shape[0]):
+            
+            if 'x_shift' in colNames:
+                particleStruct['x_shift'].append(0)
+                particleStruct['y_shift'].append(0)
+                particleStruct['z_shift'].append(0)
+                if count == 0:
+                    processedColNames.append('x_shift')
+                    processedColNames.append('y_shift')
+                    processedColNames.append('z_shift')
+                    
+            if 'class' in colNames:
+                particleStruct['class'].append(-1) #class == -1 ==>represents added Ribos
+                if count == 0:
+                    processedColNames.append('class')
+                    
+            if 'subtomo_num' in colNames:
+                particleStruct['subtomo_num'].append(-1)
+                if count == 0:
+                    processedColNames.append('subtomo_num')
+                    
+            if 'tomo_num' in colNames:
+                particleStruct['tomo_num'].append(-1)
+                if count == 0:
+                    processedColNames.append('tomo_num')  
+                    
+            if 'halfset' in colNames:
+                particleStruct['halfset'].append(-1)
+                if count == 0:
+                    processedColNames.append('halfset') 
+                    
+            count += 1
+            #pick remaing colName
+            if len(toProcessColNames) == 0:
+                toProcessColNames = [i for i in colNames if i not in processedColNames]
+            for singleName in toProcessColNames:
+                particleStruct[singleName].append(exampleInfo[singleName])  
+        
+    #make a dataframe    
     appendRiboInfo = pd.DataFrame(particleStruct)
     
     return appendRiboInfo

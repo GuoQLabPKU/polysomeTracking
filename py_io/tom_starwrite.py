@@ -1,52 +1,54 @@
-import pandas as pd
-
-def tom_starwrite(outputName, st_input, header):
+def tom_starwrite(outputName, star_st):
     '''
-    TOM_STARWRITE write a dataframe/dict to a star file
-    pruneRad(maxDist) to reduce calc (particles with distance > maxDist will not paired)
-
-    transList=tom_calcTransforms(pos,pruneRad,dmetric,verbose)
-
+    TOM_STARWRITE write a dict to a star file
     PARAMETERS
 
     INPUT
         outputName          the name of the output files(the default directory is current pathway)
-        st_input            the input file, can be a dict or a dataframe
-        header              the colnames of the input dataframe or the keys of the dict
-
+        star_st             the input file, must be a dict following content like tom_starread ouput dict
+        
     REFERENCES
-    
     '''
     #check the type of input data 
-    if isinstance(st_input, dict):
-        #print("The input data is one dict.")
-        store_data = pd.DataFrame()
-        for single_key in header["fieldNames"]:
-            store_data[single_key] = st_input[single_key]
-            
-    elif isinstance(st_input, pd.DataFrame):
-        #print("The input data is one dataframe.")
-        store_data = st_input
-    
+    support_list = ['relion2', 'relion3', 'stopgap'] 
+    assert star_st['type'] in support_list
+    writeStarFile(star_st,outputName)
+ 
+def writeStarFile(star_st,outputName): 
+    if star_st['type'] == 'relion3':
+        writeHeader(star_st['header_optics'], outputName, 1)
+        writeDF(star_st['data_optics'], outputName)         
+        writeHeader(star_st['header_particles'], outputName,0)
     else:
-        raise TypeError('unrecognized data type!')
+        writeHeader(star_st['header_particles'], outputName,1)
+    writeDF(star_st['data_particles'], outputName)    
+         
+       
+def writeDF(dataFrame, outputName):
+    f = open(outputName, 'a+')
+    if 'motl' in dataFrame.columns[0]:
+        header = ['_%s'%i for i in dataFrame.columns]  
     
-    #write out the data 
-    f = open(outputName,'w')
-    f.write(header["title"] + '\n')
-    if header['is_loop'] == 1:
-        f.write('loop_'+'\n')
-    for single_element in header['fieldNames']:
+    elif ('#' not in dataFrame.columns[0]) & ('motl' not in dataFrame.columns[0]):
+        header = [ ]
+        for count, single_column in enumerate(dataFrame.columns):
+            header.append('_%s #%d'%(single_column, count+1))
+    else:
+        header = list(dataFrame.columns)
+    for single_element in header:
         f.write(single_element + '\n')
     f.close()
-    #write the data body
-    store_data.to_csv(outputName,mode = 'a', index=False, header = False, sep = " ")
-    #print("Save the star data successfully!")
-    
+    dataFrame.to_csv(outputName, mode = 'a', index = False, header = False, sep = ' ')
+            
 
-    
-    
-    
-    
-    
-        
+def writeHeader(header, outputName, overwrite = 1):
+    if overwrite:
+        f = open(outputName, 'w+')
+    else:
+        f = open(outputName, 'a+')
+    f.write('\n')
+    for single_header in header:
+        f.write(single_header + '\n')
+        if single_header != 'loop_':
+            f.write('\n')
+    f.close()

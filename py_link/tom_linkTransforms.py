@@ -97,6 +97,7 @@ def searchPathForward(cmbInd, zz, branchNr):  #branch begin with 0 end with the 
         if type(idxT1).__name__ == 'int64':           
             if cmbInd_circleFlag[idxT1] == 1:
                 circRepeat = 1
+                
         if (isinstance(idxT1, np.ndarray)) | (circRepeat == 1):
             break
         
@@ -117,8 +118,8 @@ def uniquePathAdd(allPath, newPath): #allPath == [], should be a ptr
         allPath.append(newPath_sort)
         return allPath
  
-    memNinA = np.zeros(len(allPath), dtype = np.int)  #1D array
-    memAinN = np.zeros(len(allPath), dtype = np.int)
+    memNinA   = np.zeros(len(allPath), dtype = np.int)  #1D array
+    memAinN   = np.zeros(len(allPath), dtype = np.int)
     memBranch = np.zeros(len(allPath), dtype = np.int)
   
     newPathP = np.sort(newPath[:,2])  
@@ -181,11 +182,10 @@ def addLabelToIndList(indList, allPathN, offset_PolyID): #the indList should be 
     Path_N = len(allPathN)
     for i in range(Path_N):
         single_path = allPathN[i]
-        indList[single_path[:,2], 2] = i+offset_PolyID+1  #which polysome it belongs
+        indList[single_path[:,2], 2] = i+offset_PolyID + 1  #which polysome it belongs
         indList[single_path[:,2], 3] = single_path[:, 3] #the rank in one polysome
         indList[single_path[:,2], 4] = single_path[:, 4] #1:branch1<=>2:branch2
-        
-    
+           
     return indList
        
 def updatePairListByIndList(pairList, indList):
@@ -195,7 +195,8 @@ def updatePairListByIndList(pairList, indList):
         idxPair, indListByLabel = getPathSortedindListByLabel(indList, idxTmp)
         rowNames = pairList._stat_axis.values.tolist()
         rowNamesSel = [rowNames[i] for i in idxPair]
-        pairList.loc[rowNamesSel,:] = updatePairListOneLabel(pairList.loc[rowNamesSel,:],  indListByLabel, uLabels[i], rowNamesSel)
+        pairList.loc[rowNamesSel,:] = updatePairListOneLabel(pairList.loc[rowNamesSel,:],  indListByLabel, 
+                                                             uLabels[i], rowNamesSel)
         
     return pairList
         
@@ -209,9 +210,7 @@ def getPathSortedindListByLabel(indList, idxTmp):
 def updatePairListOneLabel(pairList,indListByLabel, uLabel, rowNamesSel): #shold write a function to directly get circular polysomes
      '''
      the debug plot function is developing 
-     '''
-#    do_debugPlot = 0
-     
+     '''    
      isLinear = 1
     
      pairList_len = pairList.shape[0]
@@ -230,9 +229,6 @@ def updatePairListOneLabel(pairList,indListByLabel, uLabel, rowNamesSel): #shold
          if isLinear:
              pairList.loc[j, 'pairPosInPoly2'] = indListByLabel[i,3] + 1
          isLinear = 1
-#        debugPlot(do_debugPlot, pairList,i)
-        
+         
      return pairList.values
             
-#def  debugPlot(doPlot, pairList,i):
-#    if doPlot:

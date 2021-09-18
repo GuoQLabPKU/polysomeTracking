@@ -58,7 +58,7 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS):
     
     idx = [ ]
     
-    if type(classFilt).__name__ == 'dict':
+    if isinstance(classFilt, dict):
         classes = np.zeros(len(d), dtype = np.int)
         lens = np.zeros(len(d), dtype = np.int)
         for i in len(d):
@@ -99,7 +99,7 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS):
             p = subprocess.Popen(call, shell = True, stdout = subprocess.PIPE)
             inputName = inputNameTmp   ##if too many transforms, only keep maxlen transforms/particles
         
-        if type(avgCallTmpl).__name__ == 'dict':
+        if isinstance(avgCallTmpl, dict):
             print("############################################################")
             print("exect below commands in the matlab")
             command = "tom_sg_average(%s,%s,%s,%s,\'\', \'default\', %d, %3f"%(inputName, 
@@ -115,18 +115,3 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS):
         
         #the idea is give a number cutoff of transforms for each class, and then average 
         #the transform for each class!
-     
-            
-            
-            
-        
-        
-            
-            
-            
-            
-            
-            
-    
-    
-        
