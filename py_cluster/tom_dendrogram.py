@@ -1,8 +1,10 @@
 from scipy.cluster.hierarchy import dendrogram
 import numpy as np
-import matplotlib.cm as cm
+import random 
 import matplotlib.pyplot as plt
 from copy import deepcopy
+import seaborn as sns
+
 
 def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeaves = 0):
     '''
@@ -73,12 +75,12 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
         if ugroupIdx[i] == 0:
             groups[i]["color"] = cmap[-1,:] #0 means that it belongs to no cluster(impossible)
         else:
-            groups[i]["color"] = cmap[ugroupIdx[i]-1,: ]
+            groups[i]["color"] = cmap[ugroupIdx[i]-1, :]
         
         tt = np.where(groupIdx == ugroupIdx[i])[0]
         tmpMem = np.unique(tree[tt, 0:2]).astype(np.int)  #1D int64 array
         if nrObservation>0:
-            tmpMem = tmpMem[tmpMem < nrObservation] #skip the member>size(transforms)
+            tmpMem = tmpMem[tmpMem < nrObservation] #skip the member > size(transforms)
             if tmpMem.size == 0:
                 tmpMem = np.array([], dtype = np.int)
         groups[i]["members"] = tmpMem  #member can be empty!
@@ -86,28 +88,32 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
         if groups[i]["members"].size != 0:
             for iii in groups[i]["members"]:
                 dlabels[iii] = "c%d"%groups[i]["id"]
+    
+    link_cols = genLink_color(groups,tree)
+    #print(link_cols)
     if dsp & (maxLeaves>0):
         plt.figure()
         if nrObservation > maxLeaves:
             figure_title = "clustering %d of %d shown"%(maxLeaves, nrObservation)
             plt.title(figure_title)
             with plt.rc_context({'lines.linewidth': 0.5}):
-                dendrogram(tree,  p=maxLeaves, color_threshold= ColorThreshold,
-                                   above_threshold_color = (0.7,0.7,0.7))
+                dendrogram(tree,  p=maxLeaves, color_threshold=None,
+                            link_color_func=lambda x: link_cols[x])
         else:
             figure_title  = 'clustering'
             plt.title(figure_title)
             with plt.rc_context({'lines.linewidth': 0.5}):
-                dendrogram(tree,  p = nrObservation, color_threshold=ColorThreshold, labels= dlabels,
-                                   above_threshold_color = (0.7,0.7,0.7))
+                dendrogram(tree,  p=maxLeaves, color_threshold=None,
+                            link_color_func=lambda x: link_cols[x])
             plt.xticks(fontsize = 5)
+            
     #add the legend
     if dsp & (len(groups) > 0) & (maxLeaves>0):
         h_plot = [ ]
         h_label = [ ]
         i = 0
         for single_dict in groups:
-            h_plot.append(plt.plot(1,1, color = "C%d"%i))
+            h_plot.append(plt.plot(1,1, color = single_dict['color']))
             i += 1
             h_label.append('cl:%d(%d)'%(single_dict['id'], len(single_dict['members'])))
         plt.legend(h_plot,labels = h_label,fontsize = 10,bbox_to_anchor=(1.15, 1),
@@ -116,8 +122,25 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
 
     return groups, cmap, groupIdx, ColorThreshold
         
+def genLink_color(groups, tree):
+    #color dict for each leaf
+    dflt_col = "#808080"   # Unclustered gray
+    D_leaf_color = { }
+    for single_cluster in groups:
+        rgb = single_cluster['color']
+        hexrgb = '#%02x%02x%02x'%(int(rgb[0]*255), int(rgb[1]*255), int(rgb[2]*255))
+        members =  single_cluster['members']       
+        for single_member in members:        
+            D_leaf_color["%d"%single_member] = hexrgb
+    #color for each linkage
+    link_cols = {}
+    for i, i12 in enumerate(tree[:,:2].astype(int)):
+        c1, c2 = (link_cols[x] if x > len(tree) else D_leaf_color["%d"%x] for x in i12)
+        link_cols[i+1+len(tree)] = c1 if c1 == c2 else dflt_col
         
-    
+    return link_cols
+        
+ 
 def genColorLookUp(Z, threshold): #Z:tree --- Array is changable data structure, You change it!!!
     if threshold == 'off':  #any transforms with different distance will be considered
         theGroups = ''
@@ -201,8 +224,12 @@ def traceback(Z,b):
     return np.min([a,c])
         
     
-def gen_colors(clusters_n): #one cluster one color
-    colorm = [cm.hsv(i/clusters_n, 1) for i in range(1,clusters_n+1)]
-    return np.array(colorm)[:,0:3]        
-    
+
+
+def gen_colors(n): #one cluster one color
+    colorm = sns.color_palette('hls',n)
+    return np.array(colorm)
+
+ 
+
         
