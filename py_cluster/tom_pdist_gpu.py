@@ -5,14 +5,16 @@ import gc
 import shutil
 import multiprocessing as mp
 from alive_progress import alive_bar 
+import random
+
 from py_cluster.tom_calc_packages import tom_calc_packages
 from py_transform.tom_sum_rotation import tom_sum_rotation
-
+from py_log.tom_logger import Log
 
 #@profile
 def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
               dmetric = 'euc', in_Inv = '', jobListSt = None, 
-              tmpDir = '',  cleanTmpDir = 1):
+              tmpDir = '',  cleanTmpDir = 1, verbose = 1):
     '''
     dists=tom_pdist(in_Fw,dmetric,in_Inv,maxChunk)
 
@@ -36,10 +38,14 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
   
 
     dd=tom_pdist(np.array([[0, 0, 0],[0, 0, 10], [10, 20, 30]]),'ang');
-    '''
+    '''   
+    randN = random.randint(0,500)
+    log = Log('transform pairs distance %d'%randN).getlog()
+    
     in_Fw = in_Fw.astype(np.single)
     if len(in_Inv) > 0:
-        print("Using inverse transforms")
+        log.debug('Use inverse transforms')
+        #print("Using inverse transforms")
         in_Inv = in_Inv.astype(np.single)
      #since the number of combination of pairs can be large 
     if jobListSt is None:
@@ -50,10 +56,12 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
         lenJobs = np.uint64(in_Fw.shape[0] - 1)
        
     dists = np.zeros(lenJobs, dtype = np.single) # the distance between pairs of ribosomes , one dimention array
-    print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
+    log.info('Calculate %s for %d transforms'%(dmetric, in_Fw.shape[0]))
+    #print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
     job_n = len(jobListSt) #number of cores to use
     if dmetric == 'euc':
-        print("Loading data into %d gpus..."%job_n)            
+        log.debug("Load data into %d gpus..."%job_n)
+        #print("Loading data into %d gpus..."%job_n)            
         shared_ncc = mp.Array('f', int(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2))            
         processes = [ ]
         for pr_id, gpu_id in enumerate(jobListSt.keys()):
@@ -70,25 +78,27 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
         #check the exit stats
         for pr_id in range(len(processes)):
             if pr_id != pr_results[pr_id]:
-                raise RuntimeError("Process %d exited unexpectedly."%pr_id)
+                errorInfo = "Process %d exited unexpectedly."%pr_id
+                log.error(errorInfo)
+                raise RuntimeError(errorInfo)
         dists = np.frombuffer(shared_ncc.get_obj(), dtype=np.float32).reshape(1,-1)
         dists = dists[0]
         gc.collect()
             
-            
-        print("Finishing calculating euc transforms distance!")      
+        log.info('Calculate euc transforms distance done!')    
+        #print("Finishing calculating euc transforms distance!")      
       
              
     elif dmetric == 'ang':
         #calculate ration matrix
-        Rin= calcRotMatrices(in_Fw)
+        Rin= calcRotMatrices(in_Fw, verbose)
         if len(in_Inv) > 0:
-            Rin_Inv= calcRotMatrices(in_Inv)        
+            Rin_Inv= calcRotMatrices(in_Inv, verbose)        
         else:
             Rin_Inv = ''
         
- 
-        print("Loading data into %d gpus..."%job_n)
+        log.debug("Load data into %d gpus..."%job_n)
+        #print("Loading data into %d gpus..."%job_n)
         shared_ncc = mp.Array('f', int(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2))   
         processes = [ ]
         for pr_id, gpu_id in enumerate(jobListSt.keys()):
@@ -104,14 +114,16 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
         #check the exit stats
         for pr_id in range(len(processes)):
             if pr_id != pr_results[pr_id]:
-                raise RuntimeError("Error: process %d exited unexpectedly."%pr_id)
+                errorInfo = "Process %d exited unexpectedly."%pr_id
+                log.error(errorInfo)
+                raise RuntimeError(errorInfo)
 
         dists = np.frombuffer(shared_ncc.get_obj(), dtype=np.float32).reshape(1,-1)
         dists = dists[0]
         gc.collect()       
 
-                             
-        print("Finishing calculating ang transforms distance!")  
+        log.info('Calculate ang transforms distance done!')                        
+        #print("Finishing calculating ang transforms distance!")  
         
     if  cleanTmpDir == 1:
         shutil.rmtree(tmpDir) #remove the dirs 
@@ -139,7 +151,6 @@ def calcVectDist_mp(pr_id, jobList, in_Fw, in_Inv, shared_ncc, gpu_id):
             shared_ncc[jobList_single["start"]:jobList_single["stop"]] = dtmp
             del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
             gc.collect()
-            
             bar()
         
     cp.get_default_memory_pool().free_all_blocks()   #free the blocked memory 
@@ -165,15 +176,17 @@ def calcVectDist(g1,g2,g1Inv,g2Inv):
         dtmp = cp.min(dists_allpart2, axis = 0)
     return dtmp
  
-def calcRotMatrices(in_angs):
-    print("Starting calculating rotation matrices for each transforms")
+def calcRotMatrices(in_angs, verbose):
+    if verbose:
+        print("Start calculating rotation matrices for each transform")
     Rin = np.zeros([in_angs.shape[0], 3,6 ], dtype = np.single)
     
     for i in range(in_angs.shape[0]):
         _,_, Rin[i,:,0:3] = tom_sum_rotation(in_angs[i,:], np.array([0,0,0]))
         Rin[i,:,3:6] = np.linalg.inv(Rin[i,:,0:3])
-        
-    print("Finishing calculating rotation matrices for each transforms")
+    
+    if verbose:    
+        print("Calculate rotation matrices for each transform done")
     
     
     return  Rin
@@ -203,7 +216,7 @@ def calcAngDist_mp(pr_id, jobList, Rin, Rin_Inv,shared_ncc,gpu_id):
                 
             shared_ncc[singlejobs["start"]:singlejobs["stop"]] = dtmp  
             del jobListChunk, dtmp
-            gc.collect()                            
+            gc.collect() 
             bar()
                             
     cp.get_default_memory_pool().free_all_blocks()   #free the blocked memory 

@@ -3,7 +3,7 @@ import scipy.stats as sps
 import matplotlib.pyplot as plt
 
 def tom_kdeEstimate(dist1, dist1Label, fTitle = '', save_dir = '', ifDisplay = 1,
-                    cdfValue = 0.05, dist2 = '', dist2Label = ''):
+                    cdfValue = 0.05, dist2 = '', dist2Label = '', mode = 'basic'):
     '''
     TOM_KDEESTIMATE is aimed to fit a gauss based KDE estimator to one distribution, 
     if more than one distribution is given, two fitting KDE will be returned. And
@@ -27,25 +27,27 @@ def tom_kdeEstimate(dist1, dist1Label, fTitle = '', save_dir = '', ifDisplay = 1
             plt.hist(dist2, label = dist2Label,
                      density = True, alpha = 0.4, edgeColor = None)   
             spread = np.linspace(np.min(dist2), np.max(dist2))
-            plt.plot(spread, kde2.pdf(spread), label = 'KDE_%s'%dist2Label)        
-            #here, we want to show the CDF of these two overlapped regions
-            if np.max(dist1) > np.min(dist2):
-                overlapDist1 = kde1.integrate_box_1d(np.min(dist2), np.max(dist1))
-                coordy1 = kde1.pdf(np.min(dist2))
-                plt.text(np.min(dist2), coordy1, 'pValues:%.3f'%overlapDist1)
+            plt.plot(spread, kde2.pdf(spread), label = 'KDE_%s'%dist2Label) 
+            
+            if mode == 'advance':
+                #here, we want to show the CDF of these two overlapped regions
+                if np.max(dist1) > np.min(dist2):
+                    overlapDist1 = kde1.integrate_box_1d(np.min(dist2), np.max(dist1))
+                    coordy1 = kde1.pdf(np.min(dist2))
+                    plt.text(np.min(dist2), coordy1, 'pValues:%.3f'%overlapDist1)
                 
-                overlapDist2 = kde2.integrate_box_1d(np.min(dist2), np.max(dist1))
-                coordy2 = kde2.pdf(np.max(dist1))
-                plt.text(np.max(dist1), coordy2, 'pValues:%.3f'%overlapDist2)
+                    overlapDist2 = kde2.integrate_box_1d(np.min(dist2), np.max(dist1))
+                    coordy2 = kde2.pdf(np.max(dist1))
+                    plt.text(np.max(dist1), coordy2, 'pValues:%.3f'%overlapDist2)
                 
-            elif np.max(dist2) > np.min(dist1):
-                overlapDist1 = kde1.integrate_box_1d(np.min(dist1), np.max(dist2))
-                coordy1 = kde1.pdf(np.max(dist2))
-                plt.text(np.max(dist2), coordy1, 'pValues:%.3f'%overlapDist1)
+                elif np.max(dist2) > np.min(dist1):
+                    overlapDist1 = kde1.integrate_box_1d(np.min(dist1), np.max(dist2))
+                    coordy1 = kde1.pdf(np.max(dist2))
+                    plt.text(np.max(dist2), coordy1, 'pValues:%.3f'%overlapDist1)
                 
-                overlapDist2 = kde2.integrate_box_1d(np.min(dist1), np.max(dist2))
-                coordy2 = kde2.pdf(np.min(dist1))
-                plt.text(np.min(dist1), coordy2, 'pValues:%.3f'%overlapDist2)  
+                    overlapDist2 = kde2.integrate_box_1d(np.min(dist1), np.max(dist2))
+                    coordy2 = kde2.pdf(np.min(dist1))
+                    plt.text(np.min(dist1), coordy2, 'pValues:%.3f'%overlapDist2)  
             
         #return the border of distribution2 with p-value
         cdfBorder2, cdf2 = borderCal(kde2, np.min(dist2), 
@@ -53,9 +55,10 @@ def tom_kdeEstimate(dist1, dist1Label, fTitle = '', save_dir = '', ifDisplay = 1
     if ifDisplay:  
         plt.title(fTitle)
         plt.legend()
-        plt.show() 
+        #plt.show() 
     if len(save_dir) > 0:
-        plt.savefig('%s/%s_%s.png'%(save_dir, dist1Label, dist2Label), dpi = 300)
+        plt.savefig('%s/%s_%s_%s.png'%(save_dir, dist1Label, dist2Label, fTitle), dpi = 300)
+    plt.close()
         
     return cdfBorder1, cdf1, cdfBorder2, cdf2
     

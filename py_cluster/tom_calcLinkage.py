@@ -2,7 +2,8 @@ import numpy as np
 import timeit as ti
 from scipy.cluster.hierarchy import linkage
 from py_memory.tom_memalloc import tom_memalloc
-
+from py_log.tom_logger import Log
+import random
 
 def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std', worker_n = None, gpu_list = None,freeMem = None ):
     '''
@@ -32,6 +33,9 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
 
     REFERENCES
     '''
+    randN = random.randint(0,100)
+    log = Log('linkage calculation %d'%randN).getlog()
+    
     transAngVect = np.array([transList["pairTransAngleZXZPhi"].values, 
                              transList["pairTransAngleZXZPsi"].values, 
                              transList["pairTransAngleZXZTheta"].values]).transpose()
@@ -59,8 +63,10 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
             
        
     distsVect = tom_pdist(transVect,  maxChunk , worker_n, gpu_list, 'euc', transVectInv)
-    distsAng =  tom_pdist(transAngVect,  maxChunk, worker_n, gpu_list, 'ang', transAngVectInv)      
-    print("Using %s to combine angles and shifts"%cmb_metric)
+    distsAng =  tom_pdist(transAngVect,  maxChunk, worker_n, gpu_list, 'ang', transAngVectInv)  
+
+    log.info("Use %s to combine angles and shifts"%cmb_metric)    
+    #print("Using %s to combine angles and shifts"%cmb_metric)
     
     if cmb_metric == 'scale2Ang':
         distsVect = distsVect/(2*maxDistInpix)*180
@@ -88,10 +94,13 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
             distsCN = (distsCN - np.min(distsCN)) / np.max(distsCN - np.min(distsCN)) #from 0-1 
         else:
             distsCN = (distsCN - np.mean(distsCN)) + 1.0 #(1,1,1)
-    print('Calculating linkage')
-    t1 = ti.default_timer() 
+    
+    log.info('Calculate linkage')
+    #print('Calculating linkage')
+    #t1 = ti.default_timer() 
     ll = linkage(distsCN,'average') #looks like a slow step if too large of distsCN
-    print("Calculating linkage done with %.5f seconds"%(ti.default_timer() -t1))
+    log.info('Calculate linkage done')
+    #print("Calculating linkage done with %.5f seconds"%(ti.default_timer() -t1))
     #save the ll results
     np.save("%s/tree.npy"%preCalcFold,ll)
     

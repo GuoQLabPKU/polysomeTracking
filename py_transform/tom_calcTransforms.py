@@ -11,6 +11,7 @@ from py_io.tom_starread import generateStarInfos
 from py_io.tom_extractData import tom_extractData
 from py_io.tom_starwrite import tom_starwrite
 from py_transform.tom_calcPairTransForm import tom_calcPairTransForm
+from py_log.tom_logger import Log
 
 
 def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', outputName='', verbose=1, worker_n = 1):
@@ -44,14 +45,15 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
     REFERENCES
     
     '''
+    log = Log('calcTransform').getlog()
     oriPartList = 'noListStarGiven'
-
     
     if isinstance(posAng, str):
         oriPartList = posAng
     if isinstance(posAng, dict):
         if "pairTransVectX" in posAng.keys():
-            print("The file already has transformation information! No need to transform.")
+            log.info("The file has transformation information! Skip transform.")
+            #print("The file already has transformation information! No need to transform.")
             return 
     # read the star file into a dict/st
     st = tom_extractData(posAng,pixS)
@@ -64,9 +66,10 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
   
     if worker_n == 1:
         for i in range(len_tomo):
-            time1 = ti.default_timer()
-            print("####################################################")
-            print("Calculating transformations for tomo %s.........."%uTomoId[i])
+#            time1 = ti.default_timer()
+            #print("####################################################")
+            log.info('Calculate transformations for tomo %s'%uTomoId[i])
+            #print("Calculating transformations for tomo %s.........."%uTomoId[i])
             idx = list(np.where(st["label"]["tomoID"] == uTomoId[i])[0])
             idxAct = idx
             posAct = st["p1"]["positions"][idx,:]
@@ -76,10 +79,11 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
             #transListAct[:,0:2] = transListAct[:,0:2] + idxOffSet
             transList = np.concatenate((transList, transListAct),axis=0)
             #idxOffSet = idxOffSet + posAct.shape[0]
-            time2 = ti.default_timer()
-            time_gap = (time2-time1)
-            print("Finish calculating transformations for tomo %d with %d pairs, %.5f seconds consumed."%(i,transListAct.shape[0],
-                                                                                                         time_gap))
+#            time2 = ti.default_timer()
+#            time_gap = (time2-time1)
+            log.info('Transformations for tomo %d with %d pairs done'%(i,transListAct.shape[0]))
+            #print("Finish calculating transformations for tomo %d with %d pairs, %.5f seconds consumed."%(i,transListAct.shape[0],
+#                                                                                                         time_gap))
     else:
         #make temp directory to store the transListAct and then reload merge them!
         temp_dir = "%s/tempTrans"%os.path.split(outputName)[0]
@@ -93,14 +97,17 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
         avail_cpu = mp.cpu_count()
         if worker_n == -1:
             npr = avail_cpu
-            print("Use all available %d CPUs to calculate transformations."%npr)
+            log.info("Use available %d CPUs to calculate transformations."%npr)
+            #print("Use all available %d CPUs to calculate transformations."%npr)
         elif avail_cpu < worker_n:
             npr = avail_cpu
-            print("Warning: No enough CPUs are available! Use %d CPUs instead."%npr)
+            log.warning('No enough CPUs are available! Use %d CPUs instead.'%npr)
+            #print("Warning: No enough CPUs are available! Use %d CPUs instead."%npr)
             
         #using parallel
-        print('Using parallel cpus to calculate transformations.')
-        t1 = ti.default_timer()
+        log.info('Use %d cpus to calculate transformations'%npr)
+        #print('Using parallel cpus to calculate transformations.')
+        #t1 = ti.default_timer()
         processes = dict()
         spl_ids = np.array_split(uTomoId,npr) #one cpu process one tomogram, save the consuming of creating processes
         #remove the empty spl_ids
@@ -113,7 +120,9 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
         for pr_id, pr in zip(processes.keys(), processes.values()):
             pr.join()
             if pr_id != pr.exitcode:
-                raise RuntimeError('the process %d ended usuccessfully [%d]'%(pr_id, pr.exitcode))
+                errorInfo = 'the process %d ended usuccessfully [%d]'%(pr_id, pr.exitcode)
+                log.error(errorInfo)
+                raise RuntimeError(errorInfo)
                 
         gc.collect() #free the memory
         
@@ -123,8 +132,9 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
         #delete the temp files       
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-        t2 = ti.default_timer()
-        print('Finish calulating transformations with %.5f seconds consumed.'%(t2-t1))
+        #t2 = ti.default_timer()
+        log.info('Calculate transformations done')
+        #print('Finish calculating transformations with %.5f seconds consumed.'%(t2-t1))
         
     if outputName == '':
         return transList
@@ -162,9 +172,9 @@ def calcTransforms(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose):
     jobList = jobListN
     
     if jobList.shape[0] == 0:
-        raise RuntimeError("the distances between ribosomes are bigger than %d pixels! Set bigger maxDist and try again!"%pruneRad)  
+        raise RuntimeError("The distances between ribosomes are bigger than %d pixels! Set bigger maxDist and try again!"%pruneRad)  
     transListAct_inner = np.zeros([jobList.shape[0],29], dtype = np.float)#this will store the transformation results   
-    with alive_bar(int(np.floor(jobList.shape[0]/100)+1), title="calculate trans pairs") as bar:
+    with alive_bar(int(np.floor(jobList.shape[0]/100)+1), title="Calculate trans pairs") as bar:
         for i in range(jobList.shape[0]):             
             icmb0,icmb1 = jobList[i,:]
             pos1 = pos[icmb0,:]
@@ -181,7 +191,7 @@ def calcTransforms(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose):
                                                  pos2[0],pos2[1],pos2[2],ang2[0],ang2[1],ang2[2]])
             if (verbose == 1) & (i%100 == 0):
                 bar()
-                bar.text("Calculating transfromation for %d pairs..........."%(i))
+                bar.text("Calculate transfromation done with %d pairs..........."%(i))
     return transListAct_inner
       
     

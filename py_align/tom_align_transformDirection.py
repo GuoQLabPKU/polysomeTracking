@@ -1,7 +1,9 @@
 import numpy as np
 from scipy.cluster.vq import kmeans, vq
 from py_summary.tom_analysePolysomePopulation import calcAngStat, calcVectStat
-#continue 2-step kmeans to check if if the iterative k-means make the erro smaller
+from py_log.tom_logger import Log
+
+#continue N-steps kmeans to check if the iterative k-means function make the errors smaller
 def alignDir(pairList, iterN): #the input is subset of one dataframe pointer
     while iterN > 0:
         vects = np.array([pairList['pairTransVectX'].values,
@@ -82,15 +84,19 @@ def getCluster(vects, cl):
     
     
 def tom_align_transformDirection(transList, iterN = 1):
+    log = Log('align transforms').getlog()
+    
     allClasses = transList['pairClass'].values
     allClassesU = np.unique(allClasses)
     for single_class in allClassesU:
         if single_class == 0: #if the class == 0: continue
             continue 
         if single_class == -1:
-            print('Warning: no clusters classes detected. Skipping align the transform.')
+            log.warning('No cluster classes detected. Skip align the transforms.')
+            #print('Warning: no clusters classes detected. Skipping align the transform.')
             break
-        print('align class%d for %d iterations'%(single_class, iterN))
+        log.info('Align class%d for %d iterations'%(single_class, iterN))
+        #print('align class%d for %d iterations'%(single_class, iterN))
         idx = np.where(allClasses == single_class)[0]
         transList.iloc[idx,:] = alignDir(transList.iloc[idx,:], iterN) #class 0 will also be aligned and class -1
     return transList

@@ -57,9 +57,9 @@ def getDist(transVect, transAng,worker_n, gpu_list, cmb_metric, pruneRad):
         jobListdict = genJobListGpu(transVect.shape[0] - 1, tmpDir, maxChunk)
 
     distsVect = tom_pdist(transVect, maxChunk, worker_n, gpu_list, 'euc', 
-                          '', jobListdict, tmpDir, 0)
+                          '', jobListdict, tmpDir, 0, 0)
     distsAng =  tom_pdist(transAng,  maxChunk ,worker_n, gpu_list,'ang',
-                          '',jobListdict,tmpDir, 1)
+                          '',jobListdict,tmpDir, 1, 0)
 
     if cmb_metric == 'scale2Ang':
         distsVect = distsVect/(2*pruneRad)*180

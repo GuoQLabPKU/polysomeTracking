@@ -129,7 +129,7 @@ def calcPolyStat(pairList):
         mVal = np.max(allNum)
         stat['numPolyMax'] = mVal #the longest polysomes in this class 
         stat['numBranch'] = np.sum(allPolyHasBranch)
-        labelMax = allLabelU[mPos] #which polysome has the longest length
+        labelMax = allLabelU[mPos] #which polysome has the longest length also with branch
         tomoMax =  np.unique(allTomoID[np.where(allLabel == labelMax)[0]])
         if len(tomoMax) == 0:
             tomoMax = np.unique(allTomoID[np.where(allLabel_fix == labelMax)[0]])
@@ -157,6 +157,7 @@ def analysePopulationPerPoly(pairList):
         stat[0]['posInListVect'] = '-1'
         
         return stat
+    
     else:
         for i in range(len(allLabelU)):
             idx = np.where(allLabel == allLabelU[i])[0] ##this is no branch(branch1)
@@ -168,6 +169,8 @@ def analysePopulationPerPoly(pairList):
             stat[i]['num'] = len(idx)
             if stat[i]['num'] >= 20:
                 print(' ')
+            if stat[i]['num'] <= 5:
+                continue
             stat[i]['tomoNr'] = allTomoID[idx[0]]
             stat[i]['classNr'] = classNr
             stat[i]['polyID'] = allLabelU[i]
@@ -247,7 +250,7 @@ def genOutput(stat, minTransMembers):
         print(i, end = "\t")
     print('\t')
     for row in range(stat.shape[0]):
-        print("%d\t%d\t%.1f\t%.1f\t%d\t%d\t%d\t%d"%(stat['classNr'].values[row], stat['num'].values[row], 
+        print("%d\t%d\t%.1f\t\t%.1f\t\t%d\t\t%d\t\t%d\t\t%d"%(stat['classNr'].values[row], stat['num'].values[row], 
                                                     stat['stdTransVect'].values[row],
                                                     stat['stdTransAng'].values[row], stat['numPolybg5'].values[row],
                                                     stat['numPolybg3'].values[row], stat['numPolyMax'].values[row],

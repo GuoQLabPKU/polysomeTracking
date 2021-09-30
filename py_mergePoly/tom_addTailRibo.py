@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from ast import literal_eval
 from alive_progress import alive_bar 
-
+from py_log.tom_logger import Log
+import random
 
 from py_io.tom_starread import tom_starread, generateStarInfos
 from py_io.tom_starwrite import tom_starwrite
@@ -63,6 +64,9 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
         transList        (dataframe) transList with fillup ribosomes transList
     
     '''
+    randN = random.randint(0,100)
+    log = Log('polysome filling up %d'%randN).getlog()
+    
     if isinstance(pairList, str):
         pairList = tom_starread(pairList)
         pairList = pairList['data_particles']
@@ -74,10 +78,12 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
     polyStateU = statePolyAll_list[statePolyAll_list['pairClass'] == pairClass]
     polyU = np.unique(polyStateU['pairLabel'].values) #unique polysome with branches
     if len(polyU) == 0:
-        print('No polysomes detected in class%d! Check your transList!'%pairClass)
+        log.warning('No polysomes detected in class%d! Check your transList!'%pairClass)
+        #print('No polysomes detected in class%d! Check your transList!'%pairClass)
         return pairList
     if len(polyU) == 1:
-        print('Only one polysome detected, no need link short polys!')
+        log.warning('Only one polysome detected, no need link  polys!')
+        #print('Only one polysome detected, no need link short polys!')
         return pairList
    
     #get the head/tail ribo position & angle information
@@ -102,14 +108,18 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
     fillUpRiboInfos, fillUpMiddleRiboInfos = tom_extendPoly(tailRiboInfo, avgRot, avgShift, particleSt, pruneRad, 
                                                             numAddRibo, xyzborder)
     if fillUpRiboInfos.shape[0] == 0:
-        print('Warning: can not extend polysomes! This is because hypothetical ribos are \
-              already in the tomo  OR out of the tomo border!')
+        log.warning('''Warning: can not extend polysomes! This is because hypothetical ribos are 
+                    already in the tomo  OR out of the tomo border!''')
+        #print('Warning: can not extend polysomes! This is because hypothetical ribos are \
+        #      already in the tomo  OR out of the tomo border!')
         return pairList
     #calculate angle /vector distance between hypothetical trans and head ribos of other polysomes
     transListAct = genTransList(fillUpRiboInfos, headRiboInfo, statePolyAll_list)
     if transListAct.shape[0] == 0:
-        print('''Can not link short polys! This may to be polys are in different tomos or 
-              in the same polysome.''')
+        log.warning('''Can not link polys! This may be polys are in different tomos or 
+              from the same polysome.''')
+        #print('''Can not link short polys! This may to be polys are in different tomos or 
+        #      in the same polysome.''')
         return pairList
     
     #calculate distance between hypo trans and average trans
@@ -129,8 +139,10 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
         
     transAct_filter = transListAct[index]
     if transAct_filter.shape[0] == 0:
-        print('''Warning: can not add fillup ribos at tail of polysomes. 
-              This is because fillup ribos can't link another polysome''')
+        log.warning('''Can not link  polys. 
+                       This is because fillup ribos form different transform class''')
+        #print('''Warning: can not add fillup ribos at tail of polysomes. 
+        #      This is because fillup ribos can't link another polysome''')
         return pairList
     #debug for filled up ribosome infos output
     if verbose:
@@ -413,7 +425,7 @@ def updateTransList(transList, tomoName12, particleStar, pixelSize, starType,
     startSt_data[header["fieldNames"][41]] = np.repeat([oriPartList],transList.shape[0])
     startSt_data[header["fieldNames"][42]] = np.repeat([maxDist],transList.shape[0])
     startSt_data[header["fieldNames"][43]] = pairClass
-    startSt_data[header["fieldNames"][44]]  = np.repeat(['1.00-0.00-0.00'],transList.shape[0])
+    startSt_data[header["fieldNames"][44]]  = np.repeat(['100.00-100.00-100.00'],transList.shape[0]) #100&100&100 --> represents added Ribos
     startSt_data[header["fieldNames"][45:47]] = pd.DataFrame(np.tile([-1,-1],(transList.shape[0],1)))
     
     return startSt_data
@@ -455,7 +467,7 @@ def updateParticle(riboCoords, riboAngles, exampleInfo, tomoNames, particleN, st
                     processedColNames.append('rlnOriginZ')
                     
             if 'rlnClassNumber' in colNames:
-                particleStruct['rlnClassNumber'].append(-1) #class == -1 ==>represents added Ribos
+                particleStruct['rlnClassNumber'].append(-100) #class == -100 ==>represents added Ribos
                 if count == 0:
                     processedColNames.append('rlnClassNumber')
             if 'rlnGroupNumber' in colNames:
@@ -500,7 +512,7 @@ def updateParticle(riboCoords, riboAngles, exampleInfo, tomoNames, particleN, st
                     processedColNames.append('z_shift')
                     
             if 'class' in colNames:
-                particleStruct['class'].append(-1) #class == -1 ==>represents added Ribos
+                particleStruct['class'].append(-100) #class == -100 ==>represents added Ribos
                 if count == 0:
                     processedColNames.append('class')
                     
@@ -538,13 +550,13 @@ def debug_output(transList_filter, dists):
     for i in range(transList_filter.shape[0]):
         _,angles = tom_eulerconvert_xmipp(transList_filter[i,21], transList_filter[i,22], 
                                           transList_filter[i,23], 'tom2xmipp')
-        print('%.3f   %.3f   %.3f   %.3f   %.3f   %.3f'%(angles[0],angles[1],angles[2], 
+        print('\t\t\t%.3f   %.3f   %.3f   %.3f   %.3f   %.3f'%(angles[0],angles[1],angles[2], 
                                                           transList_filter[i,18],
                                                           transList_filter[i,19],
                                                           transList_filter[i,20]))
     print('trans angle:Phi    Psi      Theta, trans shift:X         Y          Z')
     for i in range(transList_filter.shape[0]):
-        print('%.3f   %.3f   %.3f   %.3f   %.3f   %.3f'%( transList_filter[i,7],
+        print('\t\t\t%.3f   %.3f   %.3f   %.3f   %.3f   %.3f'%( transList_filter[i,7],
                                                           transList_filter[i,8],
                                                           transList_filter[i,9], 
                                                           transList_filter[i,4],

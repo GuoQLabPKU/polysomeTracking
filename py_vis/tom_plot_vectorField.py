@@ -7,24 +7,24 @@ from py_io.tom_extractData import tom_extractData
 from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_transform.tom_pointrotate import tom_pointrotate
 
-def tom_plot_vectorField(posAng, tomoID = np.array([-1]), classNr = np.array([-1]), \
+def tom_plot_vectorField(posAng, mode = 'basic', tomoID = np.array([-1]), classNr = np.array([-1]), \
                          polyNr = np.array([-1]), onlySelected = 1, scale=20, \
                          repVect = np.array([[1,0,0]]), col = np.array([0,0,1]), cmbInd = '', outputFolder=''):
     
     type_ang = type(posAng)
     if (type_ang.__name__ == 'ndarray') | (type_ang.__name__ == 'str') | (type_ang.__name__ == 'DataFrame'):
-        plot_vectField(posAng, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder, type_ang)
-    if type_ang == 'list':
+        plot_vectField(posAng, mode, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder, type_ang)
+    if isinstance(posAng, list):
         for posAngAct in posAng:
-            plot_vectField(posAngAct, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder,type_ang)
+            plot_vectField(posAngAct, mode, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder,type_ang)
 
-def plot_vectField(posAng, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder, type_ang):
+def plot_vectField(posAng, mode, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder, type_ang):
     if type_ang.__name__ == 'ndarray':
         pos = posAng[:,0:3]
         angles = posAng[:,3:6]
         ax = plt.figure().gca(projection ='3d')
         plotRepVects(pos,angles, repVect, scale, col, ax)
-#        plt.show()
+        plt.close()
         return 
     if (type_ang.__name__ == 'str') | (type_ang.__name__ == 'DataFrame'):
         fTitleList = ''
@@ -44,22 +44,21 @@ def plot_vectField(posAng, repVect, scale, col, cmbInd, classNr, polyNr, onlySel
             for i in range(len(uTomoID)):
                 tmpInd = np.where(allTomoID == uTomoID[i])[0]
                 print('tomoID: %d  tomoName: %s'%(uTomoID[i], allTomoLabel[tmpInd[0]]))
-        if (len(uTomoID) > 5) & (tomoID[0] == -1) & (len(outputFolder) ==0):  ##TomoID  = -1 ==> All tomo
+        if (len(uTomoID) > 5) & (tomoID[0] == -1) & (len(outputFolder) == 0):  ##TomoID  = -1 ==> All tomo and only for vislization
             print('warning found %d tomograms reducing to 5'%len(uTomoID))
             print('can use tomoID parameter to select specific tomograms')
-            uTomoID = uTomoID[:5]
-            
-        plotClassZero = len(np.where(classNr == 0)[0]) > 0
+            uTomoID = uTomoID[:5]            
+        
         print('rendering vector fields')
         
         for i in range(len(uTomoID)):
             tmpInd = np.where(allTomoID == uTomoID[i])[0]
             tomoName = allTomoLabel[tmpInd[0]]
-            doRender(st, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleList,
-                     tomoName, repVect, scale, col,plotClassZero )  #one tomo and one tomo,and plot each class in one tomo
+            doRender(st, mode, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleList,
+                     tomoName, repVect, scale, col )  #one tomo and one tomo,and plot each class in one tomo
 
-def doRender(st, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleList, 
-             tomoName, repVect, scale, col, plotClassZero):
+def doRender(st, mode, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleList, 
+             tomoName, repVect, scale, col):
     
     fTitle = '%s%s'%(fTitleList, tomoName)
     if len(outputFolder) > 0:
@@ -80,22 +79,26 @@ def doRender(st, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleLi
         idxRep = idx
     else:
         idxRep = np.arange(0, len(st['p1']['positions'])) #plot the whole ribosomes
-        
-    pos = st['p1']['positions'][idxRep,:]
-    angles = st['p1']['angles'][idxRep,:]
-    plotRepVects(pos,angles, repVect, scale, col, ax)
+    
+    if mode == 'advance':    
+        pos = st['p1']['positions'][idxRep,:]
+        angles = st['p1']['angles'][idxRep,:]
+        plotRepVects(pos,angles, repVect, scale, col, ax)
         
     if 'p2' in st.keys():  #plot another ribosome that near close (<2 ribosomo distance)
         pos = st['p2']['positions'][idxRep,:]
         angles = st['p2']['positions'][idxRep,:]
-        plotRepVects(pos, angles, repVect, scale, col, ax)
-        plotPairs(st, idx, plotClassZero, ax)
-           
+        if mode == 'advance':
+            plotRepVects(pos, angles, repVect, scale, col, ax)
+        plotPairs(st, mode, idx, ax)
+        
+    ax.azim = 0
+    ax.elev = 80     
     if len(outputFolder)>0:
         fnameTmp = os.path.splitext(os.path.split(tomoName)[1])[0]
         plt.title(fTitle)
         plt.savefig('%s/%s.png'%(outputFolder,fnameTmp), dpi = 300)
-        plt.show()
+#        plt.show()
         plt.close()
     else:
         plt.title(fTitle)
@@ -113,7 +116,7 @@ def filterList(st, classNr, polyNr, tomoID):
         idxC = np.arange(st['p1']['positions'].shape[0])
     
     if 'pairLabel' in st['label'].keys():
-        if polyNr == -1:
+        if polyNr[0] == -1: #no poly is selected 
             idxP = np.arange(len(st['label']['pairClass']))
         else:
             allPoly = st['label']['pairLabel']
@@ -122,7 +125,7 @@ def filterList(st, classNr, polyNr, tomoID):
         idxP = np.arange(st['p1']['positions'].shape[0])
     
     if 'tomoID' in st['label'].keys():
-        if tomoID == -1:
+        if tomoID == -1: #no tomo is selected
             idxT = np.arange(len(st['label']['pairClass']))
         else:
             allTomo = st['label']['tomoID']
@@ -132,12 +135,12 @@ def filterList(st, classNr, polyNr, tomoID):
     return idx
             
         
-def plotPairs(st, idx, plotClassZero, ax):
+def plotPairs(st, mode, idx, ax):
     allClasses = st['label']['pairClass'][idx]
     uClasses = np.unique(allClasses)
     allTrans = st['label']['p1p2TransVect'][idx,:]
     allCol = st['label']['pairClassColour'][idx,:]
-    allPos = st['p1']['positions'][idx,:]
+    allPos1 = st['p1']['positions'][idx,:]
     allPos2 = st['p2']['positions'][idx,:]
     
     allLabel = st['label']['pairLabel'][idx]
@@ -146,6 +149,10 @@ def plotPairs(st, idx, plotClassZero, ax):
     allClassP1 = st['p1']['classes'][idx]
     allClassP2 = st['p2']['classes'][idx]
     
+    #make variables for legends
+    h_plot = [ ]
+    h_label = [ ]
+    if_legend = 0
     for i in range(len(uClasses)):  #plot each trans class
         if uClasses[i] == 0:
             continue#I don't want to show class 0 --> noise!
@@ -153,7 +160,7 @@ def plotPairs(st, idx, plotClassZero, ax):
         tmpIdx = np.where(allClasses == uClasses[i])[0]  #find the specific class of trans
         connVect = allTrans[tmpIdx,:]
         conCol = allCol[tmpIdx[0],:]
-        conPos = allPos[tmpIdx,:]
+        conPos = allPos1[tmpIdx,:]
         midPos = conPos + connVect*0.35
         p2Pos = allPos2[tmpIdx,:]
         posInPoly1 = allPosInpoly1[tmpIdx]
@@ -162,44 +169,61 @@ def plotPairs(st, idx, plotClassZero, ax):
         classInPoly2 = allClassP2[tmpIdx]
         
         ax.quiver(conPos[:,0], conPos[:,1], conPos[:,2],
-                  connVect[:,0], connVect[:,1], connVect[:,2], color = conCol) #from each ribosome to the adaject pair
-        
-        labelPoly = np.repeat('-1',len(tmpIdx))
-        labelPosInPoly1 = np.repeat('-1',len(tmpIdx)) 
-        labelPosInPoly2 = np.repeat('-1',len(tmpIdx))
-        for ii in range(len(tmpIdx)):
-            labelPoly[ii] = 'c%d,p%d'%(uClasses[i],  int(allLabel[tmpIdx[ii]]))
-            labelPosInPoly1[ii] = '%d/%d'%(posInPoly1[ii], classInPoly1[ii])
-            labelPosInPoly2[ii] = '%d/%d'%(posInPoly2[ii], classInPoly2[ii])
-        
-        for x,y,z, lbl in zip(midPos[:,0], midPos[:, 1], midPos[:,2], labelPoly):
-            ax.text(x,y,z,lbl, size = 10)
-        for x,y,z, lbl in zip(conPos[:,0], conPos[:,1],conPos[:,2],labelPosInPoly1):
-            ax.text(x,y,z,lbl, size = 10 )
-        for x,y,z,lbl in zip(p2Pos[:,0],p2Pos[:,1],p2Pos[:,2], labelPosInPoly2):
-            ax.text(x,y,z, lbl, size = 10)
-                
+                  connVect[:,0], connVect[:,1], connVect[:,2], color = conCol,
+                  arrow_length_ratio=0.4) #from each ribosome to the adaject pair
+ 
+        if mode == 'advance':
+            labelPoly = [ ]
+            labelPosInPoly1 = [ ]
+            labelPosInPoly2 = [ ]
+            for ii in range(len(tmpIdx)):
+                labelPoly.append('cl%s,p%.1f'%(uClasses[i],  allLabel[tmpIdx[ii]]))
+                labelPosInPoly1.append('%d/c%d'%(posInPoly1[ii], classInPoly1[ii]))
+                labelPosInPoly2.append('%d/c%d'%(posInPoly2[ii], classInPoly2[ii]))
+           
+            for x,y,z, lbl in zip(midPos[:,0], midPos[:, 1], midPos[:,2], labelPoly):
+                ax.text(x,y,z,lbl, size = 10)
+            for x,y,z, lbl in zip(conPos[:,0], conPos[:,1],conPos[:,2],labelPosInPoly1):
+                ax.text(x,y,z,lbl, size = 10 )
+            for x,y,z,lbl in zip(p2Pos[:,0],p2Pos[:,1],p2Pos[:,2], labelPosInPoly2):
+                ax.text(x,y,z, lbl, size = 10)
+        #add color legend for transform class    
+        if mode == 'basic':
+            h_plot.append(plt.plot(1,1, color = conCol))
+            h_label.append('cl%d'%(uClasses[i]))  
+            
         #plot for fillUp ribos
         allColClass = allCol[tmpIdx,:]
-        fillIdx = np.where((allColClass == np.array([1,0,0])).all(1))[0]
+        fillIdx = np.where((allColClass == np.array([100,100,100])).all(1))[0]
         if len(fillIdx) == 0:
-            del labelPoly, labelPosInPoly1, labelPosInPoly2
-            continue
+            if mode == 'advance':
+                del labelPoly, labelPosInPoly1, labelPosInPoly2              
+            continue   
+        
+        if_legend += 1
         conPosfill = conPos[fillIdx,:]
         connVectfill = connVect[fillIdx,:]
         ax.quiver(conPosfill[:,0], conPosfill[:,1], conPosfill[:,2],
                   connVectfill[:,0], connVectfill[:,1], connVectfill[:,2], linewidths = 8,
-                  color = np.array([1,0,0]))
-        #change the color of label 
-        for sIdx in fillIdx:
-            ax.text(midPos[sIdx,0],midPos[sIdx,1],midPos[sIdx,2],labelPoly[sIdx], size = 15,color = 'red')
-           
-        del labelPoly, labelPosInPoly1, labelPosInPoly2
+                  color = np.array([1,0,0]), arrow_length_ratio=0.4)
+              
+        if mode == 'advance':
+            #change the color of label 
+            for sIdx in fillIdx:
+                ax.text(midPos[sIdx,0], midPos[sIdx,1], midPos[sIdx,2],
+                        labelPoly[sIdx], size = 15, color = 'red')          
+            del labelPoly, labelPosInPoly1, labelPosInPoly2
         
+    #add filled up transform
+    if (if_legend > 0) & (mode == 'basic'):
+        h_plot.append(plt.plot(1,1, color = 'red'))
+        h_label.append('fillup')   
+    if  mode == 'basic':  
+        plt.legend(h_plot,labels = h_label,fontsize = 10,bbox_to_anchor=(1.15, 1),
+                   title = 'class')  
+
         
-        
-        
-        
+    
 def plotRepVects(pos,angles, repVect, scale, col,ax):
     for i in range(repVect.shape[0]):
 

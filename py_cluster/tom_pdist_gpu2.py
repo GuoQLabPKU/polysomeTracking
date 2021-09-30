@@ -4,13 +4,15 @@ import os
 import gc
 import shutil
 from alive_progress import alive_bar 
+import random
+
 from py_cluster.tom_calc_packages import tom_calc_packages
 from py_transform.tom_sum_rotation_gpu import tom_sum_rotation
-
+from py_log.tom_logger import Log
 
 #@profile
 def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc', 
-              in_Inv = '', jobListSt = None,  tmpDir = '',  cleanTmpDir = 1):
+              in_Inv = '', jobListSt = None,  tmpDir = '',  cleanTmpDir = 1, verbose = 1):
     '''
     dists=tom_pdist(in_Fw,dmetric,in_Inv,maxChunk)
 
@@ -35,7 +37,10 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
 
     dd=tom_pdist(np.array([[0, 0, 0],[0, 0, 10], [10, 20, 30]]),'ang');
     '''
-    #sample a GPU to do the main function
+    randN = random.randint(0,500)
+    log = Log('transform pairs distance %d'%randN).getlog()
+    
+    #sample a GPU to do the main function   
     main_gpu = gpu_list[0] #the default gpu is the first gpu
     cp.cuda.Device(main_gpu).use()
     
@@ -44,7 +49,8 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
     if len(in_Inv) > 0:
         in_Inv = cp.asarray(in_Inv)
         in_Inv = in_Inv.astype(cp.single) #save the memory
-        print("Using inverse transforms")
+        log.debug('Use inverse transforms')
+        #print("Using inverse transforms")
         
     if jobListSt is None:
         lenJobs = in_Fw.shape[0]*(in_Fw.shape[0]-1)/2
@@ -54,26 +60,30 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
         lenJobs = in_Fw.shape[0] - 1
       
     dists = cp.zeros(int(lenJobs), dtype = cp.single) # the distance between pairs of ribosomes , one dimention array
-    print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
+    log.info('Calculate %s for %d transforms'%(dmetric, in_Fw.shape[0]))
+    #print("Start calculating %s for %d transforms"%(dmetric, in_Fw.shape[0]))
     
-    if dmetric == 'euc':             
-        print("Using single gpu") 
+    if dmetric == 'euc':  
+        log.debug("Use single gpu")           
+        #print("Using single gpu") 
         dists = calcVectDist_mp(jobListSt[main_gpu], in_Fw, in_Inv, dists) 
-        print("Finishing calculating euc transforms distance!")      
+        log.info('Calculate euc transforms distance done!')   
+        #print("Finishing calculating euc transforms distance!")      
       
              
     elif dmetric == 'ang':
         #calculate ration matrix
-        Rin= calcRotMatrices(in_Fw)
+        Rin= calcRotMatrices(in_Fw, verbose)
         if len(in_Inv) > 0:
-            Rin_Inv= calcRotMatrices(in_Inv)        
+            Rin_Inv= calcRotMatrices(in_Inv, verbose)        
         else:
             Rin_Inv = ''
       
-     
-        print("Using single gpu")
-        dists = calcAngDist_mp(jobListSt[main_gpu], Rin, Rin_Inv,dists)                          
-        print("Finishing calculating ang transforms distance!")  
+        log.debug("Use single gpu")    
+        #print("Using single gpu")
+        dists = calcAngDist_mp(jobListSt[main_gpu], Rin, Rin_Inv,dists)  
+        log.info('Calculate ang transforms distance done!')                        
+        #print("Finishing calculating ang transforms distance!")  
         
     if cleanTmpDir == 1:    
         shutil.rmtree(tmpDir) #remove the dirs 
@@ -101,12 +111,10 @@ def calcVectDist_mp(jobList, in_Fw, in_Inv, dists):
                 g1Inv = in_Inv[jobListChunk[:,0],:]
                 g2Inv = in_Inv[jobListChunk[:,1],:]
           
-            dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)
-             
+            dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)             
             dists[jobList_single["start"]:jobList_single["stop"]] = dtmp
             del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
-            gc.collect()
-            
+            gc.collect()        
             bar()
     
     return dists
@@ -132,8 +140,9 @@ def calcVectDist(g1,g2,g1Inv,g2Inv):
            
     return dtmp
  
-def calcRotMatrices(in_angs):
-    print("Starting calculating rotation matrices for each transforms")
+def calcRotMatrices(in_angs, verbose):
+    if verbose:  
+        print("Start calculating rotation matrices for each transform")
    
     Rin = cp.zeros([in_angs.shape[0], 3,6 ], dtype = cp.single)
     
@@ -141,7 +150,8 @@ def calcRotMatrices(in_angs):
         Rin[i,:,0:3] = tom_sum_rotation(in_angs[i,:])
         Rin[i,:,3:6] = cp.linalg.inv(Rin[i,:,0:3])
         
-    print("Finishing calculating rotation matrices for each transforms")
+    if verbose:    
+        print("Calculate rotation matrices for each transform done")
     return  Rin
     
 #@profile   
@@ -173,7 +183,6 @@ def calcAngDist_mp(jobList, Rin, Rin_Inv,dists):
             bar()
             
                
- 
     return dists
             
     

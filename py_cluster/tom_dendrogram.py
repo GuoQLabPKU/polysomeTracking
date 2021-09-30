@@ -1,6 +1,5 @@
 from scipy.cluster.hierarchy import dendrogram
 import numpy as np
-import random 
 import matplotlib.pyplot as plt
 from copy import deepcopy
 import seaborn as sns
@@ -113,9 +112,10 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
         h_label = [ ]
         i = 0
         for single_dict in groups:
-            h_plot.append(plt.plot(1,1, color = single_dict['color']))
-            i += 1
-            h_label.append('cl:%d(%d)'%(single_dict['id'], len(single_dict['members'])))
+            if len(single_dict['members']) > 0:
+                h_plot.append(plt.plot(1,1, color = single_dict['color']))
+                i += 1
+                h_label.append('cl:%d(%d)'%(single_dict['id'], len(single_dict['members'])))
         plt.legend(h_plot,labels = h_label,fontsize = 10,bbox_to_anchor=(1.15, 1),
                    title = 'class')  
         plt.tight_layout()   
