@@ -14,7 +14,7 @@ pandas: 1.1.1 (1.0.5/1.2.1)
 
 jupyter: 1.0.0
 
-matplotlib: 3.0.2
+matplotlib: 3.0.2(3.3.3)
 
 cupy: 9.0.0
 
@@ -24,13 +24,22 @@ pytest: 6.2.4
 
 networkx:2.6.2
 
-seaborn
+seaborn:0.11.2
+
+
 
 Flatform:
 Any platform (linux/windows/macos)should be fine. But linux is largely tested to run these codes.
 
 Test:
-For test, please run pytest test_polysome in the terminal 
+For test, please run pytest py_simulation/run_simPoly.py in the terminal 
 
 Debugging:
 If you meet an memory error from tom_pdist function, please reduce the input variable Chunk in function tom_memalloc (py_memory/tom_memalloc.py)
+
+Visualization：
+1. tree/linkage:  vis/clustering
+2. transform pairs distance distribution: vis/distVSavg
+3. noise estimation: vis/noiseEstimate
+4. polysomes: vis/vectfields
+
