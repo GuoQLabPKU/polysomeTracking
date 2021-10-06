@@ -14,7 +14,7 @@ pandas: 1.1.1 (1.0.5/1.2.1)
 
 jupyter: 1.0.0
 
-matplotlib: 3.0.2(3.3.3)
+matplotlib: 3.3.3
 
 cupy: 9.0.0
 
