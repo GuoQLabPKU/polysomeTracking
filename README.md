@@ -26,7 +26,7 @@ networkx:2.6.2
 
 seaborn:0.11.2
 
-
+dill:0.3.4
 
 Flatform:
 Any platform (linux/windows/macos)should be fine. But linux is largely tested to run these codes.
