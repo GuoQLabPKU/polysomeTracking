@@ -9,21 +9,22 @@ from py_transform.tom_pointrotate import tom_pointrotate
 
 def tom_plot_vectorField(posAng, mode = 'basic', tomoID = np.array([-1]), classNr = np.array([-1]), \
                          polyNr = np.array([-1]), onlySelected = 1, scale=20, \
-                         repVect = np.array([[1,0,0]]), col = np.array([0,0,1]), cmbInd = '', outputFolder=''):
+                         repVect = np.array([[1,0,0]]), col = np.array([[0.7,0.7,0.7]]), outputFolder='',
+                         if_2views = 0):
     
     type_ang = type(posAng)
     if (type_ang.__name__ == 'ndarray') | (type_ang.__name__ == 'str') | (type_ang.__name__ == 'DataFrame'):
-        plot_vectField(posAng, mode, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder, type_ang)
+        plot_vectField(posAng, mode, repVect, scale, col,  classNr, polyNr, onlySelected, tomoID, outputFolder,if_2views,type_ang)
     if isinstance(posAng, list):
         for posAngAct in posAng:
-            plot_vectField(posAngAct, mode, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder,type_ang)
+            plot_vectField(posAngAct, mode, repVect, scale, col, classNr, polyNr, onlySelected, tomoID, outputFolder,if_2views,type_ang)
 
-def plot_vectField(posAng, mode, repVect, scale, col, cmbInd, classNr, polyNr, onlySelected, tomoID, outputFolder, type_ang):
+def plot_vectField(posAng, mode, repVect, scale, col, classNr, polyNr, onlySelected, tomoID, outputFolder,if_2views,type_ang):
     if type_ang.__name__ == 'ndarray':
         pos = posAng[:,0:3]
         angles = posAng[:,3:6]
         ax = plt.figure().gca(projection ='3d')
-        plotRepVects(pos,angles, repVect, scale, col, ax)
+        plotRepVects(pos, angles, repVect, scale, col, ax)
         plt.close()
         return 
     if (type_ang.__name__ == 'str') | (type_ang.__name__ == 'DataFrame'):
@@ -55,21 +56,34 @@ def plot_vectField(posAng, mode, repVect, scale, col, cmbInd, classNr, polyNr, o
             tmpInd = np.where(allTomoID == uTomoID[i])[0]
             tomoName = allTomoLabel[tmpInd[0]]
             doRender(st, mode, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleList,
-                     tomoName, repVect, scale, col )  #one tomo and one tomo,and plot each class in one tomo
+                     tomoName, repVect, scale, col, if_2views)  #one tomo and one tomo,and plot each class in one tomo
 
 def doRender(st, mode, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fTitleList, 
-             tomoName, repVect, scale, col):
+             tomoName, repVect, scale, col, if_2views):
     
     fTitle = '%s%s'%(fTitleList, tomoName)
     if len(outputFolder) > 0:
-        if not os.path.exists(outputFolder):
-            os.mkdir(outputFolder)
-        fig = plt.figure()
-        ax = fig.gca(projection ='3d')
+        if os.path.isdir(outputFolder):
+            if not os.path.exists(outputFolder):
+                os.mkdir(outputFolder)
+        else:
+            (shotdir,_) = os.path.split(outputFolder)
+            if not os.path.exists(shotdir):
+                os.mkdir(shotdir)
+                   
+        if if_2views:
+            fig = plt.figure(figsize = (15,10))
+            ax1 = fig.add_subplot(121, projection ='3d')
+            ax2 = fig.add_subplot(122, projection ='3d')
+        else:
+            fig = plt.figure(figsize = (10,10))
+            ax1 = fig.add_subplot(111, projection ='3d')
         
     else:
         if i >= 0:
-            ax = plt.figure().gca(projection ='3d')
+            if_2views = 0
+            fig = plt.figure(figsize = (10,10))
+            ax1 = fig.add_subplot(111, projection ='3d')
             
     idx = filterList(st, classNr, polyNr, uTomoID[i])
     if len(idx) == 0:
@@ -83,25 +97,39 @@ def doRender(st, mode, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fT
     if mode == 'advance':    
         pos = st['p1']['positions'][idxRep,:]
         angles = st['p1']['angles'][idxRep,:]
-        plotRepVects(pos,angles, repVect, scale, col, ax)
+        plotRepVects(pos,angles, repVect, scale, col, ax1)
+        if if_2views:
+            plotRepVects(pos,angles, repVect, scale, col, ax2)
         
     if 'p2' in st.keys():  #plot another ribosome that near close (<2 ribosomo distance)
         pos = st['p2']['positions'][idxRep,:]
         angles = st['p2']['positions'][idxRep,:]
         if mode == 'advance':
-            plotRepVects(pos, angles, repVect, scale, col, ax)
-        plotPairs(st, mode, idx, ax)
+            plotRepVects(pos, angles, repVect, scale, col, ax1)
+            if if_2views:
+                plotRepVects(pos,angles, repVect, scale, col, ax2)
+        if if_2views:
+            plotPairs(st, mode, idx, ax2)
+        plotPairs(st, mode, idx, ax1)
         
-    ax.azim = 0
-    ax.elev = 80     
+        
+    ax1.azim = 0
+    ax1.elev = 90
+    
+    if if_2views:
+        ax2.azim = 0
+        ax2.elev = 0  
     if len(outputFolder)>0:
         fnameTmp = os.path.splitext(os.path.split(tomoName)[1])[0]
-        plt.title(fTitle)
-        plt.savefig('%s/%s.png'%(outputFolder,fnameTmp), dpi = 300)
+        fig.suptitle(fTitle)
+        if os.path.isdir(outputFolder):
+            plt.savefig('%s/%s.png'%(outputFolder,fnameTmp), dpi = 300)
+        else:
+            plt.savefig('%s'%outputFolder, dpi = 300)
 #        plt.show()
         plt.close()
     else:
-        plt.title(fTitle)
+        fig.suptitle(fTitle)
         plt.show()
         plt.close()
 
@@ -170,7 +198,7 @@ def plotPairs(st, mode, idx, ax):
         
         ax.quiver(conPos[:,0], conPos[:,1], conPos[:,2],
                   connVect[:,0], connVect[:,1], connVect[:,2], color = conCol,
-                  arrow_length_ratio=0.4) #from each ribosome to the adaject pair
+                  arrow_length_ratio=0.4, linewidths = 0.7) #from each ribosome to the adaject pair
  
         if mode == 'advance':
             labelPoly = [ ]
@@ -188,10 +216,15 @@ def plotPairs(st, mode, idx, ax):
             for x,y,z,lbl in zip(p2Pos[:,0],p2Pos[:,1],p2Pos[:,2], labelPosInPoly2):
                 ax.text(x,y,z, lbl, size = 10)
         #add color legend for transform class    
+#        if mode == 'basic':
+#            h_plot.append(plt.plot(.1, color = conCol))
+#            h_label.append('cl%d'%(uClasses[i]))  
+        
         if mode == 'basic':
-            h_plot.append(plt.plot(1,1, color = conCol))
+            h_plot.append(ax.plot(conPos[0,0], conPos[0,1], conPos[0,2],color = conCol))
             h_label.append('cl%d'%(uClasses[i]))  
             
+                       
         #plot for fillUp ribos
         allColClass = allCol[tmpIdx,:]
         fillIdx = np.where((allColClass == np.array([100,100,100])).all(1))[0]
@@ -204,7 +237,7 @@ def plotPairs(st, mode, idx, ax):
         conPosfill = conPos[fillIdx,:]
         connVectfill = connVect[fillIdx,:]
         ax.quiver(conPosfill[:,0], conPosfill[:,1], conPosfill[:,2],
-                  connVectfill[:,0], connVectfill[:,1], connVectfill[:,2], linewidths = 8,
+                  connVectfill[:,0], connVectfill[:,1], connVectfill[:,2], linewidths = 1.5,
                   color = np.array([1,0,0]), arrow_length_ratio=0.4)
               
         if mode == 'advance':
@@ -216,14 +249,13 @@ def plotPairs(st, mode, idx, ax):
         
     #add filled up transform
     if (if_legend > 0) & (mode == 'basic'):
-        h_plot.append(plt.plot(1,1, color = 'red'))
+        h_plot.append(ax.plot(conPosfill[0,0], conPosfill[0,1], conPosfill[0,2], 
+                               color = np.array([1,0,0])))
         h_label.append('fillup')   
     if  mode == 'basic':  
-        plt.legend(h_plot,labels = h_label,fontsize = 10,bbox_to_anchor=(1.15, 1),
+        ax.legend(h_plot,labels = h_label,fontsize = 10,#bbox_to_anchor=(1.15, 1),
                    title = 'class')  
 
-        
-    
 def plotRepVects(pos,angles, repVect, scale, col,ax):
     for i in range(repVect.shape[0]):
 

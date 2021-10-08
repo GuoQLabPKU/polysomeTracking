@@ -87,9 +87,11 @@ def test_branchClean():
     
     #link the polysomes
     fillPoly = { }
-    fillPoly['class'] = np.array([-2])
-    fillPoly['riboinfo'] = 0
+    fillPoly['classNr'] = np.array([-2])
+    fillPoly['riboInfo'] = 1
     fillPoly['addNum'] = 2
+    fillPoly['fitModel'] = 'lognorm' 
+    fillPoly['threshold'] = 0.05
     polysome1.fillPoly = fillPoly
     polysome1.link_ShortPoly()
     
@@ -98,9 +100,9 @@ def test_branchClean():
 #                                  vectVisP['repVectLen'],vectVisP['repVect'],
 #                                  np.array([0,0,1]), '', '')   
     #load the filled up particle.star and get the filled up ribosomes
-    particlesData = tom_starread('./sim_dropFillUp.star')
+    particlesData = tom_starread('./cluster-sim_drop/run0/sim_dropFillUp.star')
     particlesData = particlesData['data_particles']
-    fillupRibos = particlesData[particlesData['rlnClassNumber'] == -1]
+    fillupRibos = particlesData[particlesData['rlnClassNumber'] == -100]
     fillupRibos_coord = fillupRibos.loc[:,['rlnCoordinateX','rlnCoordinateY','rlnCoordinateZ']].values
     print('real drop:', riboDrop_info)
     print('code filled up:', fillupRibos_coord)

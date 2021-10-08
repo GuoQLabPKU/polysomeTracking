@@ -3,7 +3,9 @@ import numpy as np
 import scipy
 import scipy.stats
 from scipy.stats import chi2
+import scipy.stats as sps
 import matplotlib.pyplot as plt
+import dill
 
 
 def tom_fitDist(inputData, distModel, clusterClass = '',saveDir = '', verbose = 0):
@@ -38,7 +40,8 @@ def tom_fitDist(inputData, distModel, clusterClass = '',saveDir = '', verbose = 
     dist_names = ['expon',
                   'gamma',
                   'lognorm',
-                  'norm']
+                  'norm',
+                  'genFit']
     if isinstance(distModel, str):
          if distModel not in dist_names:
              raise TypeError('Not a recognized distribution model, \
@@ -70,29 +73,53 @@ def tom_fitDist(inputData, distModel, clusterClass = '',saveDir = '', verbose = 
     observed_number, bins = (np.histogram(norData, bins=percentile_cutoffs))  
     # Loop through candidate distributions   
     for distribution in distModel:
-        # Set up distribution and get fitted distribution parameters
-        dist = getattr(scipy.stats, distribution)
-        param = dist.fit(norData);fit_paramsSave.append(str(param));fit_params.append(param)
-        dof = 20-len(param)-1#freedom degree of chi square-test        
-        # Obtain the KS test P statistic, round it to 5 decimal places
-        stat, p = scipy.stats.kstest(norData, distribution, args=param)
-        p = np.around(p, 3)
-        KS_pValue.append(p) 
-        KS_stat.append(np.round(stat,2))
-        # Get expected counts in percentile bins
-        cdf_fitted = dist.cdf(percentile_cutoffs, *param[:-2], loc=param[-2], 
-                              scale=param[-1])
+        if distribution != 'genFit':
+            # Set up distribution and get fitted distribution parameters
+            dist = getattr(scipy.stats, distribution)
+            param = dist.fit(norData);fit_paramsSave.append(str(param));fit_params.append(param)
+            dof = len(observed_number) -len(param)-1#freedom degree of chi square-test        
+            # Obtain the KS test P statistic, round it to 5 decimal places
+            stat, p = scipy.stats.kstest(norData, distribution, args=param)
+            p = np.around(p, 3)
+            KS_pValue.append(p) 
+            KS_stat.append(np.round(stat,2))
+            # Get expected counts in percentile bins
+            cdf_fitted = dist.cdf(percentile_cutoffs, *param[:-2], loc=param[-2], 
+                                  scale=param[-1])
+
+        else:
+            fit_paramsSave.append('gaussian_kde')
+            fit_params.append('gaussian_kde')
+            
+            kde = sps.gaussian_kde(norData)
+            kde_cdf = np.array([kde.integrate_box_1d(-np.inf, x) for x in norData])
+            #get KS test results
+            stat, p = scipy.stats.ks_2samp(norData, kde_cdf)
+            p = np.around(p,3)
+            KS_pValue.append(p)
+            KS_stat.append(np.round(stat,2))
+            #Get expected counts in percentile bins 
+            cdf_fitted = np.array([kde.integrate_box_1d(-np.inf, x) for x in percentile_cutoffs])
+            dof = len(observed_number) - 1
+            #save the kde 
+            with open('%s/c%d_dill.pkl'%(saveDir, clusterClass), 'wb') as f:
+                dill.dump(kde, f)
+                        
         expected_num = []
         for bins in range(len(percentile_bins)-1):
             expected_cdf_area = cdf_fitted[bins+1] - cdf_fitted[bins]
             expected_num.append(expected_cdf_area)
-        
+                    
         # calculate chi-squared
         expected_num = np.array(expected_num) * size
         ss = np.sum(((expected_num - observed_number) ** 2) / observed_number)
         chi_square.append(np.round(ss,2))
         pval = 1 - chi2.cdf(ss, dof)
-        chi_pValue.append(np.round(pval,3))
+        chi_pValue.append(np.round(pval,3))           
+            
+            
+            
+            
     # Collate results and sort by goodness of fit (best at top) 
     results = pd.DataFrame()
     results['distribution'] = distModel
@@ -108,8 +135,8 @@ def tom_fitDist(inputData, distModel, clusterClass = '',saveDir = '', verbose = 
         print ('\nDistributions sorted by goodness of fit:')
         print ('----------------------------------------')
         print (results)
+        
     #save the data 
-    results = results[results['KS_pValue'] > 0.05]
     #plot the figures of distance and the fitted line
     if results.shape[0] > 0:
         createFitPlot(norData, results['distribution'].values, 
@@ -136,16 +163,24 @@ def createFitPlot(inputData, dist_names, fit_params,clusterClass, saveDir):
     h = plt.hist(inputData, bins = bin_cutoffs, color='0.75')
     # Loop through the distributions ot get line fit and paraemters  
     for dist_name,param in zip(dist_names, fit_params):
-        dist = getattr(scipy.stats, dist_name)
-        # Get line for each distribution (and scale to match observed data)
-        pdf_fitted = dist.pdf(x, *param[:-2], loc=param[-2], scale=param[-1])
+        if dist_name != 'genFit':
+            dist = getattr(scipy.stats, dist_name)
+            # Get line for each distribution (and scale to match observed data)
+            pdf_fitted = dist.pdf(x, *param[:-2], loc=param[-2], scale=param[-1])
+
+        else:
+            with open('%s/c%d_dill.pkl'%(saveDir, clusterClass), 'rb') as f:
+                kde = dill.load(f)
+            pdf_fitted = kde.pdf(x)
+            
         scale_pdf = np.trapz (h[0], h[1][:-1]) / np.trapz (pdf_fitted, x)
         pdf_fitted *= scale_pdf        
         # Add the line to the plot
         plt.plot(x,pdf_fitted, label=dist_name)
         # Set the plot x axis to contain 99% of the data
         # This can be removed, but sometimes outlier data makes the plot less clear
-        plt.xlim(np.percentile(inputData,0),np.percentile(inputData,99))    
+        plt.xlim(np.percentile(inputData,0),np.percentile(inputData,99))                 
+            
     # Add legend and display plot   
     plt.legend(fontsize = 15)
     plt.xlabel('Normalized distance between\neach transformation and Tavg',fontsize = 15)
@@ -155,7 +190,7 @@ def createFitPlot(inputData, dist_names, fit_params,clusterClass, saveDir):
         plt.savefig('%s/c%d_fitDis.png'%(saveDir, clusterClass), dpi = 300)
 #    plt.show()
     plt.close()
-    createQQ_PP(inputData, dist_names, fit_params, clusterClass, saveDir)
+    #createQQ_PP(inputData, dist_names, fit_params, clusterClass, saveDir)
 
 def createQQ_PP(inputData, distName, fitParams, clusterClass, saveDir):
     '''

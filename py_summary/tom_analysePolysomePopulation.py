@@ -27,7 +27,7 @@ def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scal
         distsVect2 = distsVect/(2*maxDistInpix)*180
         distsCN = (distsAng+(distsVect2*2))/2
     #plot the results and fit the distance combined to different distribution model  
-    visFit(distsVect, distsAng, distsCN, visFolder, classNr, distModel = ['lognorm']) 
+    visFit(distsVect, distsAng, distsCN, visFolder, classNr, distModel = ['lognorm', 'genFit']) 
         
     #analysis the state of each polysome  
     polyStat = calcPolyStat(pairList)
@@ -164,17 +164,18 @@ def analysePopulationPerPoly(pairList):
             tmpLabel = allLabelU[i] + 0.1
             idxbB1 = np.where(allLabel == tmpLabel)[0]  ##this is with branch(branch2)
             if (len(idxbB1) > len(idx)):
-                idx = idxbB1
-            stat.append({})
-            stat[i]['num'] = len(idx)
-            if stat[i]['num'] >= 20:
-                print(' ')
-            if stat[i]['num'] <= 5:
+                idx = idxbB1          
+            if len(idx) <= 5:
                 continue
-            stat[i]['tomoNr'] = allTomoID[idx[0]]
-            stat[i]['classNr'] = classNr
-            stat[i]['polyID'] = allLabelU[i]
-            stat[i]['hasBranch'] = np.int(len(idxbB1) > 0)
+            
+            stat_perPoly = {}
+            stat_perPoly['num'] = len(idx)
+            if stat_perPoly['num'] >= 20:
+                print(' ')
+            stat_perPoly['tomoNr'] = allTomoID[idx[0]]
+            stat_perPoly['classNr'] = classNr
+            stat_perPoly['polyID'] = allLabelU[i]
+            stat_perPoly['hasBranch'] = np.int(len(idxbB1) > 0)
             
             posInPolyVect = np.array([], dtype = np.int)
             confClassVect = np.array([], dtype = np.int)
@@ -189,10 +190,11 @@ def analysePopulationPerPoly(pairList):
                 posInListVect = np.concatenate((posInListVect, np.array([pairList['pairIDX1'].values[idx[ii]],
                                                                          pairList['pairIDX2'].values[idx[ii]]])))
             _, indices = np.unique(posInPolyVect, return_index = True)
-            if len(indices) < stat[i]['num']:
-                stat[i]['num'] = len(indices)  #the unique polysome w/o any branch
-            stat[i]['confClassVect'] = '-'.join([str(i) for i in confClassVect[indices]])                      
-            stat[i]['posInListVect'] =  '-'.join([str(i) for i in posInListVect[indices]])
+            if len(indices) < stat_perPoly['num']:
+                stat_perPoly['num'] = len(indices)  #the unique polysome w/o any branch
+            stat_perPoly['confClassVect'] = '-'.join([str(i) for i in confClassVect[indices]])                      
+            stat_perPoly['posInListVect'] =  '-'.join([str(i) for i in posInListVect[indices]])
+            stat.append(stat_perPoly)
             
     return stat
                 
@@ -264,6 +266,5 @@ def visFit(distsVect, distsAng, distsCN, saveDir, clusterClass, distModel):
     #plot the distance distribution
     if len(saveDir) > 0:
         tom_visDist(distsVect, distsAng, distsCN, '%s/distVSavg'%saveDir, 'class%d'%clusterClass)       
-    #fit to different distribution models 
-    if len(distsCN) > 50:# I amo not sure if this is a good metric to cutoff, small sample will make fit meanningfulless
-        tom_fitDist(distsCN, distModel, clusterClass,'%s/fitDist'%(saveDir))
+    #fit to different distribution models     
+    tom_fitDist(distsCN, distModel, clusterClass,'%s/fitDist'%(saveDir))
