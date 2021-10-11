@@ -1,10 +1,11 @@
 codes for track polysomes from tomograms
-#py_***: the functions for polysomes handling
+##py_***: the functions for polysomes tracing
 
 #tutorial_readme.ipynb: an example to call functions
 
 #polysome_class: the polysome Class
 
+Requirement:
 Modules:
 
 python: 3.6.7 (3.7.9/3.8.3)
