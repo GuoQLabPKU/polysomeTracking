@@ -5,7 +5,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import warnings
 import timeit as ti
-import pandas as pd
+
 
 
 from py_io.tom_starread import tom_starread, generateStarInfos
@@ -459,6 +459,7 @@ class Polysome:
                                           maxDistInpix, visFolder, cmb_metric))
             statPerPolyTmp.append(analysePopulationPerPoly(self.transList.iloc[idx,:]))
         
+        
         statPerPoly = sortStatPoly(statPerPolyTmp)
         stat = sortStat(stat)
         writeOutputStar(stat, statPerPoly, outputFolder)
@@ -812,7 +813,6 @@ class Polysome:
 
         self.log.info('Error estimation done')
     
-    
     def visResult(self):
         '''
         visulize the polysomes 
@@ -887,14 +887,24 @@ class Polysome:
                 transList_singleClass = self.transList[self.transList['pairClass'] == singleClass]
                 transList_singleClass['pairLabel_fix'] = np.fix(transList_singleClass['pairLabel'].values)
                 polyLenList = transList_singleClass['pairLabel_fix'].value_counts()
+                #show the distribution of polysome length
+                plt.hist(polyLenList.values+1,bins=20)
+                plt.xlabel('# of ribosomes in each polysome')
+                plt.ylabel('# of polysomes')
+                plt.savefig('%s/vis/vectfields/c%d_polyLengthDist.png'%(self.io['classifyFold'],singleClass),dpi = 300)
+                plt.close()
+                #find the longest polysome              
                 longestPolyId = polyLenList.index[0]
                 keep_row = np.where(transList_singleClass['pairLabel_fix'] == longestPolyId)[0]    
                 transListLongestPoly = transList_singleClass.iloc[keep_row, :]
                 #plot the longest polysome
                 tom_plot_vectorField(posAng = transListLongestPoly, mode= self.vis['vectField']['type'],  
                                      outputFolder = '%s/vis/vectfields/c%d_longestPolysome.png'%(self.io['classifyFold'],singleClass)
-                                     ,if_2views=1)
-                
+                                     ,if_2views=1) 
+                del transListLongestPoly
+                self.log.info('Render figures done')
+     
+                       
     def visPoly(self, lenPoly = 10):
         '''
         this method is aimed to vis all polysomes with length longer than 5
