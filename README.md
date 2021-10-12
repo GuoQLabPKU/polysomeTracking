@@ -42,8 +42,8 @@ Given an input starfile named 'particles.star' in ***main.py***, for example, se
 cluster-particle
   - run0   (*change the folder name using ***run_time*** in **main.py**)*
     - allTransformsb4Relink.star  (*transforms starfiles before relinking*)
-    - allTransformsProcessed.star (*transforms starfile after relinking*)
-    - allTransforms.star (*transforms starfiles after branches cleaning and ribosome fillingup, will be deprecated*)
+    - allTransforms.star (*transforms starfile after relinking*)
+    - allTransformsFillUp.star (*transforms starfiles after branches cleaning and ribosome fillingup*)
     - avg 
       - exp
       - model
@@ -62,19 +62,19 @@ cluster-particle
       - clustering
         - linkLevel.png
         - tree.png
-      - distVSavg (*the distribution of distances between each transform and the average transform from one transform class*)
+      - distanceDist (*the distribution of distances between each transform and the average transform from one transform class*)
         - class1.png
         - classXXX.png
-      - fitDist (*using different models to fit distribution of distances between each transform and the average transform from one transform class*)
+      - fitDistanceDist (*using different models to fit distribution of distances between each transform and the average transform from one transform class*)
         - cXXX_dill.pkl (*the fitting results of gauss KDE*)
-        - cXXX_fitDis.png (*the fitting results using gauss KDE and lognorm*)
-        - distFit_cXXX.csv (*the parameters for lognorm fitting*)
+        - cXXX_fitDist.png (*the fitting results using gauss KDE and lognorm*)
+        - distanceDistFit_cXXX.csv (*the parameters for lognorm fitting*)
       - noiseEstimate (*compare the distribution of 1.distance between each transform and the average transform from the same transform class; 2.distance between transforms from other classes and the average transform from 1*)
         - cXXX_otherClasses_angle distance.png 
         - cXXX_otherClasses_vect distance.png
         - cXXX_otherClasses_combined distance.png
       - vectfields
         - tomoID.png (*polysomes from the same tomogram*)
-        - cXXX_longestPolysome.png(*the longest polysome from classXXX*)
+        - cXXX_longestPoly.png(*the longest polysome from classXXX*)
         - cXXX_polyLengthDist.png(*the distribution of length of polysome from classXXX*)
        
