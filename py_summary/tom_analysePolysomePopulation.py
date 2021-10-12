@@ -9,8 +9,7 @@ from py_stats.tom_fitDist import tom_fitDist
 from py_vis.tom_visDist import tom_visDist
 
 
-def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scale2Ang'): #the input shoule be a ptr
-    
+def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scale2Ang'): 
     classNr = pairList['pairClass'].values[0]
     
     stat = { }
@@ -26,7 +25,7 @@ def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scal
     elif cmb_metric == 'scale2AngFudge':
         distsVect2 = distsVect/(2*maxDistInpix)*180
         distsCN = (distsAng+(distsVect2*2))/2
-    #plot the results and fit the distance combined to different distribution model  
+    #plot the results and fit the distance  to different distribution model  
     visFit(distsVect, distsAng, distsCN, visFolder, classNr, distModel = ['lognorm', 'genFit']) 
         
     #analysis the state of each polysome  
@@ -165,7 +164,7 @@ def analysePopulationPerPoly(pairList):
             idxbB1 = np.where(allLabel == tmpLabel)[0]  ##this is with branch(branch2)
             if (len(idxbB1) > len(idx)):
                 idx = idxbB1          
-            if len(idx) <= 5:
+            if len(idx) <= 2:
                 continue
             
             stat_perPoly = {}
@@ -265,6 +264,6 @@ def genOutput(stat, minTransMembers):
 def visFit(distsVect, distsAng, distsCN, saveDir, clusterClass, distModel):    
     #plot the distance distribution
     if len(saveDir) > 0:
-        tom_visDist(distsVect, distsAng, distsCN, '%s/distVSavg'%saveDir, 'class%d'%clusterClass)       
+        tom_visDist(distsVect, distsAng, distsCN, '%s/distanceDist'%saveDir, 'class%d'%clusterClass)       
     #fit to different distribution models     
-    tom_fitDist(distsCN, distModel, clusterClass,'%s/fitDist'%(saveDir))
+    tom_fitDist(distsCN, distModel, clusterClass,'%s/fitDistanceDist'%(saveDir))

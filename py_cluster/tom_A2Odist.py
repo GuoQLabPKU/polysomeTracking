@@ -87,7 +87,7 @@ def genJobListGpu(lenJobs, tmpDir, maxChunk):
         for i in range(packages.shape[0]):
             jobListChunk = jobList[packages[i,0]:packages[i,1], :]
             jobListSt.append({ })
-            jobListSt[i]["file"] = "%s/jobListChunk_%d_gpu%d.npy"%(tmpDir, i, gpu_id)
+            jobListSt[i]["file"] = "%s/jobListChunk%d_gpu%d.npy"%(tmpDir, i, gpu_id)
             jobListSt[i]["start"] = packages[i,0]
             jobListSt[i]["stop"] = packages[i,1]
             np.save(jobListSt[i]["file"], jobListChunk)  #will waste a long time for writing and reading!  

@@ -89,7 +89,6 @@ def tom_dendrogram(tree,ColorThreshold = -1, nrObservation = -1,dsp = 1,maxLeave
                 dlabels[iii] = "c%d"%groups[i]["id"]
     
     link_cols = genLink_color(groups,tree)
-    #print(link_cols)
     if dsp & (maxLeaves>0):
         plt.figure()
         if nrObservation > maxLeaves:

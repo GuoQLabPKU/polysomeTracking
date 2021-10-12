@@ -131,7 +131,7 @@ def doRender(st, mode, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fT
     else:
         fig.suptitle(fTitle)
         plt.show()
-        plt.close()
+#        plt.close()
 
 def filterList(st, classNr, polyNr, tomoID):
     if 'pairClass' in st['label'].keys():
@@ -214,11 +214,7 @@ def plotPairs(st, mode, idx, ax):
             for x,y,z, lbl in zip(conPos[:,0], conPos[:,1],conPos[:,2],labelPosInPoly1):
                 ax.text(x,y,z,lbl, size = 10 )
             for x,y,z,lbl in zip(p2Pos[:,0],p2Pos[:,1],p2Pos[:,2], labelPosInPoly2):
-                ax.text(x,y,z, lbl, size = 10)
-        #add color legend for transform class    
-#        if mode == 'basic':
-#            h_plot.append(plt.plot(.1, color = conCol))
-#            h_label.append('cl%d'%(uClasses[i]))  
+                ax.text(x,y,z, lbl, size = 10) 
         
         if mode == 'basic':
             h_plot.append(ax.plot(conPos[0,0], conPos[0,1], conPos[0,2],color = conCol))

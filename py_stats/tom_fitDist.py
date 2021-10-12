@@ -92,9 +92,9 @@ def tom_fitDist(inputData, distModel, clusterClass = '',saveDir = '', verbose = 
             fit_params.append('gaussian_kde')
             
             kde = sps.gaussian_kde(norData)
-            kde_cdf = np.array([kde.integrate_box_1d(-np.inf, x) for x in norData])
+            kde_cdf = lambda ary: np.array([kde.integrate_box_1d(-np.inf, x) for x in ary])
             #get KS test results
-            stat, p = scipy.stats.ks_2samp(norData, kde_cdf)
+            stat, p = scipy.stats.kstest(norData, kde_cdf)
             p = np.around(p,3)
             KS_pValue.append(p)
             KS_stat.append(np.round(stat,2))
@@ -144,7 +144,7 @@ def tom_fitDist(inputData, distModel, clusterClass = '',saveDir = '', verbose = 
                       clusterClass, saveDir)
         if len(saveDir) > 0:
             results.drop(['fit_params2'],inplace = True,axis = 1)
-            results.to_csv('%s/distFit_c%d.csv'%(saveDir, clusterClass), sep = ",",index = False)
+            results.to_csv('%s/distanceDistFit_c%d.csv'%(saveDir, clusterClass), sep = ",",index = False)
             
     
  
@@ -187,7 +187,7 @@ def createFitPlot(inputData, dist_names, fit_params,clusterClass, saveDir):
     plt.ylabel('# of transformation',fontsize = 15)
     plt.tight_layout()
     if len(saveDir) > 0:
-        plt.savefig('%s/c%d_fitDis.png'%(saveDir, clusterClass), dpi = 300)
+        plt.savefig('%s/c%d_fitDist.png'%(saveDir, clusterClass), dpi = 300)
 #    plt.show()
     plt.close()
     #createQQ_PP(inputData, dist_names, fit_params, clusterClass, saveDir)

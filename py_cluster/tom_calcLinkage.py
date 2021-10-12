@@ -1,5 +1,4 @@
 import numpy as np
-import timeit as ti
 from scipy.cluster.hierarchy import linkage
 from py_memory.tom_memalloc import tom_memalloc
 from py_log.tom_logger import Log
@@ -33,7 +32,7 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
 
     REFERENCES
     '''
-    randN = random.randint(0,100)
+    randN = random.randint(0,200)
     log = Log('linkage calculation %d'%randN).getlog()
     
     transAngVect = np.array([transList["pairTransAngleZXZPhi"].values, 
@@ -51,8 +50,8 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
                              transList["pairInvTransVectZ"].values]).transpose()
     
     
-    maxChunk = tom_memalloc(freeMem, worker_n, gpu_list)#maxChunk can be uint64(cpu) or dict(gpus)
-    #using gpu or cpu
+    maxChunk = tom_memalloc(freeMem, worker_n, gpu_list)
+
     if isinstance(worker_n, int):
         from py_cluster.tom_pdist_cpu import tom_pdist
     else:
@@ -66,7 +65,6 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
     distsAng =  tom_pdist(transAngVect,  maxChunk, worker_n, gpu_list, 'ang', transAngVectInv)  
 
     log.info("Use %s to combine angles and shifts"%cmb_metric)    
-    #print("Using %s to combine angles and shifts"%cmb_metric)
     
     if cmb_metric == 'scale2Ang':
         distsVect = distsVect/(2*maxDistInpix)*180
@@ -96,19 +94,12 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
             distsCN = (distsCN - np.mean(distsCN)) + 1.0 #(1,1,1)
     
     log.info('Calculate linkage')
-    #print('Calculating linkage')
-    #t1 = ti.default_timer() 
-    ll = linkage(distsCN,'average') #looks like a slow step if too large of distsCN
+    ll = linkage(distsCN,'average') 
     log.info('Calculate linkage done')
-    #print("Calculating linkage done with %.5f seconds"%(ti.default_timer() -t1))
-    #save the ll results
     np.save("%s/tree.npy"%preCalcFold,ll)
     
     return ll
 
-#if __name__ == '__main__':
-#    ll = tom_calcLinkage(startSt, 'py_io', 100, 'mean+1std')
-    
     
     
     

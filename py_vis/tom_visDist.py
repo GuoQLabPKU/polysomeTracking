@@ -14,7 +14,7 @@ def tom_visDist(distVect, distsAng, distsCN, saveDir, classLabel):
     plt.ylabel('# of transformation',fontsize = 15)
     plt.title('%s\nmean:%.2f, std:%.2f of vect distance\nmean:%.2f, std:%.2f of angle distance\nmean:%.2f, std:%.2f of combined distance'
               %(classLabel, np.mean(distVect),np.std(distVect),np.mean(distsAng),np.std(distsAng),np.mean(distsCN), np.std(distsCN)),
-                                                                    fontsize = 10)
+                                                                    fontsize = 12)
 
     plt.tight_layout()
     if len(saveDir) > 0:

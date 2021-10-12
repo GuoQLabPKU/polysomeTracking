@@ -1,4 +1,4 @@
-from py_io.tom_starread import tom_starread, generateStarInfos
+from py_io.tom_starread import generateStarInfos
 from py_io.tom_starwrite import tom_starwrite
 from py_io.tom_extractData import tom_extractData
 

@@ -21,12 +21,12 @@ def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None, chunk = 3000)
     if isinstance(worker_n, int): #using cpu
         if isinstance(gpu_list, list):
             print('Warning: you can not use cpus and gpus at the same time! \
-                  Will use cpus.')
+                   Will use cpus instead.')
         
         import psutil
         cpuN = psutil.cpu_count()
         if cpuN < worker_n:
-            print('Warning: given # cpus exceed available cpus')
+            print('Warning: given %dcpus exceed all available cpus'%worker_n)
             worker_n = cpuN
             
         mem_free = round(psutil.virtual_memory().free/1024/1024,2)*0.8 #not sure if the psutil is reliable
@@ -38,7 +38,7 @@ def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None, chunk = 3000)
         maxChunk = np.uint64(mem_free*chunk/worker_n) #if memory error, reduce this number(6500),uint64
         print('Free memory: %.2f mib'%mem_free)
         return maxChunk
-    else: #using gpu
+    else: 
         if isinstance(gpu_list, list):
             import pynvml
             pynvml.nvmlInit()
@@ -55,7 +55,7 @@ def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None, chunk = 3000)
                 if free/total < 0.5:
                     print('gpu %d already used, skipping'%gpu_id)
                     continue
-                freeMem_dict[gpu_id] =  round(free/1024/1024,2)*0.8 #not sire of the pynvml is reliable
+                freeMem_dict[gpu_id] =  round(free/1024/1024,2)*0.8 #not sure if the pynvml is reliable
                 print('GPU %d:%.2f mib free memory'%(gpu_id, round(free/1024/1024,2)*0.8))
             if len(freeMem_dict) == 0:
                 raise RuntimeError('Invalid gpu list')
