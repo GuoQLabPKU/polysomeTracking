@@ -1,5 +1,5 @@
 # polysomes tracking based on ribosome positions and euler angles
-![This is an image](https://github.com/werhoog/polysomeTracking/blob/main/image/concept.PNG)
+![This is an image](https://github.com/werhoog/polysomeTracking/blob/main/image/concept2.PNG)
 
 this folder contains the scripts for describing quantitavely polysomes high order conformations 
 ## Scripts description
