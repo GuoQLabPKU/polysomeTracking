@@ -38,25 +38,40 @@ Modify suitable parameters in main.py, then `python main.py`
 ```
 pyest py_test/test_*
 ```
-If meet any memory error, please reduce the input variable ***Chunk*** in function ***tom_memalloc*** **(py_memory/tom_memalloc.py)**
+This will test three functions:
+- test_polysome.py: test if track right polysomes from simulation data
+- test_fillupRibo.py: test if fill up right ribosomes after manully delete two ribosomes
+- test_branchClean.py: test if clean the branches created manully in simulation data
+
+### If meet any memory error, please reduce the input variable ***Chunk*** in function ***tom_memalloc*** **(py_memory/tom_memalloc.py)**
 ## Output 
 Given an input starfile named 'particles.star' in ***main.py***, for example, several folders will be created like below,
 cluster-particle
   - run0   (*change the folder name using ***run_time*** in **main.py**)*
-    - allTransformsb4Relink.star  (*transforms starfiles before relinking*)
-    - allTransforms.star (*transforms starfile after relinking*)
-    - allTransformsFillUp.star (*transforms starfiles after branches cleaning and ribosome fillingup*)
+    - allTransformsb4Relink.star  
+      > *transforms starfiles before relinking*
+    - allTransforms.star 
+      > *transforms starfiles after relinking*
+    - allTransformsFillUp.star 
+      > *transforms starfiles after branches cleaning and ribosome fillingup*
+      
+      | column name | description | 
+      | ---- | ---- |
+      | fillUpProb | the probability of the transform. -1:none fill up/1.1: transforms with middle fillup ribosomes(fillUoPoly_addNum>1)/other:transforms with last filled up ribosomes | 
     - avg 
       - exp
       - model
-    - classes (*transList for each transform class*)
-      - c1
-      - c2
-      - cXXX
-    - scores (*transform classes assignment scores*)
+    - classes 
+      > *transList for each transform class*
+      - c1/transList.star
+      - c2/transList.star
+      - cXXX/transList.star
+    - scores 
+      > *transform classes assignment scores*
       - treeb4Relink.npy
       - tree.npy
-    - stat (*summary of each transform class and each polysome*)
+    - stat
+      > *summary of each transform class and each polysome*
       - statePerClass.star
       - statePerPoly.star   
     - vis
@@ -64,19 +79,34 @@ cluster-particle
       - clustering
         - linkLevel.png
         - tree.png
-      - distanceDist (*the distribution of distances between each transform and the average transform from one transform class*)
+      - distanceDist
+        > *the distribution of distances between each transform and the average transform from one transform class*
         - class1.png
         - classXXX.png
-      - fitDistanceDist (*using different models to fit distribution of distances between each transform and the average transform from one transform class*)
-        - cXXX_dill.pkl (*the fitting results of gauss KDE*)
-        - cXXX_fitDist.png (*the fitting results using gauss KDE and lognorm*)
-        - distanceDistFit_cXXX.csv (*the parameters for lognorm fitting*)
-      - noiseEstimate (*compare the distribution of 1.distance between each transform and the average transform from the same transform class; 2.distance between transforms from other classes and the average transform from 1*)
+      - fitDistanceDist
+        > *using different models to fit distribution of distances between each transform and the average transform from one transform class*
+        - cXXX_dill.pkl 
+        > *the fitting results of gauss KDE*
+        - cXXX_fitDist.png
+        > *the fitting results figures using gauss KDE and lognorm*
+        - distanceDistFit_cXXX.csv 
+        > *the parameters for lognorm fitting*
+      - noiseEstimate
+        > *compare the distribution of 1.distance between each transform and the average transform from the same transform class; 2.distance between transforms from other classes and the average transform from class of 1*
         - cXXX_otherClasses_angle distance.png 
         - cXXX_otherClasses_vect distance.png
         - cXXX_otherClasses_combined distance.png
       - vectfields
-        - tomoID.png (*polysomes from the same tomogram*)
-        - cXXX_longestPoly.png(*the longest polysome from classXXX*)
-        - cXXX_polyLengthDist.png(*the distribution of length of polysome from classXXX*)
+        - tomoID.png 
+          > *polysomes from the same tomogram*
+        - cXXX_longestPoly.png
+          > *the longest polysome from classXXX*
+        - cXXX_polyLengthDist.png
+          > *the distribution of length of polysomes from classXXX*
+     - particlesFillUp.star
+        > *the particlesFillUp.star with filled up ribosomes as well as from particles.star
+        
+       | column name | description | 
+       | ---- | ---- |
+       | fillUpProb | the state of ribosomes. -1:none fill up/1.1: middle fillup ribosomes(fillUoPoly_addNum>1)/1:last filled up ribosomes |
        
