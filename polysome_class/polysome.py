@@ -671,7 +671,7 @@ class Polysome:
         aren't from classA and the average transform of classA.
         Finally, compare these two distributions.
         '''
-        self.log.info('estimete classes assignment errors')
+        self.log.info('Estimete classes assignment errors')
         
         maxDistInpix = self.transForm['maxDist']/self.transForm['pixS']
         cmb_metric = self.classify['cmb_metric']
@@ -756,7 +756,7 @@ class Polysome:
             tom_kdeEstimate(distAngSame, 'c%d'%classN, 'angle distance', save_dir,1, 0.05, distAngDiff, 'otherClasses')
             tom_kdeEstimate(distCombineSame, 'c%d'%classN,'combined distance',save_dir,1, 0.05, distCombineDiff, 'otherClasses') 
 
-        self.log.info('error estimation done')
+        self.log.info('Error estimation done')
     
     def visResult(self):
         '''

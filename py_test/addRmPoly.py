@@ -2,12 +2,11 @@ import numpy as np
 import os
 import shutil
 from py_test.genSimForwardPolyModel import genForwardPolyModel
-def setup(conf=None, noizeDegree = 2, branch = 0):
+def setup(conf=None, noizeDegree = 2, branch = 0, realPartStar = None):
     '''
     Parameters
     ----------
-    conf :dict, optional
-          dict with polysomes information stored. The default is None.
+    conf: dict with polysomes information stored. The default is None.
 
     Returns 
     -------
@@ -15,7 +14,7 @@ def setup(conf=None, noizeDegree = 2, branch = 0):
 
     '''
     #remove the previous sim.star and order random.star
-    print('Generating simulation data.')
+    print('Generate simulation data.')
     if os.path.exists('sim.star'):
         os.remove('sim.star')
     if os.path.exists('simOrderRandomized.star'):
@@ -32,7 +31,7 @@ def setup(conf=None, noizeDegree = 2, branch = 0):
         zz0['increAng']= np.array([30, 10, 70])
         zz0['startPos']=np.array([20, 30, 0])
         zz0['startAng']= np.array([40, 10, 30])
-        zz0['minDist']=50
+        zz0['minDist']=50 #the pixel distance between two adajcent ribosomes
         zz0['searchRad']=100
         if branch:
             zz0['branch']=1
@@ -58,7 +57,7 @@ def setup(conf=None, noizeDegree = 2, branch = 0):
         zz2 = { }
         zz2['type']='noise'
         zz2['tomoName']='100.mrc'
-        zz2['numRepeats']=150
+        zz2['numRepeats']=250
         zz2['minDist']=50
         zz2['searchRad']=100
         conf.append(zz2)
@@ -84,7 +83,7 @@ def setup(conf=None, noizeDegree = 2, branch = 0):
         zz4 = { }
         zz4['type']='noise'
         zz4['tomoName']='101.mrc'
-        zz4['numRepeats']=100
+        zz4['numRepeats']=200
         zz4['minDist']=50
         zz4['searchRad']=100
         conf.append(zz4)
@@ -109,9 +108,9 @@ def setup(conf=None, noizeDegree = 2, branch = 0):
 #        zz6['minDist']=50
 #        zz6['searchRad']=100
 #        conf.append(zz6)
-        idxBranches = genForwardPolyModel(conf)
+        idxBranches = genForwardPolyModel(conf, realPartStar)
     else:
-        idxBranches = genForwardPolyModel(conf)
+        idxBranches = genForwardPolyModel(conf, realPartStar)
     return idxBranches
         
 def teardown():

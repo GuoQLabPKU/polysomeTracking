@@ -25,7 +25,8 @@ def plot_vectField(posAng, mode, repVect, scale, col, classNr, polyNr, onlySelec
         angles = posAng[:,3:6]
         ax = plt.figure().gca(projection ='3d')
         plotRepVects(pos, angles, repVect, scale, col, ax)
-        plt.close()
+        plt.show()
+        #plt.close()
         return 
     if (type_ang.__name__ == 'str') | (type_ang.__name__ == 'DataFrame'):
         fTitleList = ''
@@ -130,8 +131,8 @@ def doRender(st, mode, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fT
         plt.close()
     else:
         fig.suptitle(fTitle)
-        plt.show()
-#        plt.close()
+#        plt.show()
+        plt.close()
 
 def filterList(st, classNr, polyNr, tomoID):
     if 'pairClass' in st['label'].keys():

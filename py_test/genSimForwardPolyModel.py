@@ -4,9 +4,9 @@ from py_transform.tom_sum_rotation import tom_sum_rotation
 from py_transform.tom_pointrotate import tom_pointrotate
 from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_io.tom_starwrite import tom_starwrite
-from py_io.tom_starread import generateStarInfos
+from py_io.tom_starread import generateStarInfos, tom_starread
 
-def genForwardPolyModel(conf = None):
+def genForwardPolyModel(conf = None, realPartStar = None):
     '''
     Parameters
     ----------
@@ -18,11 +18,20 @@ def genForwardPolyModel(conf = None):
     simulated star file and store a npy file of polysomes
 
     '''
+    if isinstance(realPartStar, str):
+        print('using %s to pick euler angles'%realPartStar)
+        realPartStar = tom_starread(realPartStar)
+        realParStar = realPartStar['data_particles']  
+        starType = realPartStar['type']  
+        
+    else:
+        realParStar = None
+        starType = 'relion2'
     if conf == None:
         conf = []
         zz = {}
         zz['type'] = 'vect'
-        zz['tomoName'] = '102.mrc'
+        zz['tomoName'] = '100.mrc'
         zz['numRepeats'] = 30 #the length of the polysome
         zz['increPos'] = np.array([60,4,10])
         zz['increAng'] = np.array([10,20,30])
@@ -35,8 +44,8 @@ def genForwardPolyModel(conf = None):
         conf.append(zz)
         zz2 = { }
         zz2['type'] = 'noise'
-        zz2['tomoName'] = '102.mrc'
-        zz2['numRepeats'] = 10
+        zz2['tomoName'] = '100.mrc'
+        zz2['numRepeats'] = 200
         zz2['minDist'] = 50
         zz2['searchRad'] = 100
         conf.append(zz2)
@@ -53,7 +62,7 @@ def genForwardPolyModel(conf = None):
             else:      
                 shape0 = list_.shape[0]
             list_,  idx_branch = genVects(list_, single_conf['tomoName'], single_conf['increPos'],
-                             single_conf['increAng'], single_conf['startPos'],
+                              single_conf['increAng'], single_conf['startPos'],
                               single_conf['startAng'], single_conf['numRepeats'], 
                               single_conf['branch'], single_conf['noizeDregree'])
             shape1 = list_.shape[0]
@@ -64,7 +73,7 @@ def genForwardPolyModel(conf = None):
         if single_conf['type'] == 'noise':
             list_ = addNoisePoints(list_, single_conf['tomoName'],
                                    single_conf['numRepeats'], single_conf['minDist'],
-                                   single_conf['searchRad'])
+                                   single_conf['searchRad'], realParStar, starType )
     
     polysome_label = np.zeros(list_.shape[0], dtype = np.int)#label the polysome information to the data 
     for key in polysome_flag.keys():
@@ -142,7 +151,7 @@ def genVects(list_, tomoName, increPos, increAng, startPos, startAng, nrRep, bra
         pos = list_.loc[5, ['rlnCoordinateX', 'rlnCoordinateY', 'rlnCoordinateZ']].values
         ang = list_.loc[5, ['rlnAngleRot', 'rlnAngleTilt', 'rlnAnglePsi']].values
         _, ang = tom_eulerconvert_xmipp(ang[0], ang[1], ang[2], 'xmipp2tom')
-        listBranch = genBranch(pos, ang, increAng, increPos, 5, tomoName)
+        listBranch = genBranch(pos, ang, increAng, increPos, 6, tomoName)
         idxBranch = (listIn.shape[0] + 5, listIn.shape[0] + list_.shape[0])
         list_ = pd.concat((listIn, list_, listBranch),axis = 0)
     else:
@@ -163,7 +172,7 @@ def genBranch(pos, ang, increAng, increPos, nrRep, tomoName):
         angNoise = np.random.rand(3)*3
         vnoise = np.random.rand(3)*3 
         ang,_,_ = tom_sum_rotation( np.array([list(increAng), list(angOld), list(angNoise)]),
-                                         np.zeros((3,3)))
+                                    np.zeros((3,3)))
                   
         vTr = tom_pointrotate(increPos + vnoise, ang[0], ang[1], ang[2])
         pos = posOld + vTr
@@ -184,36 +193,71 @@ def genBranch(pos, ang, increAng, increPos, nrRep, tomoName):
     return list_
     
        
-def addNoisePoints(list_, tomoName, nrNoisePoints, minDist, searchRad):
-    listNoise = allocListFrame(tomoName, nrNoisePoints, 'relion')#listNoise should be one dataframe initilaized 
-    for i in range(listNoise.shape[0]):
-        posList = getPositionsPerTomo(list_, tomoName)
-        
+def addNoisePoints(list_, tomoName, nrNoisePoints, minDist, searchRad, realParStar = None ,
+                   startype = 'relion2'):
+    listNoise = allocListFrame(tomoName, nrNoisePoints, 'relion')  
+    if realParStar is not None:
+        realParNr = realParStar.shape[0]
+    half_noiseN = int(listNoise.shape[0]/2)
+    posList = getPositionsPerTomo(list_, tomoName)
+
+    for i in range(half_noiseN):
+       
         posNoise = getPositionsPerTomo(listNoise, tomoName)
         oldPos = np.concatenate((posList, posNoise), axis = 1)
-        
-        pos = genUniquePos(oldPos, posList, minDist, searchRad)[0]
-        
+
+        pos = genUniquePos(oldPos, posList, minDist)
         listNoise.loc[i,'rlnCoordinateX'] = pos[0]
         listNoise.loc[i,'rlnCoordinateY'] = pos[1]
         listNoise.loc[i,'rlnCoordinateZ'] = pos[2]
         
-        angC = np.random.rand(3)*360
+        #get random euler angles from realParStar
+        if realParStar is not None:
+            index_rand = np.random.choice(range(realParNr),1)[0]
+            if (startype == 'relion2') | (startype == 'relion3'):           
+                angC = realParStar.loc[index_rand, ['rlnAngleRot', 'rlnAngleTilt', 'rlnAnglePsi']]
+            else:
+                angC = realParStar.loc[index_rand, ['phi', 'psi', 'the']]
+                
+        else:    
+            angC = np.random.rand(3)*360
         listNoise.loc[i,'rlnAngleRot'] = angC[0]
         listNoise.loc[i,'rlnAngleTilt'] = angC[1]
         listNoise.loc[i,'rlnAnglePsi'] = angC[2]
         
+    posListNoise = posNoise[:, 0:half_noiseN-1]
+    posList = np.concatenate((posList, posListNoise), axis = 1)
+    for i in range(half_noiseN, nrNoisePoints):
+        posNoise = getPositionsPerTomo(listNoise, tomoName)
+        oldPos = np.concatenate((posList, posNoise), axis = 1)
+        
+        pos = genUniquePos_adjact(oldPos, posList, minDist, searchRad)[0]
+        listNoise.loc[i,'rlnCoordinateX'] = pos[0]
+        listNoise.loc[i,'rlnCoordinateY'] = pos[1]
+        listNoise.loc[i,'rlnCoordinateZ'] = pos[2]
+        #get random euler angles from realParStar
+        if realParStar is not None:
+            index_rand = np.random.choice(range(realParNr),1)[0]
+            if (startype == 'relion2') | (startype == 'relion3'):           
+                angC = realParStar.loc[index_rand, ['rlnAngleRot', 'rlnAngleTilt', 'rlnAnglePsi']]
+            else:
+                angC = realParStar.loc[index_rand, ['phi', 'psi', 'the']]
+                
+        else:    
+            angC = np.random.rand(3)*360
+        listNoise.loc[i,'rlnAngleRot'] = angC[0]
+        listNoise.loc[i,'rlnAngleTilt'] = angC[1]
+        listNoise.loc[i,'rlnAnglePsi'] = angC[2]        
+        
+   
     list_ = pd.concat((list_,listNoise),axis = 0)
     list_.reset_index(inplace = True, drop = True)
     
     return list_
         
-
-def genUniquePos(oldPos, posSeed, minDist, offSize):
-    for i in range(1000):
-        
+def genUniquePos_adjact(oldPos, posSeed, minDist, offSize):
+    for i in range(1000):      
         ind = np.random.permutation(posSeed.shape[1])
-        
         seed = posSeed[:,ind[0]]
         m = np.fix(np.random.rand(3) + 0.5)
         m = m*2-1
@@ -221,6 +265,23 @@ def genUniquePos(oldPos, posSeed, minDist, offSize):
         allDist = oldPos - np.tile(pos, (oldPos.shape[1],1)).transpose()
         allDist = np.sqrt(np.sum(allDist*allDist,axis = 0))
         allDist = allDist<minDist
+        if np.sum(allDist) < 1:
+            break      
+    return pos
+
+def genUniquePos(oldPos, posSeed, minDist):
+    posSeed=posSeed[:, posSeed[0,:] > -1000]
+    xrange = (int(np.min(posSeed[0,:])), int(np.max(posSeed[0,:])))
+    yrange = (int(np.min(posSeed[1,:])), int(np.max(posSeed[1,:])))
+    zrange = (int(np.min(posSeed[2,:])), int(np.max(posSeed[2,:])))
+    for i in range(1000):
+        pos = np.array([np.random.choice(range(xrange[0], xrange[1]),1)[0],
+                        np.random.choice(range(yrange[0], yrange[1]),1)[0],
+                        np.random.choice(range(zrange[0], zrange[1]),1)[0]])
+        
+        allDist = oldPos - np.tile(pos, (oldPos.shape[1],1)).transpose()
+        allDist = np.sqrt(np.sum(allDist*allDist, axis = 0))
+        allDist = allDist < minDist
         if np.sum(allDist) < 1:
             break
     return pos
@@ -233,8 +294,8 @@ def getPositionsPerTomo(list_, tomoName):
     for i in range(len(idx)):
         ind = idx[i]
         pos[:,i] = np.array([list_['rlnCoordinateX'].values[ind],
-                            list_['rlnCoordinateY'].values[ind],
-                            list_['rlnCoordinateZ'].values[ind]])
+                             list_['rlnCoordinateY'].values[ind],
+                             list_['rlnCoordinateZ'].values[ind]])
     return pos
     
 def allocListFrame(tomoName, nrItem, flavour):
@@ -255,7 +316,7 @@ def allocListFrame(tomoName, nrItem, flavour):
     rlnOriginZ = [ ]
     rlnClassNumber = [ ]
     rlnNormCorrection = [ ]
-    rlnLoglikeliContribution = [ ]
+    rlnLogLikeliContribution = [ ]
     rlnMaxValueProbDistribution = [ ]
     rlnNrOfSignificantSamples = [ ]
     
@@ -279,7 +340,7 @@ def allocListFrame(tomoName, nrItem, flavour):
             rlnOriginZ.append(0)
             rlnClassNumber.append(0)
             rlnNormCorrection.append(0)
-            rlnLoglikeliContribution.append(0)
+            rlnLogLikeliContribution.append(0)
             rlnMaxValueProbDistribution.append(0)
             rlnNrOfSignificantSamples.append(1)
             
@@ -291,7 +352,7 @@ def allocListFrame(tomoName, nrItem, flavour):
                        'rlnGroupNumber':rlnGroupNumber, 'rlnOriginX':rlnOriginX,
                        'rlnOriginY':rlnOriginY, 'rlnOriginZ':rlnOriginZ,
                        'rlnClassNumber':rlnClassNumber, 'rlnNormCorrection':rlnNormCorrection,
-                       'rlnLoglikeliContribution':rlnLoglikeliContribution, 
+                       'rlnLogLikeliContribution':rlnLogLikeliContribution, 
                        'rlnMaxValueProbDistribution':rlnMaxValueProbDistribution, 
                        'rlnNrOfSignificantSamples':rlnNrOfSignificantSamples})
     return st
