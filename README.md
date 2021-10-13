@@ -40,6 +40,8 @@ pyest py_test/test_*
 ```
 This will test three functions:
 - test_polysome.py: test if track right polysomes from simulation data
+  > test_polysome.py can receive a parameter***particleStar***. Modify this parameter to your real particle.star file. Then the euler angles
+  > of simulation data will come from the particle.star
 - test_fillupRibo.py: test if fill up right ribosomes after manully delete two ribosomes
 - test_branchClean.py: test if clean the branches created manully in simulation data
 
