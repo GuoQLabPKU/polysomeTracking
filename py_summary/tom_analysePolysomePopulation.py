@@ -164,8 +164,6 @@ def analysePopulationPerPoly(pairList):
             idxbB1 = np.where(allLabel == tmpLabel)[0]  ##this is with branch(branch2)
             if (len(idxbB1) > len(idx)):
                 idx = idxbB1          
-            if len(idx) <= 2:
-                continue
             
             stat_perPoly = {}
             stat_perPoly['num'] = len(idx)

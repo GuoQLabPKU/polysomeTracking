@@ -4,9 +4,9 @@ from py_transform.tom_sum_rotation import tom_sum_rotation
 from py_transform.tom_pointrotate import tom_pointrotate
 from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_io.tom_starwrite import tom_starwrite
-from py_io.tom_starread import generateStarInfos, tom_starread
+from py_io.tom_starread import generateStarInfos
 
-def genForwardPolyModel(conf = None, realPartStar = None):
+def genForwardPolyModel(conf = None, eulerAngles=None):
     '''
     Parameters
     ----------
@@ -18,15 +18,9 @@ def genForwardPolyModel(conf = None, realPartStar = None):
     simulated star file and store a npy file of polysomes
 
     '''
-    if isinstance(realPartStar, str):
-        print('using %s to pick euler angles'%realPartStar)
-        realPartStar = tom_starread(realPartStar)
-        realParStar = realPartStar['data_particles']  
-        starType = realPartStar['type']  
-        
-    else:
-        realParStar = None
-        starType = 'relion2'
+    if isinstance(eulerAngles, str):
+        print('pick euler angles from %s'%eulerAngles)
+        eulerAngles = pd.read_csv(eulerAngles, sep=",")
     if conf == None:
         conf = []
         zz = {}
@@ -73,7 +67,7 @@ def genForwardPolyModel(conf = None, realPartStar = None):
         if single_conf['type'] == 'noise':
             list_ = addNoisePoints(list_, single_conf['tomoName'],
                                    single_conf['numRepeats'], single_conf['minDist'],
-                                   single_conf['searchRad'], realParStar, starType )
+                                   single_conf['searchRad'], eulerAngles)
     
     polysome_label = np.zeros(list_.shape[0], dtype = np.int)#label the polysome information to the data 
     for key in polysome_flag.keys():
@@ -193,11 +187,10 @@ def genBranch(pos, ang, increAng, increPos, nrRep, tomoName):
     return list_
     
        
-def addNoisePoints(list_, tomoName, nrNoisePoints, minDist, searchRad, realParStar = None ,
-                   startype = 'relion2'):
+def addNoisePoints(list_, tomoName, nrNoisePoints, minDist, searchRad, eulerAngles):
     listNoise = allocListFrame(tomoName, nrNoisePoints, 'relion')  
-    if realParStar is not None:
-        realParNr = realParStar.shape[0]
+    if eulerAngles is not None:
+        eulerAnglesLen = eulerAngles.shape[0]
     half_noiseN = int(listNoise.shape[0]/2)
     posList = getPositionsPerTomo(list_, tomoName)
 
@@ -211,14 +204,11 @@ def addNoisePoints(list_, tomoName, nrNoisePoints, minDist, searchRad, realParSt
         listNoise.loc[i,'rlnCoordinateY'] = pos[1]
         listNoise.loc[i,'rlnCoordinateZ'] = pos[2]
         
-        #get random euler angles from realParStar
-        if realParStar is not None:
-            index_rand = np.random.choice(range(realParNr),1)[0]
-            if (startype == 'relion2') | (startype == 'relion3'):           
-                angC = realParStar.loc[index_rand, ['rlnAngleRot', 'rlnAngleTilt', 'rlnAnglePsi']]
-            else:
-                angC = realParStar.loc[index_rand, ['phi', 'psi', 'the']]
-                
+        #get random euler angles from eulerAngles
+        if eulerAngles is not None:
+            index_rand = np.random.choice(range(eulerAnglesLen),1)[0]                     
+            angC = eulerAngles.iloc[index_rand,:].values*180/np.pi
+                     
         else:    
             angC = np.random.rand(3)*360
         listNoise.loc[i,'rlnAngleRot'] = angC[0]
@@ -235,14 +225,11 @@ def addNoisePoints(list_, tomoName, nrNoisePoints, minDist, searchRad, realParSt
         listNoise.loc[i,'rlnCoordinateX'] = pos[0]
         listNoise.loc[i,'rlnCoordinateY'] = pos[1]
         listNoise.loc[i,'rlnCoordinateZ'] = pos[2]
-        #get random euler angles from realParStar
-        if realParStar is not None:
-            index_rand = np.random.choice(range(realParNr),1)[0]
-            if (startype == 'relion2') | (startype == 'relion3'):           
-                angC = realParStar.loc[index_rand, ['rlnAngleRot', 'rlnAngleTilt', 'rlnAnglePsi']]
-            else:
-                angC = realParStar.loc[index_rand, ['phi', 'psi', 'the']]
-                
+        #get random euler angles from eulerAngles
+        if eulerAngles is not None:
+            index_rand = np.random.choice(range(eulerAnglesLen),1)[0]                     
+            angC = eulerAngles.iloc[index_rand,:].values*180/np.pi
+            
         else:    
             angC = np.random.rand(3)*360
         listNoise.loc[i,'rlnAngleRot'] = angC[0]

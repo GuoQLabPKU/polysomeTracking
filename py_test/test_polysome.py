@@ -8,7 +8,8 @@ from py_io.tom_starread import tom_starread
 from polysome_class.polysome import Polysome
 
 ####PARAMETERS#####
-particleStar = './dataStar/allParticles_5goodtomos.star'
+eulerAngles = '/lustre/Data/jiangwh/polysome/python_version/polysome/py_test/euler_angles.csv'
+testType = 'noise' #noise: generate noise star file
 ##################
 
 def pick_polysome(input_star):
@@ -42,21 +43,21 @@ def pick_polysome(input_star):
     return polysome
 
 
-def test_polysome(partStar):  
-    if not os.path.exists(partStar):
-        partStar = None
-    _ = setup(realPartStar = partStar) #create simulation data  
+def test_polysome(eulerAngles):  
+    if not os.path.exists(eulerAngles):
+        eulerAngles = None
+    _ = setup(eulerAngles = eulerAngles) #create simulation data  
 
     polysome1 = Polysome(input_star = './simOrderRandomized.star', run_time = 'run0')  
     polysome1.classify['clustThr'] = 5
-    polysome1.classify['relinkWithoutSmallClasses'] = 0
+    polysome1.classify['relinkWithoutSmallClasses'] = 1
     polysome1.sel[0]['minNumTransform'] = 10
     polysome1.transForm['pixS'] = 3.42 # in Ang
     polysome1.transForm['maxDist'] = 342 # in Ang
 
     polysome1.creatOutputFolder()
     
-    polysome1.calcTransForms(worker_n = 3) #parallel, can assert the speed of pdit next time
+    polysome1.calcTransForms(worker_n = 2) #parallel, can assert the speed of pdit next time
    
     polysome1.groupTransForms(gpu_list = [0]) #parallel 
                                             
@@ -85,7 +86,47 @@ def test_polysome(partStar):
         assert real_polysome[single_key] == track_polysome[single_key]
    
 
+def test_noise(eulerAngles):
+    if not os.path.exists(eulerAngles):
+        eulerAngles = None
+    _ = setup(eulerAngles = eulerAngles,  genType = 'noise' ) #create simulation data  
+
+    polysome1 = Polysome(input_star = './simNoise.star', run_time = 'run_threshold35_eulerangle_relink')  
+    polysome1.classify['clustThr'] = 35
+    polysome1.classify['relinkWithoutSmallClasses'] = 1
+    polysome1.sel[0]['minNumTransform'] = 25
+    polysome1.transForm['pixS'] = 3.42 # in Ang
+    polysome1.transForm['maxDist'] = 342 # in Ang
+
+    polysome1.creatOutputFolder()
+    
+    polysome1.calcTransForms(worker_n = 1) #parallel, can assert the speed of pdit next time
+   
+    polysome1.groupTransForms(gpu_list = [0]) #parallel 
+                                            
+    polysome1.selectTransFormClasses()
+    
+    polysome1.alignTransforms()
+    
+    polysome1.find_connectedTransforms()  #can assert here next time 
+    
+    polysome1.analyseTransFromPopulation('',  '', 1)
+    
+    
+    #use advance mode
+    #polysome1.vis['vectField']['type'] = 'advance'
+    
+    polysome1.vis['longestPoly']['render'] = 1
+    polysome1.visResult()
+    polysome1.visLongestPoly()
+    
+    assert 1==1
+    
 if __name__ == '__main__':
-    test_polysome(particleStar)
+    if testType == 'polysome':
+        test_polysome(eulerAngles)
+    else:
+        test_noise(eulerAngles)
     #teardown() #clean up the data 
+    
                 
