@@ -48,21 +48,25 @@ def tom_genavgFromTransFormScript(transList, maxRes, pixS, workerNr = 35 ,
         log.warning('No particles files detect. Skip average particles')  
         return
     else:
-        avgFromWildCard(transList, outputRoot, classFilt, avgCall, maxRes, pixS,callByPython)
+        avgFromWildCard(transList, outputRoot, classFilt, avgCall, maxRes, pixS,callByPython, 'all')
+        avgFromWildCard(transList, outputRoot, classFilt, avgCall, maxRes, pixS,callByPython, 'p1')
+        avgFromWildCard(transList, outputRoot, classFilt, avgCall, maxRes, pixS,callByPython, 'p2')
     
-def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS, callByPython):
+def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS, callByPython,kind):
     #list the dir of all classes
     wk_upup = os.path.split(os.path.split(os.path.split(wk)[0]) [0])[0]
-    d = [ i+ '/particleCenter/allParticles.star' for i in os.listdir(wk_upup)]     
+    d = [ i+ '/particleCenter/%sParticles.star'%kind for i in os.listdir(wk_upup)]     
   
     
     if isinstance(classFilt, int) | isinstance(classFilt, float):
         maxLen = np.inf
     else:
-        if 'maxNumPart' in classFilt.keys():
+        if 'maxNumPart' in classFilt.keys():           
             maxLen = classFilt['maxNumPart']
         else:
             maxLen = classFilt['maxNumTransForm']
+        if (kind == 'p2') | (kind == 'p1'):
+            maxLen = maxLen/2         
     
     idx = [ ]
     
@@ -79,54 +83,61 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS, callBy
             
             p = subprocess.Popen(call, shell = True, stdout = subprocess.PIPE)
             out, err = p.communicate()
-            
-            res = [int(i) for i in re.findall('\d+', out)][0]
+            res = [int(i) for i in re.findall('\d+', str(out))][0]
             lens[i] = res
             
             if 'maxNumPart' in classFilt.keys():
+                if (kind == 'p2') | (kind == 'p1'):
+                    classFilt['minNumPart'] = classFilt['minNumPart']/2                   
                 if res > classFilt['minNumPart']: ##select the classes which has more than particles
                     idx.append(i)
                 
             else:
+                if (kind == 'p2') | (kind == 'p1'):
+                    classFilt['minNumTransform'] = classFilt['minNumTransform']/2 
                 if res > classFilt['minNumTransform']:   ##select the classes which has more than transforms
                     idx.append(i)            
                 
     if len(idx) == 0:
         return 
+    
+    #tell user call by unix or python
+    if not callByPython:
+        scriptName = "%s/avg_%s.cmd"%(os.path.split(outputRoot)[0], kind)
+        print('the average script by relion is located at %s'%scriptName)
+    
+    #make relion call script or call by python 
     for i in range(len(idx)):
         uPos = idx[i]
         inputName = "%s/%s"%(wk_upup, d[uPos])
         #fold = os.path.split(inputName)[0]
         p = os.path.split(os.path.split(os.path.split(inputName)[0])[0])[1]
-        outputName = '%s/%s.mrc'%(os.path.split(outputRoot)[0], p)
-        outputNameLog = '%s/log/%s.log'%(os.path.split(outputRoot)[0], p)
-        
-        #tell user call by unix or python
-        if not callByPython:
-            scriptName = "%s/avg.cmd"%(os.path.split(outputRoot)[0])
-            print('the average script by relion is located at %d'%scriptName)
+        outputName = '%s/%s_%s.mrc'%(os.path.split(outputRoot)[0], p, kind)
+        outputNameLog = '%s/log/%s_%s.log'%(os.path.split(outputRoot)[0], p,kind)
+
             
-        if lens(uPos) > maxLen:  
+        if lens[uPos] > maxLen:  
             inputNameTmp = inputName.replace('.star', '_subset.star')
             call = 'cat %s | awk \"NF<4{print $0}\" > %s'%(inputName, inputNameTmp)
             p = subprocess.Popen(call, shell = True, stdout = subprocess.PIPE)
             call = 'awk \"NF>5{print $0}\" %s | sort -R | awk \"NR<%d{print $0}\" >> %s'%(inputName, 
                               maxLen, inputNameTmp)
+            
             p = subprocess.Popen(call, shell = True, stdout = subprocess.PIPE)
             inputName = inputNameTmp   ##if too many transforms, only keep maxlen transforms/particles
+    
         
-            
-            
-            #process by relion
-            avgCall = avgCallTmpl.replace('XXX_inList_XXX', inputName)
-            avgCall = avgCall.replace('XXX_outAVG_XXX', outputName)
-            avgCall = avgCall.replace('XXX_maxRes_XXX', str(maxRes))
-            avgCallFull = "%s &> %s"%(avgCall, outputNameLog)
-            if callByPython:
-                p = subprocess.Popen(avgCallFull, shell = True, stdout = subprocess.PIPE)
-            else:
-                f = open(scriptName, 'a+')
-                f.write(avgCallFull + '\n')
-                f.close()
+        
+        #process by relion
+        avgCall = avgCallTmpl.replace('XXX_inList_XXX', inputName)
+        avgCall = avgCall.replace('XXX_outAVG_XXX', outputName)
+        avgCall = avgCall.replace('XXX_maxRes_XXX', str(maxRes))
+        avgCallFull = "%s &> %s"%(avgCall, outputNameLog)
+        if callByPython:
+            p = subprocess.Popen(avgCallFull, shell = True, stdout = subprocess.PIPE)
+        else:
+            f = open(scriptName, 'a+')
+            f.write(avgCallFull + '\n')
+            f.close()
                 
                 

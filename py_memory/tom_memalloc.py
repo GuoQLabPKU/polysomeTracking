@@ -1,5 +1,5 @@
 import numpy as np
-def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None, chunk = 3000):
+def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None, chunk = 2000):
     '''
     TOM_MEMALLOC returns the maxChunck for tom_pdist parallel computation 
 

@@ -65,7 +65,7 @@ def calcAngStat(pairList):
     lendiffAng = np.zeros(angs.shape[0])
     for i in range(angs.shape[0]):
         lendiffAng[i] = tom_angular_distance(angs[i,:], meanAng)
-    stdTransAng = np.std(lendiffAng)
+    stdTransAng = np.sqrt(np.sum(lendiffAng)/len(lendiffAng)-1)
     meandiffAng = np.mean(lendiffAng)
     stat = { }
     stat['meanTransAngPhi'] = meanAng[0]
@@ -88,7 +88,7 @@ def calcVectStat(pairList):
     diffV = vects - meanV
     lendiffV = np.linalg.norm(diffV,axis = 1)
     assert len(lendiffV) == diffV.shape[0]
-    stdTransVect = np.std(lendiffV)
+    stdTransVect = np.sqrt(np.sum(lendiffV)/len(lendiffV)-1)
     meandiffV = np.mean(lendiffV)
     stat = { }
     stat['meanTransVectX'] = meanV[0]

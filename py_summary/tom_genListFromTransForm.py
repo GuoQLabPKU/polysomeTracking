@@ -83,6 +83,17 @@ def writePairCenterCoords(st, baseNameOut, ext):  #the transList from one class,
 def writeParticleCenterList(st, listFlav, outFold):
     starOrg = tom_starread(st['label']['orgListName'][0])
     starOrgData = starOrg['data_particles']
+    #store the coordinates of p1
+    p1_ind = st['p1']['orgListIDX']
+    starNew = starOrgData.iloc[p1_ind, :]
+    starOrg['data_particles'] = starNew 
+    tom_starwrite('%s/p1Particles.star'%outFold, starOrg)    
+    #store the coordinates of p2
+    p2_ind = st['p2']['orgListIDX']
+    starNew = starOrgData.iloc[p2_ind, :]
+    starOrg['data_particles'] = starNew 
+    tom_starwrite('%s/p2Particles.star'%outFold, starOrg)      
+    #store the coordinates of all
     all_ind = np.concatenate((st['p1']['orgListIDX'], st['p2']['orgListIDX']))
     all_ind = np.unique(all_ind)   
     starNew = starOrgData.iloc[all_ind, :]

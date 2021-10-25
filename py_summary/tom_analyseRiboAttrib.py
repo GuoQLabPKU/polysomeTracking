@@ -94,8 +94,11 @@ def tom_analyseRiboAttrib(transList, save_dir = '',
                                 'overlapRatioOfC2':overlapRatioOfC2_list})
     if (transListB4Relink is not None) & (particleStar is not None):
         dropData = pd.DataFrame({'dropRelinkTransNr':[dropRelinkTransformNr],
+                                 'keepTransNr':[transList.shape[0]],
                                  'dropRelinkRiboNr':[dropRelinkRiboNr],
-                                 'aloneRiboNr':[aloneRiboNr]})
+                                 'aloneRiboNr':[aloneRiboNr],
+                                 'totalRiboNr':[particleStar.shape[0]],
+                                 'keepRiboNr':[len(ribo_Idx)]})
     else:
         dropData = ''
     #save the data 
