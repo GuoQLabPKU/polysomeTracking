@@ -37,11 +37,7 @@ def tom_A2Odist(transVect, transAng, shift, rot,
                                               worker_n, gpu_list, 
                                               cmb_metric, pruneRad)
     return distVect, distAng, distCombine
-    
-    
-    
-    
-        
+              
 def getDist(transVect, transAng,worker_n, gpu_list, cmb_metric, pruneRad):  
     maxChunk = tom_memalloc(None, worker_n, gpu_list) #mallocal the memory
     if isinstance(worker_n, int):

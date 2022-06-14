@@ -26,7 +26,7 @@ def tom_starread(starfile ,pixS = -1):
     '''  
     f = open(starfile,"r+")
     all_line = f.readlines()
-    #detect the type of starfile:relion2/relion3/stopgap
+    #detect the type of starfile:relion2/relion3.1/stopgap
     startype = startype_check(all_line)
     if startype == 'relion2':
         starInfos = readRelion2(all_line)
@@ -55,7 +55,7 @@ def startype_check(all_line):
                     return 'relion2'
         else:
             raise TypeError('''Unknown type of input star file! 
-                            Only relion2/relion3/stopgap star files are supported!''')
+                            Only relion2/relion3.1/stopgap star files are supported!''')
         count -= 1
         
 def generateStarInfos():
@@ -96,19 +96,19 @@ def readRelion2(all_line):
             line_content_clean = [i  for i in line_content if len(i)!= 0]
             if line_content_clean[-1] == '\n':
                 if len(line_content_clean)-1 != colname_list.__len__():  #because the last char shoule be "\n" 
-                    raise TypeError("the star data is not consistent!") 
+                    raise TypeError("Input star file is not consistent, check it!") 
                     #os._exit(1)
             
             else:
                 if "\n" in line_content_clean[-1]:
                     if len(line_content_clean) != colname_list.__len__(): 
-                        raise TypeError("the star data is not consistent!")
+                        raise TypeError("Input star file is not consistent, check it!")
                     else:
                         last_element = line_content_clean[-1]
                         last_element_clean = last_element[0:-1]
                         line_content_clean[-1] = last_element_clean
                 else:
-                    raise TypeError("newline symbol detected! Check you file !")                       
+                    raise TypeError("Input star file is not consistent, check it!")                       
             for single_element, single_column in zip(line_content_clean, colname_list):
                 try:
                     if "." in single_element:
@@ -172,18 +172,18 @@ def readRelion3(all_line):
             line_content_clean = [i for i in line_content if len(i)!= 0]
             if line_content_clean[-1] == '\n':
                 if len(line_content_clean)-1 != colnameOptics_list.__len__():  #because the last char shoule be "\n" 
-                    raise TypeError("the star data is not consistent!") 
+                    raise TypeError("Input star file is not consistent, check it!") 
                     #os._exit(1)            
             else:
                 if "\n" in line_content_clean[-1]:
                     if len(line_content_clean) != colnameOptics_list.__len__(): 
-                        raise TypeError("the star data is not consistent!")
+                        raise TypeError("Input star file is not consistent, check it!")
                     else:
                         last_element = line_content_clean[-1]
                         last_element_clean = last_element[0:-1]
                         line_content_clean[-1] = last_element_clean
                 else:
-                    raise TypeError("newline symbol detected! Check you file !")                      
+                    raise TypeError("Input star file is not consistent, check it!")                      
             for single_element, single_column in zip(line_content_clean, colnameOptics_list):
                 try:
                     if "." in single_element:
@@ -217,17 +217,17 @@ def readRelion3(all_line):
             line_content_clean = [i  for i in line_content if len(i)!= 0]
             if line_content_clean[-1] == '\n':
                 if len(line_content_clean)-1 != colnameParticles_list.__len__():  #because the last char shoule be "\n" 
-                    raise TypeError("the star data is not consistent!")            
+                    raise TypeError("Input star file is not consistent, check it!")            
             else:
                 if "\n" in line_content_clean[-1]:
                     if len(line_content_clean) != colnameParticles_list.__len__(): 
-                        raise TypeError("the star data is not consistent!")
+                        raise TypeError("Input star file is not consistent, check it!")
                     else:
                         last_element = line_content_clean[-1]
                         last_element_clean = last_element[0:-1]
                         line_content_clean[-1] = last_element_clean
                 else:
-                    raise TypeError("newline symbol detected! Check you file !")
+                    raise TypeError("Input star file is not consistent, check it!")
                     #os._exit(1)                        
             for single_element, single_column in zip(line_content_clean, colnameParticles_list):
                 try:
@@ -274,19 +274,19 @@ def readSG(all_line):
             line_content_clean = [i  for i in line_content if len(i)!= 0]
             if line_content_clean[-1] == '\n':
                 if len(line_content_clean)-1 != colname_list.__len__():  #because the last char shoule be "\n" 
-                    raise TypeError("the star data is not consistent!") 
+                    raise TypeError("Input star file is not consistent, check it!") 
                     #os._exit(1)
             
             else:
                 if "\n" in line_content_clean[-1]:
                     if len(line_content_clean) != colname_list.__len__(): 
-                        raise TypeError("the star data is not consistent!")
+                        raise TypeError("Input star file is not consistent, check it!")
                     else:
                         last_element = line_content_clean[-1]
                         last_element_clean = last_element[0:-1]
                         line_content_clean[-1] = last_element_clean
                 else:
-                    raise TypeError("newline symbol detected! Check you file !")                       
+                    raise TypeError("Input star file is not consistent, check it!")                       
             for single_element, single_column in zip(line_content_clean, colname_list):
                 try:
                     if "." in single_element:

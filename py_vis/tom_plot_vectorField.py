@@ -127,12 +127,15 @@ def doRender(st, mode, classNr, polyNr, uTomoID, outputFolder,i,onlySelected, fT
             plt.savefig('%s/%s.png'%(outputFolder,fnameTmp), dpi = 300)
         else:
             plt.savefig('%s'%outputFolder, dpi = 300)
-#        plt.show()
+        #plt.show()
         plt.close()
     else:
         fig.suptitle(fTitle)
-#        plt.show()
-        plt.close()
+        ax1.set_xlabel('X', fontsize = 25)
+        ax1.set_ylabel('Y', fontsize = 25)
+        ax1.set_zlabel('Z', fontsize = 25)
+        plt.show()
+#        plt.close()
 
 def filterList(st, classNr, polyNr, tomoID):
     if 'pairClass' in st['label'].keys():
@@ -183,8 +186,8 @@ def plotPairs(st, mode, idx, ax):
     h_label = [ ]
     if_legend = 0
     for i in range(len(uClasses)):  #plot each trans class
-        if uClasses[i] == 0:
-            continue#I don't want to show class 0 --> noise!
+#        if uClasses[i] == 0:
+#            continue#I don't want to show class 0 --> noise!
         
         tmpIdx = np.where(allClasses == uClasses[i])[0]  #find the specific class of trans
         connVect = allTrans[tmpIdx,:]

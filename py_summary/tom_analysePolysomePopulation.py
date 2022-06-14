@@ -30,7 +30,7 @@ def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scal
         
     #analysis the state of each polysome  
     polyStat = calcPolyStat(pairList)
-        
+       
     stat['stdTransVect'] = vectStat['stdTransVect']
     stat['stdTransAng'] = angStat['stdTransAng']
     stat['meanVectDist'] = vectStat['meanVectDist']
@@ -45,6 +45,14 @@ def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scal
     stat['numBranch'] = polyStat['numBranch']
     stat['tomoNrPolyMax'] = polyStat['tomoNrPolyMax']
     stat['polyIDMax'] = polyStat['polyIDMax']
+    
+#    stat['numPolybg5'] = -1
+#    stat['numPolybg3'] = -1
+#    stat['numPolyMax'] = -1
+#    stat['numBranch'] = -1
+#    stat['tomoNrPolyMax'] = -1
+#    stat['polyIDMax'] = -1
+    
     stat['meanTransVectX'] = vectStat['meanTransVectX']
     stat['meanTransVectY'] = vectStat['meanTransVectY']
     stat['meanTransVectZ'] = vectStat['meanTransVectZ']
@@ -65,7 +73,7 @@ def calcAngStat(pairList):
     lendiffAng = np.zeros(angs.shape[0])
     for i in range(angs.shape[0]):
         lendiffAng[i] = tom_angular_distance(angs[i,:], meanAng)
-    stdTransAng = np.sqrt(np.sum(lendiffAng)/len(lendiffAng)-1)
+    stdTransAng = np.sqrt(np.sum(lendiffAng**2)/(len(lendiffAng)-1))
     meandiffAng = np.mean(lendiffAng)
     stat = { }
     stat['meanTransAngPhi'] = meanAng[0]
@@ -84,11 +92,11 @@ def calcVectStat(pairList):
     if vects.shape[0] > 1:
         meanV = np.mean(vects, axis = 0 )
     else:
-        meanV = vects    
+        meanV = vects[0]  
     diffV = vects - meanV
     lendiffV = np.linalg.norm(diffV,axis = 1)
     assert len(lendiffV) == diffV.shape[0]
-    stdTransVect = np.sqrt(np.sum(lendiffV)/len(lendiffV)-1)
+    stdTransVect = np.sqrt(np.sum(lendiffV**2)/(len(lendiffV)-1))
     meandiffV = np.mean(lendiffV)
     stat = { }
     stat['meanTransVectX'] = meanV[0]
@@ -145,7 +153,7 @@ def analysePopulationPerPoly(pairList):
     allLabelU = np.unique(allLabel_fix)
     
     stat = []
-    if (allLabelU[0] == -1) | (classNr == 0): #don't analyse class 0 
+    if (allLabelU[0] == -1) | (classNr == 0): #don't analyse cluster 0 
         stat.append({})
         stat[0]['num'] = -1
         stat[0]['tomoNr'] = -1
@@ -193,9 +201,7 @@ def analysePopulationPerPoly(pairList):
             stat_perPoly['posInListVect'] =  '-'.join([str(i) for i in posInListVect[indices]])
             stat.append(stat_perPoly)
             
-    return stat
-                
-                                                                        
+    return stat                                                                                       
                                                                                  
 def sortStatPoly(statePerPolyTmp):
     #merge the polysome information and then sort the polysomes info by the 'num'
@@ -226,24 +232,24 @@ def sortStat(stat):
     return stat_frame
     
     
-def writeOutputStar(stat, statPoly, outputFolder = ''): #the two inputs shoule be dataframe data structure
+def writeOutputStar(stat,  outputFolder = '', label = 'poly'): #the two inputs shoule be dataframe data structure
     if outputFolder != '':
-        starInfo = generateStarInfos()
-        starInfo['data_particles'] = stat
-        tom_starwrite('%s/statPerClass.star'%outputFolder, starInfo)
-   
-        starInfo = generateStarInfos()
-        starInfo['data_particles'] = statPoly
-        tom_starwrite('%s/statPerPoly.star'%outputFolder, starInfo)
+        if label == 'cluster':
+            starInfo = generateStarInfos()
+            starInfo['data_particles'] = stat
+            tom_starwrite('%s/statPerClass.star'%outputFolder, starInfo)
+        if label == 'poly':
+            starInfo = generateStarInfos()
+            starInfo['data_particles'] = stat
+            tom_starwrite('%s/statPerPoly.star'%outputFolder, starInfo)
         
              
 def genOutput(stat, minTransMembers):
-    if stat.shape[0] > 20: #the number of this represent the class numbers!
-        stat = stat[stat['num'] > minTransMembers] #each row represent one class, this number represent the #transformation in this class
+    if stat.shape[0] > 20: #the number of this represent the cluster numbers!
+        stat = stat[stat['num'] > minTransMembers] #each row represent one cluster, this number represent the #transformation in this class
         stat.reset_index(inplace = True, drop = True)
 
-    select_col = ['classNr', 'num', 'stdTransVect', 'stdTransAng', 
-                  'numPolybg5', 'numPolybg3', 'numPolyMax', 'numBranch']
+    select_col = ['clusterNr', 'num', 'stdTransVect', 'stdTransAng', 'numPolybg5', 'numPolybg3', 'numPolyMax', 'numBranch']
     #print the whole data set
     for i in select_col:
         print(i, end = "\t")
@@ -256,12 +262,12 @@ def genOutput(stat, minTransMembers):
                                                     stat['numBranch'].values[row]))
                
     if stat.shape[0] > 20:
-        print('only classes with more than %d transforms showed!'%minTransMembers)
+        print('only clusters with more than %d transforms showed!'%minTransMembers)
         
         
 def visFit(distsVect, distsAng, distsCN, saveDir, clusterClass, distModel):    
     #plot the distance distribution
     if len(saveDir) > 0:
-        tom_visDist(distsVect, distsAng, distsCN, '%s/distanceDist'%saveDir, 'class%d'%clusterClass)       
+        tom_visDist(distsVect, distsAng, distsCN, '%s/innerClusterDist'%saveDir, 'cluster%d'%clusterClass)       
     #fit to different distribution models     
-    tom_fitDist(distsCN, distModel, clusterClass,'%s/fitDistanceDist'%(saveDir))
+    tom_fitDist(distsCN, distModel, clusterClass,'%s/fitInnerClusterDist'%(saveDir))

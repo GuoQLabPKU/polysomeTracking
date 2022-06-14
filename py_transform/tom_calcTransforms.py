@@ -44,7 +44,7 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
     REFERENCES
     
     '''
-    log = Log('calcTransform').getlog()
+    log = Log('CalcTransform').getlog()
     oriPartList = 'noListStarGiven'
     
     if isinstance(posAng, str):
@@ -153,7 +153,7 @@ def calcTransforms(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose):
     jobList = jobListN
     
     if jobList.shape[0] == 0:
-        raise RuntimeError("The distances between ribosomes are bigger than %d pixels! Set bigger maxDist and try again!"%pruneRad)  
+        raise RuntimeError("The distances between neighbors are bigger than %d pixels! Set bigger maxDist!"%pruneRad)  
         
     transListAct_inner = np.zeros([jobList.shape[0],29], dtype = np.float) 
     with alive_bar(int(np.floor(jobList.shape[0]/100)+1), title="calculate transforms") as bar:

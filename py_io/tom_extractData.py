@@ -183,7 +183,8 @@ def extractFromRelionStar2(starfile, pixelSize):
     data_dict = { }
     data_dict["p1"] = { }
     data_dict["label"] = {}
-    data_dict["p1"]["positions"] = np.array(starfile.loc[:,["rlnCoordinateX","rlnCoordinateY","rlnCoordinateZ"]])
+ 
+    data_dict["p1"]["positions"] = np.array(starfile.loc[:,["rlnCoordinateX","rlnCoordinateY","rlnCoordinateZ"]])       
     data_dict["p1"]["angles"] = np.zeros([starfile.shape[0],3], dtype = np.float)
     for i in range(starfile.shape[0]):
         _, eluer_angles = tom_eulerconvert_xmipp(starfile["rlnAngleRot"].values[i], starfile["rlnAngleTilt"].values[i],
@@ -203,7 +204,8 @@ def extractFromRelionStar3(starfile, pixelSize):
     data_dict = { }
     data_dict["p1"] = { }
     data_dict["label"] = {}
-    data_dict["p1"]["positions"] = np.array(starfile.loc[:,["rlnCoordinateX","rlnCoordinateY","rlnCoordinateZ"]])
+ 
+    data_dict["p1"]["positions"] = np.array(starfile.loc[:,["rlnCoordinateX","rlnCoordinateY","rlnCoordinateZ"]])       
     data_dict["p1"]["angles"] = np.zeros([starfile.shape[0],3], dtype = np.float)
     for i in range(starfile.shape[0]):
         _, eluer_angles = tom_eulerconvert_xmipp(starfile["rlnAngleRot"].values[i], starfile["rlnAngleTilt"].values[i],
@@ -222,7 +224,8 @@ def extractFromStopGapStar(starfile, pixelSize):
     data_dict = { }
     data_dict["p1"] = { }
     data_dict["label"] = {}
-    data_dict["p1"]["positions"] = np.array(starfile.loc[:,["orig_x","orig_y","orig_z"]]) 
+
+    data_dict["p1"]["positions"] = np.array(starfile.loc[:,["orig_x","orig_y","orig_z"]])
     data_dict["p1"]["angles"] = np.array(starfile.loc[:,["phi","psi","the"]])
     data_dict["p1"]["classes"] = starfile["class"].values
     data_dict["p1"]["tomoName"] = np.array(["tomo%d"%int(i) for i in starfile["tomo_num"].values])

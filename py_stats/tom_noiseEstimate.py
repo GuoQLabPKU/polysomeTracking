@@ -66,12 +66,12 @@ for single_row in range(statSummary.shape[0]):
                                                                    worker_n = 1, gpu_list = None, 
                                                                    cmb_metric = 'scale2Ang', pruneRad = 100)
     #call the fit of KDE function 
-    _,_,borderVect, pVect = tom_kdeEstimate(distVectSame, 'c%d'%classN, 'vect distance', '',
-                              0, 0.05, distVectDiff, 'c0')
-    _,_,borderAng, pAng = tom_kdeEstimate(distAngSame, 'c%d'%classN, 'angle distance', '',
-                              0, 0.05, distAngDiff, 'c0')
-    _,_,borderComb,pComb = tom_kdeEstimate(distCombineSame, 'c%d'%classN,'combined distance', '',
-                              0, 0.05, distCombineDiff, 'c0') 
+    _,_,borderVect, pVect = tom_kdeEstimate(distVectSame, 'Cluster %d'%classN, 'vect distance', '',
+                              0, 0.05, distVectDiff, 'other clusters')
+    _,_,borderAng, pAng = tom_kdeEstimate(distAngSame, 'Cluster %d'%classN, 'angle distance', '',
+                              0, 0.05, distAngDiff, 'other clusters')
+    _,_,borderComb,pComb = tom_kdeEstimate(distCombineSame, 'Cluster %d'%classN,'combined distance', '',
+                              0, 0.05, distCombineDiff, 'other clusters') 
     print('Vect:',borderVect,pVect,'\n',
           'Ang:',borderAng, pAng,'\n',
           'Comb:',borderComb,pComb)

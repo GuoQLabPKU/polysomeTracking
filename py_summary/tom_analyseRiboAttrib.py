@@ -20,7 +20,9 @@ def tom_analyseRiboAttrib(transList, save_dir = '',
     if isinstance(transList, str):
         transList = tom_starread(transList)
         transList = transList['data_particles']
-    
+    if isinstance(particleStar, str):    
+        particleStar = tom_starread(particleStar)
+        particleStar = particleStar['data_particles']
     #initial variables
     pairName_list = [ ]
     riboC1Nr_list = [ ]
@@ -61,7 +63,16 @@ def tom_analyseRiboAttrib(transList, save_dir = '',
     
     #analyse those dropped ribosome pairs 
     if transListB4Relink is None:
-        log.warning("Skip summary dropped ribosome pairs")
+        if 0 in classU:
+            c0 = transList[transList['pairClass'] == 0]
+            c0_idx =  np.unique(np.concatenate((c0['pairIDX1'].values,
+                                               c0['pairIDX2'].values)))
+            #save 
+            starInfo = generateStarInfos()
+            starInfo['data_particles'] = particleStar.iloc[c0_idx,:]
+            tom_starwrite('%s/stat_NonMeanningRibos.star'%save_dir,starInfo) 
+        else:    
+            log.warning("Skip summary dropped ribosome pairs")
         
     else:
         if isinstance(transListB4Relink, str):
@@ -73,18 +84,26 @@ def tom_analyseRiboAttrib(transList, save_dir = '',
         ribo_b4RelinkIdx = np.unique(np.concatenate((transListB4Relink['pairIDX1'].values,
                                                      transListB4Relink['pairIDX2'].values)))       
         dropRelinkRiboNr = len(np.setdiff1d(ribo_b4RelinkIdx, ribo_Idx, assume_unique = True))
+        #save 
+        dropRelinkIdx = np.setdiff1d(ribo_b4RelinkIdx, ribo_Idx, assume_unique = True)
+        #save 
+        starInfo = generateStarInfos()
+        starInfo['data_particles'] = particleStar.iloc[dropRelinkIdx,:]
+        tom_starwrite('%s/stat_NonMeanningRibos.star'%save_dir,starInfo)         
     
     #analyse alone ribsome Nr
-    if particleStar is None:
-        log.warning('Skip summary ribosomes far away from others!')
-    else:
-        if isinstance(particleStar, str):
-            particleStar = tom_starread(particleStar)
-            particleStar = particleStar['data_particles']
-        try:
-            aloneRiboNr = particleStar.shape[0] - len(ribo_b4RelinkIdx)
-        except UnboundLocalError:
-            aloneRiboNr = particleStar.shape[0] - len(ribo_Idx)
+    try:
+        aloneRiboNr = particleStar.shape[0] - len(ribo_b4RelinkIdx)
+        aloneRiboIdx =  np.setdiff1d(particleStar.index, ribo_b4RelinkIdx, assume_unique = True)
+        starInfo = generateStarInfos()
+        starInfo['data_particles'] = particleStar.iloc[aloneRiboIdx,:]
+        tom_starwrite('%s/stat_AloneRibos.star'%save_dir,starInfo)  
+    except UnboundLocalError:
+        aloneRiboNr = particleStar.shape[0] - len(ribo_Idx)        
+        aloneRiboIdx =  np.setdiff1d(particleStar.index, ribo_Idx, assume_unique = True)
+        starInfo = generateStarInfos()
+        starInfo['data_particles'] = particleStar.iloc[aloneRiboIdx,:]
+        tom_starwrite('%s/stat_AloneRibos.star'%save_dir,starInfo)  
     #make dataframes to store these information
     overlapData = pd.DataFrame({'pairClass':pairName_list,
                                 'riboNr_C1':riboC1Nr_list,
@@ -92,7 +111,7 @@ def tom_analyseRiboAttrib(transList, save_dir = '',
                                 'overlapRiboNr':overlapNr_list,
                                 'overlapRatioOfC1':overlapRatioOfC1_list,
                                 'overlapRatioOfC2':overlapRatioOfC2_list})
-    if (transListB4Relink is not None) & (particleStar is not None):
+    if transListB4Relink is not None:
         dropData = pd.DataFrame({'dropRelinkTransNr':[dropRelinkTransformNr],
                                  'keepTransNr':[transList.shape[0]],
                                  'dropRelinkRiboNr':[dropRelinkRiboNr],

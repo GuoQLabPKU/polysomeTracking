@@ -79,7 +79,8 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
         particleStar = tom_starread(oriPartList, pairList['pairPixelSizeAng'].values[0])
         particleStar_data = particleStar['data_particles']
         particleSt = tom_extractData(oriPartList)
-        particleStar_data['if_fillUp'] = [-1]*particleStar_data.shape[0]
+        if 'if_fillUp' not in particleStar_data.columns:
+            particleStar_data['if_fillUp'] = [-1]*particleStar_data.shape[0]
    
     polyStateU = statePolyAll_list[statePolyAll_list['pairClass'] == pairClass]
     polyU = np.unique(polyStateU['pairLabel'].values) #unique polysome with branches
@@ -126,7 +127,7 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
     _,_,distsCN = tom_A2Odist(transListAct[:, 4:7], 
                               transListAct[:, 7:10],
                               avgShift, avgRot,
-                              1, gpu_list,
+                              10, gpu_list,
                               cmb_metric, pruneRad)
     
     if method == 'max':
@@ -281,6 +282,7 @@ def genTransList(worker_n, fillUpRiboInfos, headRiboInfo, polyInfoList):
         npr = worker_n
         avail_cpu = mp.cpu_count()
         npr = min(npr, avail_cpu)
+    
         print('use %d cpus to calculate fillingUp trans pairs'%npr)
         spl_ids = np.array_split(np.arange(fillUpRiboInfos.shape[0]),npr) 
         spl_ids = [i for i in spl_ids if len(i) > 0]
@@ -599,9 +601,11 @@ def updateParticle(riboCoords, riboAngles, exampleInfo, tomoNames, particleN, st
             for singleName in toProcessColNames:
                 particleStruct[singleName].append(exampleInfo[singleName])  
         
-    #make a dataframe    
-    appendRiboInfo = pd.DataFrame(particleStruct)
-    
+    #make a dataframe   
+    if len(particleStruct['rlnCoordinateX']) == 1:
+        appendRiboInfo = pd.DataFrame(particleStruct, index = [0])
+    else:
+        appendRiboInfo = pd.DataFrame(particleStruct)        
     return appendRiboInfo
 
 

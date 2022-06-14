@@ -6,7 +6,7 @@ from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_io.tom_starwrite import tom_starwrite
 from py_io.tom_starread import generateStarInfos
 
-def genForwardPolyModel(conf = None, eulerAngles=None):
+def genForwardPolyModel(conf = None, eulerAngles=None, save_flag = ''):
     '''
     Parameters
     ----------
@@ -58,7 +58,7 @@ def genForwardPolyModel(conf = None, eulerAngles=None):
             list_,  idx_branch = genVects(list_, single_conf['tomoName'], single_conf['increPos'],
                               single_conf['increAng'], single_conf['startPos'],
                               single_conf['startAng'], single_conf['numRepeats'], 
-                              single_conf['branch'], single_conf['noizeDregree'])
+                              single_conf['branch'], single_conf['noizeDregree'],single_conf['searchRad'])
             shape1 = list_.shape[0]
             polysome_flag[polysome_Nr] = (shape0, shape1)
             polysome_Nr += 1
@@ -75,14 +75,17 @@ def genForwardPolyModel(conf = None, eulerAngles=None):
         polysome_label[begin:end] = key
     list_['polysome'] = polysome_label
     #print(list_['polysome'])
-    writeStarFile(list_)
+    writeStarFile(list_, 0,save_flag)
     
     return idxBranches
-def writeStarFile(list_):
+def writeStarFile(list_, save_npy = 1, save_flag = ''):
     
     starInfo = generateStarInfos()
     starInfo['data_particles'] = list_
-    tom_starwrite('sim.star', starInfo) 
+    if len(save_flag) == 0:
+        tom_starwrite('sim.star', starInfo)
+    else:   
+        tom_starwrite('sim_%s.star'%save_flag, starInfo) 
     
 
     id_ = np.random.permutation(list_.shape[0])
@@ -97,13 +100,17 @@ def writeStarFile(list_):
         idx = list_[list_['polysome'] == single_polysome].index
         ori_polysome[np.min(idx)] = set(idx)
     #save the dict 
-    np.save('./py_test/ori_polysome.npy', ori_polysome)      
+    if save_npy:
+        np.save('./py_test/ori_polysome.npy', ori_polysome)      
     list_.drop('polysome',axis = 1,inplace = True)
     starInfo['data_particles'] = list_
-    tom_starwrite('simOrderRandomized.star',starInfo)
+    if len(save_flag) == 0:
+        tom_starwrite('simOrderRandomized.star',starInfo)
+    else:             
+        tom_starwrite('simOrderRandomized_%s.star'%save_flag, starInfo)
     
 def genVects(list_, tomoName, increPos, increAng, startPos, startAng, nrRep, branch=0,
-             noizeDregree = 2):
+             noizeDregree = 2, searchRad = 100):
     if not isinstance(list_ ,str):
         listIn = list_
     else:
@@ -116,16 +123,32 @@ def genVects(list_, tomoName, increPos, increAng, startPos, startAng, nrRep, bra
     for i in range(nrRep):
         if branch:
             angNoise = np.zeros(3)
-            vnoise = np.zeros(3)
-        else:   
-            angNoise = np.random.rand(3)*noizeDregree
-            vnoise = np.random.rand(3)*noizeDregree
             
+        else:   
+            angNoise = np.random.rand(3)*noizeDregree  
+                      
         ang,_,_ = tom_sum_rotation(np.array([list(increAng), list(angOld), list(angNoise)]),
                                          np.zeros((3,3)))
         
-        vTr = tom_pointrotate(increPos + vnoise, ang[0], ang[1], ang[2])
-        pos = posOld + vTr
+        #make sure the distance is smaller than the search radius
+        vTr = np.array([10000,10000,10000])
+        counts = 0
+        while (np.linalg.norm(vTr) >= searchRad) & (counts < 1000):
+            if branch:
+                vnoise = np.zeros(3)
+            else:
+                vnoise = np.random.rand(3)*noizeDregree
+
+            vTr = tom_pointrotate(increPos + vnoise, ang[0], ang[1], ang[2])
+            pos = posOld + vTr
+            counts += 1
+        if (counts == 1000):
+            print('the noise for translocation is too big, will ignore the noise!')
+            vTr = tom_pointrotate(increPos, ang[0], ang[1], ang[2])
+            pos = posOld + vTr
+            
+            
+        
         
         list_.loc[i,'rlnCoordinateX'] = pos[0]
         list_.loc[i,'rlnCoordinateY'] = pos[1]
@@ -156,15 +179,15 @@ def genVects(list_, tomoName, increPos, increAng, startPos, startAng, nrRep, bra
     
     return list_, idxBranch
         
-def genBranch(pos, ang, increAng, increPos, nrRep, tomoName):
+def genBranch(pos, ang, increAng, increPos, nrRep, tomoName, noiseDregre = 3):
     
     list_ = allocListFrame(tomoName, nrRep, 'relion')
     posOld = pos
     angOld = ang  
     
     for i in range(nrRep):   
-        angNoise = np.random.rand(3)*3
-        vnoise = np.random.rand(3)*3 
+        angNoise = np.random.rand(3)*noiseDregre
+        vnoise = np.random.rand(3)*noiseDregre
         ang,_,_ = tom_sum_rotation( np.array([list(increAng), list(angOld), list(angNoise)]),
                                     np.zeros((3,3)))
                   
@@ -243,7 +266,7 @@ def addNoisePoints(list_, tomoName, nrNoisePoints, minDist, searchRad, eulerAngl
     return list_
         
 def genUniquePos_adjact(oldPos, posSeed, minDist, offSize):
-    for i in range(1000):      
+    for i in range(10000):      
         ind = np.random.permutation(posSeed.shape[1])
         seed = posSeed[:,ind[0]]
         m = np.fix(np.random.rand(3) + 0.5)
@@ -261,7 +284,7 @@ def genUniquePos(oldPos, posSeed, minDist):
     xrange = (int(np.min(posSeed[0,:])), int(np.max(posSeed[0,:])))
     yrange = (int(np.min(posSeed[1,:])), int(np.max(posSeed[1,:])))
     zrange = (int(np.min(posSeed[2,:])), int(np.max(posSeed[2,:])))
-    for i in range(1000):
+    for i in range(10000):
         pos = np.array([np.random.choice(range(xrange[0], xrange[1]),1)[0],
                         np.random.choice(range(yrange[0], yrange[1]),1)[0],
                         np.random.choice(range(zrange[0], zrange[1]),1)[0]])
@@ -333,7 +356,7 @@ def allocListFrame(tomoName, nrItem, flavour):
             
     st = pd.DataFrame({'rlnCoordinateX':rlnCoordinateX,'rlnCoordinateY':rlnCoordinateY,
                        'rlnCoordinateZ':rlnCoordinateZ, 'rlnMicrographName':rlnMicrographName,
-                       'rlnAngleRot':rlnAngleRot, 'rlnAngleTilt':rlnAngleTilt,
+                       'rlnAngleRot':rlnAngleRot, 'rlnAngleTilt':rlnAngleTilt, 'rlnAnglePsi':rlnAnglePsi,
                        'rlnImageName':rlnImageName, 'rlnMagnification':rlnMagnification,
                        'rlnDetectorPixelSize':rlnDetectorPixelSize, 'rlnCtfImage':rlnCtfImage,
                        'rlnGroupNumber':rlnGroupNumber, 'rlnOriginX':rlnOriginX,

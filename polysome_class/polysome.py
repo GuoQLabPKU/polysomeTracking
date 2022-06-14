@@ -4,25 +4,28 @@ import shutil
 from collections import Counter
 import matplotlib.pyplot as plt
 import warnings
+import copy
+import scipy.spatial.distance as ssd
 
 
 from py_io.tom_starread import tom_starread, generateStarInfos
 from py_io.tom_starwrite import tom_starwrite
 from py_transform.tom_calcTransforms import tom_calcTransforms
+from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 from py_cluster.tom_calcLinkage import tom_calcLinkage
 from py_cluster.tom_dendrogram import tom_dendrogram
 from py_cluster.tom_selectTransFormClasses import tom_selectTransFormClasses
 from py_cluster.tom_A2Odist import tom_A2Odist
+from py_cluster.tom_assignTransFromCluster import tom_assignTransFromCluster
 from py_align.tom_align_transformDirection import tom_align_transformDirection
 from py_link.tom_linkTransforms import tom_linkTransforms
 from py_link.tom_find_poorBranch import tom_find_poorBranch
 from py_link.tom_connectGraph import tom_connectGraph
 from py_link.tom_find_transFormNeighbours import *
 from py_summary.tom_analysePolysomePopulation import *
-from py_summary.tom_findPattern import tom_findPattern
+from py_summary.tom_analyseRiboAttrib import tom_analyseRiboAttrib
 from py_summary.tom_genListFromTransForm import tom_genListFromTransForm
-from py_summary.tom_avgFromTransForm import tom_avgFromTransForm
-from py_summary.genMapVisScript import genMapVisScript
+from py_summary.tom_genavgFromTransFormScript import tom_genavgFromTransFormScript
 from py_stats.tom_kdeEstimate import tom_kdeEstimate
 from py_vis.tom_plot_vectorField import tom_plot_vectorField
 from py_mergePoly.tom_addTailRibo import tom_addTailRibo,saveStruct 
@@ -32,25 +35,28 @@ from py_log.tom_logger import Log
 
 class Polysome:
     ''' 
-    Polysome is a class that used to track the polysomes
+    Polysome is a class that used to cluster neighbors and track linear assembles
     '''
-    def __init__(self, input_star = None, run_time = 'run0', translist = None):
+    def __init__(self, input_star = None, run_time = 'run0', proj_folder = None, translist = None):
         '''
         set the default properties for polysome class
         input:
-            inut_star: the star file for ribosomes euler angles and coordinates
-            run_time: the times to get new polysomes
+            inut_star: the star file for particles' euler angles and coordinates
+            run_time: the times to get new linear assembles
         '''
         #io
         self.io = { }
         self.io['posAngList'] = input_star
         (filepath,tempfilename) = os.path.split(self.io['posAngList'])
         (shotname,extension) = os.path.splitext(tempfilename)
-        self.io['projectFolder'] = 'cluster-%s'%shotname
+        if proj_folder is None:
+            self.io['projectFolder'] = 'cluster-%s'%shotname
+        else:
+            self.io['projectFolder'] = proj_folder
         self.io['classificationRun'] = run_time 
-        self.io['classifyFold'] = None  #should be modify only after run input
+        self.io['classifyFold'] = None  #should be modified only after run input
         
-        #get transformations of ribosome pairs 
+        #get transformations of neighbors  
         self.transForm = { }
         self.transForm['pixS'] = 3.42
         self.transForm['maxDist'] = 342 #the searching region of adjacent ribosomes
@@ -59,15 +65,14 @@ class Polysome:
         #for classify
         self.classify = { }
         self.classify['clustThr'] = 0.12
-        self.classify['relinkWithoutSmallClasses'] = 1
         self.classify['cmb_metric'] = 'scale2Ang'
         
-        #clean transform classes
+        #filter transform clusters
         self.sel = [ ]  
         self.sel.append({})
-        self.sel[0]['classNr'] = np.array([-1])  #select the class of transform
+        self.sel[0]['clusterNr'] = np.array([-1])  #select the clusters of transform
         self.sel[0]['polyNr'] = np.array([-1])   #select the polysome (by polyID)
-        self.sel[0]['list'] = 'Classes-Sep' #select all classes 
+        self.sel[0]['list'] = 'Clusters-Sep' #select all clusters
       
         #vis
         self.vis  = { }
@@ -75,51 +80,40 @@ class Polysome:
         self.vis['vectField']['render'] = 1
         self.vis['vectField']['type'] = 'basic' # 'advance' ('basic':shows only lines and positions without repeat vectors)
         self.vis['vectField']['showTomo'] = np.array([-1])  #what tomos to vis?
-        self.vis['vectField']['showClassNr'] = np.arange(10000) #what classes to vis?
+        self.vis['vectField']['showClusterNr'] = np.arange(10000) #what clusters to vis?
         self.vis['vectField']['polyNr'] = np.array([-1]) #what polys to show (input polyIDs)?
-        self.vis['vectField']['onlySelected'] = 1  #only vis those selected of upper params?
-        self.vis['vectField']['repVect'] = np.array([[0,1,0]]) #how to represents the ribosomes(angle + position)
-                                                               #must be 2D array. Rotate this vector to represent rotated ribosomes
+        self.vis['vectField']['onlySelected'] = 1  #only vis those upper selected polysomes?
+        self.vis['vectField']['repVect'] = np.array([[0,1,0]]) #how to represent the particles(angle + position) 
+                                                               #must be 2D array. Rotate this vector to represent rotated particles
         self.vis['vectField']['repVectLen'] = 20
+        
+        #parameters to show the longest linear asseblems 
         self.vis['longestPoly'] = { }
         self.vis['longestPoly']['render'] = 1
-        self.vis['longestPoly']['showClassNr'] = np.array([-1]) #what classes to vis longest polysome?
+        self.vis['longestPoly']['showClusterNr'] = np.array([-1]) #what clusters to vis longest linear asseblems?
         
-        #for avg
+        #for avg of Relion
         self.avg = { }
-        self.avg['command'] = 'tom'
         self.avg['filt'] = { }
-        self.avg['filt']['minNumTransform'] = np.inf  #select number of transforms in each class 
-        self.avg['filt']['maxNumPart'] = 500  #select number of particles in each class
+        self.avg['filt']['minNumPart'] = 100  #select number of transforms in each cluster
+        self.avg['filt']['maxNumPart'] = np.inf  #select number of particles in each class       
         self.avg['pixS'] = self.transForm['pixS']
-        self.avg['maxRes'] = 45 #needed by relion 
+        self.avg['maxRes'] = 20 #needed by relion 
+        self.avg['cpuNr'] = 0
+        self.avg['callByPython'] = 0
         
-        #create the forward model(rotate mrc and shift)
-        self.fw = { } 
-        self.fw['Map'] = 'vol4forward.mrc'
-        self.fw['minNumTransform'] = 0 #select number of transforms in each class
-        self.fw['pixS'] = self.transForm['pixS']
-        
-        #for Conf class Analysis
-        self.clSt = { }
-        self.clSt['findPat'] = { }
-        self.clSt['findPat']['classNr'] =  np.array([-2])  #try to make this an array #-2
-        self.clSt['findPat']['filt'] = { }
-        self.clSt['findPat']['filt']['operator'] = '>'
-        self.clSt['findPat']['filt']['value'] = 3
         
         #for polysomes filling up 
         self.fillPoly = { }
-        self.fillPoly['classNr'] = np.array([-1]) #which class of trans want to fillup?
-        self.fillPoly['riboInfo'] = 1 #if show the infos of filled up ribos(0:switch off)
-        self.fillPoly['addNum'] = 1 #how many hypo ribosomes at each end of polysome?
-        self.fillPoly['fitModel'] = 'genFit' #genFit:fitting distribution based on data/lognorm:base on lognorm model
-        self.fillPoly['threshold'] = 0.05 #threshold to accept filled up ribosomes
+        self.fillPoly['clusterNr'] = np.array([-1]) #which cluster of trans want to fillup?
+        self.fillPoly['addNum'] = 1 #how many hypo particles at each end of linear asseblms?
+        self.fillPoly['fitModel'] = 'genFit' #genFit:fit distribution based on data/lognorm:base on lognorm model
+        self.fillPoly['threshold'] = 0.05 #threshold to accept filled up particles
     
         self.transList = translist
         
         #add logger
-        logFile = '%s/%s'%(os.getcwd(), 'polysomeTracking.log')  
+        logFile = '%s/%s'%(os.getcwd(), 'NEMO_TOC.log')  
         if os.path.exists(logFile):
             os.remove(logFile)
             
@@ -141,31 +135,191 @@ class Polysome:
             os.mkdir('%s/scores'%classificationFolder)
 
         #remove the dirs
-        if  os.path.exists(classificationFolder): #it seems that only scores dir kept ans allTransforms.star
+        if  os.path.exists(classificationFolder): 
             if os.path.isdir('%s/stat'%classificationFolder):
                 shutil.rmtree('%s/stat'%classificationFolder)
-            if os.path.isdir('%s/classes'%classificationFolder):
-                shutil.rmtree('%s/classes'%classificationFolder)        
-            if os.path.isdir('%s/avg'%classificationFolder):
-                shutil.rmtree('%s/avg'%classificationFolder)         
+            if os.path.isdir('%s/clusters'%classificationFolder):
+                shutil.rmtree('%s/clusters'%classificationFolder)            
             if os.path.isdir('%s/vis'%classificationFolder):
                 shutil.rmtree('%s/vis'%classificationFolder)
          
-        
+        #create the dirs
         os.mkdir('%s/vis'%classificationFolder)
+        os.mkdir('%s/vis/neighborsDist'%classificationFolder)
         os.mkdir('%s/vis/vectfields'%classificationFolder)
         os.mkdir('%s/vis/clustering'%classificationFolder)
-        os.mkdir('%s/vis/averages'%classificationFolder)
-        os.mkdir('%s/vis/distanceDist'%classificationFolder)
-        os.mkdir('%s/vis/fitDistanceDist'%classificationFolder)
+        os.mkdir('%s/vis/innerClusterDist'%classificationFolder)
+        os.mkdir('%s/vis/fitInnerClusterDist'%classificationFolder)
         os.mkdir('%s/vis/noiseEstimate'%classificationFolder)
+        os.mkdir('%s/vis/averages'%classificationFolder)
         os.mkdir('%s/stat'%classificationFolder)
-        os.mkdir('%s/avg'%classificationFolder)
-        os.mkdir('%s/avg/exp'%classificationFolder)
-        os.mkdir('%s/avg/model'%classificationFolder)
-        os.mkdir('%s/classes'%classificationFolder)
+        os.mkdir('%s/clusters'%classificationFolder)
+            
+    def preProcess(self, if_stopgap, subtomoPath, ctfFile, minDist):
+        '''
+        remove the duplicates if two particles too close with each other,
+        and change the stopgap file format into relion file format
+        and recenter the particles
+        '''
+        self.log.info('Preprocess the input starfile.')
+        _,fileName = os.path.split(self.io['posAngList'])
+        posAngListInfo = tom_starread(self.io['posAngList'], self.transForm['pixS'])
+        posAngList = posAngListInfo['data_particles']
+        dataType = posAngListInfo['type']
+        if dataType == 'stopgap': #from SG to Relion
+            posAngListRelionInfo = self.sg2relion(posAngListInfo, subtomoPath, ctfFile)
+            posAngListRelion = posAngListRelionInfo['data_particles']
+        else:
+            posAngListRelion = posAngList
+        #recenter particles 
+        if dataType == 'relion2' | dataType == 'stopgap':
+            if 'rlnOriginX' in posAngListRelion.columns:
+                posAngListRelion['rlnCoordinateX'] = posAngListRelion['rlnCoordinateX'] + posAngListRelion['rlnOriginX']
+                posAngListRelion['rlnCoordinateY'] = posAngListRelion['rlnCoordinateY'] + posAngListRelion['rlnOriginY']
+                posAngListRelion['rlnCoordinateZ'] = posAngListRelion['rlnCoordinateZ'] + posAngListRelion['rlnOriginZ']
+            
+        elif dataType == 'relion3':
+            if 'rlnOriginXAngst' in posAngListRelion.columns:
+                posAngListRelion['rlnCoordinateX'] = posAngListRelion['rlnCoordinateX'] + posAngListRelion['rlnOriginXAngst']/self.transForm['pixS']
+                posAngListRelion['rlnCoordinateY'] = posAngListRelion['rlnCoordinateY'] + posAngListRelion['rlnOriginYAngst']/self.transForm['pixS']
+                posAngListRelion['rlnCoordinateZ'] = posAngListRelion['rlnCoordinateZ'] + posAngListRelion['rlnOriginZAngst']/self.transForm['pixS']          
+        #remove too closed neigbors
+        uniq_mrc = np.unique(posAngListRelion['rlnMicrographName'].values)
+        #remove the duplicates and also store the distance of two neighbors 
+        rmIdx = [ ]
+        distanceNeighborsB4RmDup = [ ]
+        for single_mrc in uniq_mrc:
+            posAngListRelionSingle = posAngListRelion[posAngListRelion['rlnMicrographName'] == single_mrc]
+            posAngListRelionSingleArray = posAngListRelionSingle[['rlnCoordinateX',
+                                                                  'rlnCoordinateY',
+                                                                  'rlnCoordinateZ']].values
+            posIdx = posAngListRelionSingle.index
+            distances = ssd.pdist(posAngListRelionSingleArray, metric = 'euclidean')
+            distancesMatrix = ssd.squareform(distances)
+            #record the distance 
+            for i in range(distancesMatrix.shape[0]):
+                for j in range(i+1, distancesMatrix.shape[0]):    
+                    distanceNeighborsB4RmDup.append(distancesMatrix[i][j])
+                                   
+            #bigger lowtri matrix
+            minDistMatrix = np.ones((distancesMatrix.shape[0], distancesMatrix.shape[0]))*(minDist+100)
+            minDistMatrix_lowTri = np.tril(minDistMatrix, k=0)
+            distancesMatrix = distancesMatrix+minDistMatrix_lowTri
+            rmPairi, rmPairj = np.where(distancesMatrix <= minDist)
+            if len(rmPairi) == 0:
+                continue
+            for i, j in zip(rmPairi, rmPairj):
+                if i == j:
+                    continue
+                else:                    
+                    if 'rlnLogLikeliContribution' in posAngListRelionSingle.columns:
+                        scorei = posAngListRelionSingle['rlnLogLikeliContribution'].values[i]
+                        scorej = posAngListRelionSingle['rlnLogLikeliContribution'].values[j]
+                        if scorei <= scorej:
+                            rmIdx.append(posIdx[i])
+                        else:
+                            rmIdx.append(posIdx[j])
+                    else:
+                        rmIdx.append(posIdx[i])
+  
+        #unique            
+        rmIdx = np.unique(rmIdx)
+        if len(rmIdx) > 0:
+            keepIdx = np.setdiff1d(np.asarray(posAngListRelion.index), rmIdx, assume_unique = True)                
+        else:
+            keepIdx = np.asarray(posAngListRelion.index)       
+        fileNameNew = '%s/%s_recenter_rmDup.star'%(self.io['projectFolder'], fileName.split('.')[0])
+        fileNameNewDrop = '%s/stat/%s_recenter_dup.star'%(self.io['classifyFold'], fileName.split('.')[0])
+        
+        posAngListRelion = posAngListRelion.iloc[keepIdx]
+        posAngListRelion.reset_index(drop=True, inplace = True)
+        
+        #save drop particle above search radius 
+        posAngListRelionDrop = posAngListRelion.iloc[rmIdx]
+        posAngListRelionDrop.reset_index(drop=True, inplace = True)   
+        
+        #record the distances after duplicated remove
+        distanceNeighborsAfterRmDup = [ ]
+        for single_mrc in uniq_mrc:
+            posAngListRelionSingle = posAngListRelion[posAngListRelion['rlnMicrographName'] == single_mrc]
+            posAngListRelionSingleArray = posAngListRelionSingle[['rlnCoordinateX',
+                                                                  'rlnCoordinateY',
+                                                                  'rlnCoordinateZ']].values
+            distances = ssd.pdist(posAngListRelionSingleArray, metric = 'euclidean')
+            distancesMatrix = ssd.squareform(distances)
+            #record the distance 
+            for i in range(distancesMatrix.shape[0]):
+                for j in range(i+1, distancesMatrix.shape[0]):    
+                    distanceNeighborsAfterRmDup.append(distancesMatrix[i][j])    
+                    
+        #plot and store the distance distribution
+        plt.figure()
+        plt.hist(distanceNeighborsB4RmDup,bins = 50, label = 'before duplicates removal')
+        plt.hist(distanceNeighborsAfterRmDup,bins = 50, label = 'after duplicates removal')
+        plt.xlabel('Euclidean distances between the most neighbors(pixels)')
+        plt.ylabel('# of distances')
+        plt.savefig('%s/vis/neighborsDist/neighborsDistance.png'%self.io['classifyFold'], dpi = 300)
+        plt.close()
+            
+        if if_stopgap:
+            posAngListRelionInfo['data_particles'] = posAngListRelion
+            tom_starwrite(fileNameNew, posAngListRelionInfo)
+            
+            posAngListRelionInfo['data_particles'] = posAngListRelionDrop
+            tom_starwrite(fileNameNewDrop, posAngListRelionInfo)
             
             
+        else:                                  
+            posAngListInfo['data_particles'] = posAngListRelion            
+            tom_starwrite(fileNameNew, posAngListInfo)
+            
+            posAngListInfo['data_particles'] = posAngListRelionDrop            
+            tom_starwrite(fileNameNewDrop, posAngListInfo)            
+            
+        self.io['posAngList'] = fileNameNew    
+            
+    @staticmethod
+    def sg2relion(starList, subtomoPath=None, ctfFile = None):
+        relionStarInfo = generateStarInfos()
+        relionStarInfo['pixelSize'] = starList['pixelSize']
+        starFile = copy.deepcopy(starList['data_particles'])
+        starFile.drop(['motl_idx', 'object', 'halfset'], axis = 1, inplace = True)
+        cols = starFile.columns
+        #transfer_dict 
+        varDict = {'tomo_num':'rlnMicrographName', 'subtomo_num':'rlnImageName',
+                   'orig_x':'rlnCoordinateX', 'orig_y':'rlnCoordinateY',
+                   'orig_z':'rlnCoordinateZ', 'x_shift':'rlnOriginX',
+                   'y_shift':'rlnOriginY','z_shift':'rlnOriginZ',
+                   'class':'rlnClassNumber','score':'rlnLogLikeliContribution',
+                   'phi':'rlnAngleRot','psi':'rlnAngleTilt','the':'rlnAnglePsi'}
+        newCols = [varDict[i] for i in cols]
+        starFile.columns = newCols
+        #update ctf & pixel size
+        starFile['rlnDetectorPixelSize'] = [relionStarInfo['pixelSize']]*starFile.shape[0]
+        starFile['rlnCtfImage'] = [ctfFile]*starFile.shape[0]
+        starFile['rlnMagnification'] = [10000]*starFile.shape[0]
+        if 'rlnMicrographName' in starFile.columns:
+            starFile['rlnMicrographName'] = ["tomo%d"%int(i) for i in starFile["rlnMicrographName"].values]
+        if 'rlnImageName' in starFile.columns:
+            starFile['rlnImageName'] = ["%s/subtomo_%d.mrc"%(subtomoPath,int(i)) for i in starFile["rlnImageName"].values]
+        #update euler angles 
+        rotList = np.zeros(starFile.shape[0])
+        tiltList = np.zeros(starFile.shape[0])
+        psiList = np.zeros(starFile.shape[0])
+        for i in range(starFile.shape[0]):
+            _, euler_out = tom_eulerconvert_xmipp(starFile['rlnAngleRot'].values[i], 
+                                                                         starFile['rlnAngleTilt'].values[i], 
+                                                                         starFile['rlnAnglePsi'].values[i],'tom2xmipp')
+            rotList[i], tiltList[i], psiList[i] = euler_out  
+        starFile['rlnAngleRot'] = rotList
+        starFile['rlnAngleTilt'] = tiltList
+        starFile['rlnAnglePsi'] = psiList
+        
+        relionStarInfo['data_particles'] = starFile
+        
+        return relionStarInfo
+    
+    
     def calcTransForms(self, worker_n = 1):
         '''
         generate the transformList
@@ -182,9 +336,9 @@ class Polysome:
             self.transList = tom_calcTransforms(self.io['posAngList'], self.transForm['pixS'], maxDistInPix, '',
                                                 'exact', transFormFile, 1, worker_n)
     
-    def groupTransForms(self, worker_n = 1, gpu_list = None, freeMem = None):
+    def groupTransForms(self, worker_n = 1, iterN = 1, gpu_list = None, freeMem = None):
         '''
-        generate the clustering transform classes
+        generate the clustering transform clusters
         '''
         if gpu_list is not None:
             worker_n = None
@@ -192,19 +346,26 @@ class Polysome:
         maxDistInPix = self.transForm['maxDist']/self.transForm['pixS']
         outputFold = '%s/scores'%self.io['classifyFold']
         treeFile = '%s/tree.npy'%outputFold
+        ###if do clustering in a small subset 
+        if self.transList.shape[0] > 100000:
+            self.log.info('The number of transforms is to big, will cluster top 100,000 transforms.')           
+            transList_subset = self.transList.iloc[0:100000, :]
+        else:
+            transList_subset = self.transList
+      
         if os.path.exists(treeFile):
             self.log.info('load tree from %s'%treeFile)
             ll = np.load(treeFile) #load the clustering tree models 
         else:
-            ll = tom_calcLinkage(self.transList, outputFold, maxDistInPix,
+            ll = tom_calcLinkage(transList_subset, outputFold, maxDistInPix,
                                  self.classify['cmb_metric'], worker_n, 
                                  gpu_list, freeMem) 
         
-        clusters, _, _, thres= tom_dendrogram(ll, self.classify['clustThr'], self.transList.shape[0], 0, 0)        
+        clusters, _, _, thres = tom_dendrogram(ll, self.classify['clustThr'], transList_subset.shape[0], 0, 0)        
         self.classify['clustThr'] = thres  
         
         if len(clusters) == 0:
-            self.log.warning('''No class! Check the threshold you input! You put 
+            self.log.warning('''No clusters! Check the threshold you input! You put 
                                 a very high/low threshold.''')
 
         else:
@@ -212,27 +373,65 @@ class Polysome:
             for single_dict in clusters:
                 idx = single_dict['members']
                 classes = single_dict['id']
-                if len(idx) == 0: #no class detect 
+                if len(idx) == 0: #no cluster detect 
                     continue
                 colour = "%.2f-%.2f-%.2f"%(single_dict['color'][0],
                                            single_dict['color'][1],
                                            single_dict['color'][2])
-                self.transList.loc[idx, "pairClass"] = classes
-                self.transList.loc[idx, 'pairClassColour'] = colour
+                transList_subset.loc[idx, "pairClass"] = classes
+                transList_subset.loc[idx, 'pairClassColour'] = colour
+        if transList_subset.shape[0] < self.transList.shape[0]:
+            #first aligned the transforms and summary it!
+            transList_subset = tom_align_transformDirection(transList_subset)
+            allClusters = transList_subset['pairClass'].values
+            allClustersU = np.unique(allClusters)
+            cmb_metric = self.classify['cmb_metric']
+            stats_cluster = { }
+            for single_cluster in allClustersU:
+                if single_cluster == 0:#no need analysis cluster0
+                    continue
+                idx = np.where(allClusters == single_cluster)[0]      
+                vectStat, distsVect = calcVectStat(transList_subset.iloc[idx,:])
+                angStat, distsAng = calcAngStat(transList_subset.iloc[idx,:])           
+                if cmb_metric == 'scale2Ang':
+                    distsVect2 = distsVect/(2*maxDistInPix)*180
+                    distsCN = (distsAng+distsVect2)/2
+                elif cmb_metric == 'scale2AngFudge':
+                    distsVect2 = distsVect/(2*maxDistInPix)*180
+                    distsCN = (distsAng+(distsVect2*2))/2
+                    
+                stats_cluster[single_cluster] = np.zeros(7)
+                stats_cluster[single_cluster][0] = np.max(distsCN)
+                stats_cluster[single_cluster][1:4] = [vectStat['meanTransVectX'], vectStat['meanTransVectY'], vectStat['meanTransVectZ']]
+                stats_cluster[single_cluster][4:7] = [angStat['meanTransAngPhi'], angStat['meanTransAngPsi'], angStat['meanTransAngTheta']]
                 
+            pairClassList, _ = tom_assignTransFromCluster(self.transList, stats_cluster, cmb_metric, maxDistInPix, iterN)
+            #update the pairClass as well as the color 
+            clusterColor = { }
+            for sgCluster, sgColor in zip(transList_subset['pairClass'].values, transList_subset['pairClassColour'].values):
+                clusterColor[sgCluster] = sgColor
+            pairClassColorList = [ ]
+            for sgCluster in pairClassList:
+                pairClassColorList.append(clusterColor[sgCluster])
+            self.transList["pairClass"] = pairClassList
+            self.transList['pairClassColour'] = pairClassColorList
+                       
         self.log.info('Clustering done')
       
     def selectTransFormClasses(self, worker_n = 1, gpu_list = None, itrClean = 1):
         '''
-        select any class OR polysome and Relink
+        select any cluster and Relink
         itrClean: # of cycles to clean the data 
         '''
         transListSel = ''
         selFolds = ''
-                
-        if self.classify['relinkWithoutSmallClasses']:  
+        if self.sel[0]['minNumTransform'] != -1:
+            self.sel[0]['minNumTransform'] = int(self.sel[0]['minNumTransform']*self.transList.shape[0]) #default is 1%
+            self.log.info('set #minTransform as %d to select clusters'%self.sel[0]['minNumTransform'])
+                          
+    
             for _ in range(itrClean):  
-                #this step can keep classes we want for further analysis as well as remove class 0                 
+                #this step can keep classes we want for further analysis as well as remove cluster 0                 
                 _,_, transListSelCmb = tom_selectTransFormClasses(self.transList,
                                                                   self.sel[0]['list'],
                                                                   self.sel[0]['minNumTransform'], '')
@@ -251,6 +450,7 @@ class Polysome:
             if os.path.exists('%s/allTransforms.star'%self.io['classifyFold']):
                 os.rename('%s/allTransforms.star'%self.io['classifyFold'],
                               '%s/allTransformsb4Relink.star'%self.io['classifyFold'])
+                
             #store the translist
             starInfo = generateStarInfos()
             starInfo['data_particles'] = self.transList
@@ -259,7 +459,7 @@ class Polysome:
         transListSel, selFolds, _ = tom_selectTransFormClasses(self.transList,
                                                                self.sel[0]['list'],
                                                                self.sel[0]['minNumTransform'],
-                                                               '%s/classes'%(self.io['classifyFold']))  
+                                                               '%s/clusters'%(self.io['classifyFold']))  
            
         if len(transListSel) == 0:
             self.log.warning('''No translist has been selected for further analysis!
@@ -269,7 +469,7 @@ class Polysome:
     
     def alignTransforms(self):
         '''
-        In each class, align the direction of each transform to the same direction.
+        In each cluster, align the direction of each transform to the same direction.
         '''
         warnings.filterwarnings('ignore')
         self.log.info('Align transform pairs')
@@ -398,7 +598,7 @@ class Polysome:
         else:
             return None
         
-    def analyseTransFromPopulation(self,  outputFolder = '', visFolder = '', verbose = 1):
+    def analyseTransFromPopulation(self,  outputFolder = '', visFolder = '', if_summary = 1, verbose = 1):
         '''
         summary each transforms class, like if has branch/the length of the polysome
         all is saved at the stat folder 
@@ -426,107 +626,26 @@ class Polysome:
         
         statPerPoly = sortStatPoly(statPerPolyTmp)
         stat = sortStat(stat)
-        writeOutputStar(stat, statPerPoly, outputFolder)
+        writeOutputStar(stat, outputFolder, label = 'cluster')
+        writeOutputStar(statPerPoly, outputFolder, label = 'poly')
         if verbose:
             genOutput(stat, minTransMembers = 10)
-    
-    def find_transFromNeighbours(self, outputName = '', nrStatOut = 10):
-        '''
-        for each ribosome of one ribosome pair, this ribosome can belong to 
-        different transform clusters, that is to say, can be in different ribosome 
-        pairs and in different cluster classes.
-        This function summary the cluster classes for each ribosome
-
-        '''
-        if len(outputName) == 0:
-            outputName = "%s/allTransforms.star"%self.io['classifyFold']
-        allTomoId = self.transList['pairTomoID'].values
-        allTomoIdU = np.unique(allTomoId)
         
-        listTomo = [ ]
-        idx = [ ]
-        neighNpT = [ ]
-        neighNMT = [ ]
-        
-        for i in range(len(allTomoIdU)):
-            idx.append(np.where(allTomoId == allTomoIdU[i])[0])
-            listTomo.append(self.transList.iloc[idx[i], :])
-        
-        for i in range(len(allTomoIdU)):
-            listTomo[i], single_neighNpT, single_neightNMT  = findNeighOneTomo(listTomo[i])
-            neighNpT.append(single_neighNpT)
-            neighNMT.append(single_neightNMT)
-        
-        neigh_N_plus = np.array([], dtype = np.int).reshape(-1,3)
-        neigh_N_minus = np.array([], dtype = np.int).reshape(-1,3)
-        
-        for i in range(len(listTomo)):
-            self.transList.loc[idx[i], :] = listTomo[i]
-            neigh_N_plus = np.concatenate((neigh_N_plus,neighNpT[i]), axis = 0 )
-            neigh_N_minus = np.concatenate((neigh_N_minus, neighNMT[i]), axis = 0)
-            
-        nCmb = np.concatenate((neigh_N_plus, neigh_N_minus), axis = 1)
-        #discard the row with [0,0,0,0,0,0]
-        nCmb = nCmb[~np.all(nCmb == 0, axis =1 )]
-        nCmbU, ic = np.unique(nCmb, return_inverse = True, axis = 0)
-        #print(nCmbU)
-        clCount = Counter(ic)
-        key_list = [ ]
-        value_list =[ ]
-        for key in clCount:
-            key_list.append(key)
-            value_list.append(clCount[key])
-        key_array = np.array(key_list, dtype = np.int)
-        value_array = np.array(value_list, dtype = np.int)
-        
-        #plot the results
-        plt.figure()
-        plt.bar(key_array,  value_array)
-        plt.show()
-        plt.close()
-        
-        clIdx_Sort = np.argsort(value_array)[::-1]
-        clCount_Sort = value_array[clIdx_Sort]
-        clRow_Sort = key_array[clIdx_Sort]
-        
-        
-        if nrStatOut > len(clCount_Sort):
-            nrStatOut == len(clCount_Sort)
-        print('classn+1        ||    classn-1    abundance')
-        for i in range(nrStatOut):
-            print("  % d %d %d\t||\t%d %d %d\t\t%.2f"%(nCmbU[clRow_Sort[i],0], 
-                                                    nCmbU[clRow_Sort[i], 1],
-                                                    nCmbU[clRow_Sort[i],2],
-                                                    nCmbU[clRow_Sort[i], 3],
-                                                    nCmbU[clRow_Sort[i],4],
-                                                    nCmbU[clRow_Sort[i],5],
-                                                    clCount_Sort[i]/self.transList.shape[0]*100) + "%")
-        if len(outputName) != 0:
-            starInfo = generateStarInfos()
-            starInfo['data_particles'] = self.transList
-            tom_starwrite(outputName, starInfo) 
-          
-    def analyseConfClasses(self):  
-        '''
-        find the pattern of different classes of ribosomes 
-        in each polysome (creating)
-        '''
-        if self.clSt['findPat']['classNr'] == -2:
-            self.log.info('skip conf. Class pattern analysis ==> no conf class selected')
-            return 
-        inputFile = '%s/stat/statPerPoly.star'%self.io['classifyFold']
-        outputFold = '%s/stat/confAnalysis'%self.io['classifyFold']
-        if not os.path.exists(outputFold):
-            os.mkdir(outputFold)
-        tom_findPattern(inputFile, 99.0, 1000, outputFold, self.clSt['findPat'])
-        
-      
+        if if_summary:
+            transListB4Relink = '%s/allTransformsb4Relink.star'%self.io['classifyFold']
+            #transListB4Relink = '%s/allTransformsFillUp.star'%self.io['classifyFold']
+            if not os.path.exists(transListB4Relink):
+                transListB4Relink = None
+            #analysis the overlapping of different transform classes
+            tom_analyseRiboAttrib(self.transList, outputFolder,
+                                  transListB4Relink, self.io['posAngList'])    
+               
     def genOutputList(self, transListSel, outputFoldSel):
         '''
         output the summary of polysomes of each transform class.
         ATTENTION: the transListSel in this script is without any polysome ID info!!
         '''
-        self.log.info('generate selection translists')       
+        self.log.info('Generate selection translists')       
         for i in range(len(transListSel)):  #each translist represents one translist of one class
             transListTmp = transListSel[i]
             outputFoldCenter = "%s/pairCenter/"%outputFoldSel[i]
@@ -537,45 +656,19 @@ class Polysome:
         
     def generateTrClassAverages(self):
         '''
-        use relion/chimera to average the ribosome from one transform class
+        use relion to average the ribosome from each transform class
         '''
-        if np.isinf(self.avg['filt']['minNumTransform']):
-            self.log.info('skip translational class density map averaging')
+        if np.isinf(self.avg['filt']['minNumPart']):
+            self.log.info('Skip translational class density map averaging')
             return 
         wk = "%s/classes/c*/particleCenter/allParticles.star"%self.io['classifyFold']
-        outfold = '%s/avg/exp/%s'%(self.io['classifyFold'], self.io['classificationRun'])
-        outfoldVis = '%s/vis/averages'%self.io['classifyFold']
-        tom_avgFromTransForm(wk, self.avg['filt'], self.avg['maxRes'], 
-                             self.avg['pixS'], outfold, self.avg['command'])
+        outfold = '%s/avg/exp/%s/c'%(self.io['classifyFold'], self.io['classificationRun'])
         
-        classFile = "%s/stat/statPerClass.star"%self.io['classifyFold']
-        scriptName = "%s/avg.cmd"%(outfoldVis)
-        
-        genMapVisScript(outfold, classFile, scriptName, self.transList, self.transForm['pixS'], 0)
-    
-    def genTrClassForwardModels(self):
-        '''
-        give the transvector and transangles, 
-        this function can generate the forward model 
-        polysomes 
-        '''
-        if not os.path.exists(self.fw['Map']):
-            self.log.info('skip forward model generation')
-            return 
-        
-        outfold = '%s/avg/model/%s/c'%(self.io['classifyFold'], 
-                                       self.io['classificationRun'])
-        inputList = '%s/stat/statPerClass.star'%self.io['classifyFold']
-        
-        scale4shift = self.transForm['pixS']/self.fw['pixS']
-#       tom_genForwardMapPairTransForm(inputList, self.fw['Map'], self.fw['numForwardRepeats'],
-#                                       -1, outfold, scale4shift, self.fw['minNumTransform'])
-        
-        outfoldVis = '%s/vis/averages'%self.io['classifyFold']
-        #classFile = '%s/stat/statPerClass.star'%self.io['classifyFold']
-        scriptName = '%s/models.cmd'%outfoldVis
-        genMapVisScript(outfold, inputList, scriptName, self.transList, self.transForm['pixS'], 0 )
-               
+        tom_genavgFromTransFormScript(wk, self.avg['maxRes'], self.avg['pixS'],
+                                       self.avg['cpuNr'], self.avg['filt'],
+                                       self.avg['callByPython'],outfold)
+           
+              
     def link_ShortPoly(self, remove_branch = 1, worker_n = 1):
         '''
         link shorter polysomes 
@@ -624,7 +717,13 @@ class Polysome:
                 self.log.warning('can not detect transformation class!')
                 return
             if pairClass == 0:
-                continue        
+                continue    
+            
+            #check if exist filled up ribosomes.If exist, then load it
+            if os.path.exists(particleOutput):
+                readPosAng = particleOutput
+            else:
+                readPosAng = self.io['posAngList']
             statePolyAll_forFillUpSingleClass = statePolyAll_forFillUp[statePolyAll_forFillUp['pairClass'] == pairClass ]          
             #read the avgshift and avgRot 
             avgShift = classSummary[classSummary['classNr'] == pairClass].loc[:,
@@ -644,13 +743,12 @@ class Polysome:
                    
             self.transList = tom_addTailRibo(statePolyAll_forFillUpSingleClass, self.transList, pairClass, avgRot, 
                                              avgShift, cmbDistMaxMeanStd,
-                                             self.io['posAngList'], 
-                                             self.transForm['maxDist']/self.transForm['pixS'],                                         
-                                             transListOutput,  particleOutput,
-                                             self.fillPoly['addNum'], self.fillPoly['riboInfo'], method,
+                                             readPosAng, self.transForm['maxDist']/self.transForm['pixS'],                                         
+                                             transListOutput, particleOutput,
+                                             self.fillPoly['addNum'], 
+                                             self.fillPoly['riboInfo'], method,
                                              self.fillPoly['threshold'], worker_n)                
 
-        
         self.log.info('polysome filling up done')
         #retrack the polysomes 
         self.transList['pairLabel'] = -1
@@ -710,7 +808,8 @@ class Polysome:
                 if (pair1+pair2) > 0:
                     continue
                 keep_idx.append(single_row)
-                transClass0 = transb4Relink.iloc[keep_idx,:]
+                
+            transClass0 = transb4Relink.iloc[keep_idx,:]
         else:
             transClass0 = ''
         #calculte the distance between same class & different class   
@@ -752,9 +851,11 @@ class Polysome:
                                                                    1, None, cmb_metric, maxDistInpix)
 
             #call the fit of KDE function       
-            tom_kdeEstimate(distVectSame, 'c%d'%classN, 'vect distance', save_dir,1, 0.05, distVectDiff, 'otherClasses')
-            tom_kdeEstimate(distAngSame, 'c%d'%classN, 'angle distance', save_dir,1, 0.05, distAngDiff, 'otherClasses')
-            tom_kdeEstimate(distCombineSame, 'c%d'%classN,'combined distance',save_dir,1, 0.05, distCombineDiff, 'otherClasses') 
+            tom_kdeEstimate(distVectSame, 'Cluster %d'%classN, 'vect distance', save_dir,1, 0.05, distVectDiff, 'other clusters')
+            tom_kdeEstimate(distAngSame, 'Cluster %d'%classN, 'angle distance', save_dir,1, 0.05, distAngDiff, 'other clusters')
+            tom_kdeEstimate(distCombineSame, 'Cluster %d'%classN,'',save_dir,1, 0.05, distCombineDiff, 'other clusters') 
+            #tom_kdeEstimate(distCombineSame, 'inner-cluster','',save_dir,1, 0.05, distCombineDiff, 'inter-clusters') 
+
 
         self.log.info('Error estimation done')
     
@@ -840,33 +941,4 @@ class Polysome:
                 del transListLongestPoly
                 self.log.info('Render figures done')
      
-                       
-    def visPoly(self, lenPoly = 10):
-        '''
-        this method is aimed to vis all polysomes with length longer than 5
-        '''
-        if lenPoly == 1:
-            lenPoly = 10     
-        transList  = self.transList
-        classU = np.unique(transList['pairClass'].values)
-        for singleClass in classU:
-            if singleClass == -1:
-                self.log.warning('No trans classes detected!')
-                return
-            if singleClass == 0:
-                continue
-            
-            transListClass = transList[transList['pairClass'] == singleClass]
-            transListClass['pairLabel_fix'] = np.fix(transListClass['pairLabel'].values)
-            polyLenList = transListClass['pairLabel_fix'].value_counts()
-            polyLenBig = np.asarray(polyLenList[polyLenList>lenPoly].index)
-            if len(polyLenBig) == 0:
-                continue
 
-            for singlePoly in polyLenBig:
-                print('render figures for Class:', singleClass, 'with polyID_fix:', singlePoly)
-                keep_row = np.where(transListClass['pairLabel_fix'] == singlePoly)[0]                
-                transListPlot = transListClass.iloc[keep_row,:]
-                tom_plot_vectorField(transListPlot, self.vis['vectField']['type'])
-                del transListPlot
-            del transListClass          

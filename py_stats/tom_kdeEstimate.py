@@ -11,10 +11,17 @@ def tom_kdeEstimate(dist1, dist1Label, fTitle = '', save_dir = '', ifDisplay = 1
     two distribution
     '''
     
+#    colli_dist = {1.0: 56.15207,7.0: 101.19718,9.0: 74.42177,6.0: 131.26727,
+#                  5.0: 82.31526,11.0: 144.52849,4.0: 71.12578,8.0: 99.91933,
+#                  3.0: 108.729706,2.0: 71.62952,10.0: 81.22351}
+#    classNr = int(dist1Label[8:])
+    #dist = colli_dist[classNr]
     kde1 = sps.gaussian_kde(dist1)
     if ifDisplay:
         plt.figure()
         plt.hist(dist1, label = dist1Label, density = True, alpha = 0.4, edgeColor = None)
+        #plt.vlines(x = dist, ymin = 0, ymax = 0.09, linewidth = 2, color = 'black')
+        plt.ylim([0,0.09])
         spread = np.linspace(np.min(dist1), np.max(dist1), 300)
         plt.plot(spread, kde1.pdf(spread), label = 'KDE_%s'%dist1Label)
     
@@ -54,7 +61,10 @@ def tom_kdeEstimate(dist1, dist1Label, fTitle = '', save_dir = '', ifDisplay = 1
                                np.max(dist2), 5, cdfValue)
     if ifDisplay:  
         plt.title(fTitle)
-        plt.legend()
+        plt.legend(fontsize = 15, edgecolor='black')
+        #modify the size of the xticks 
+        plt.xticks(fontsize = 18)
+        plt.yticks(fontsize = 18)
         #plt.show() 
     if len(save_dir) > 0:
         plt.savefig('%s/%s_%s_%s.png'%(save_dir, dist1Label, dist2Label, fTitle), dpi = 300)

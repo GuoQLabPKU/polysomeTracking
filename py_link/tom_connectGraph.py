@@ -52,9 +52,10 @@ def ribo_fillUp(pairList, offset_PolyID):
     ifWoOut_list = [ ]
     ifWoIn_list = [ ]
     polyLabel_list = [ ]
+    total_node = [ ]
     
     #get the graph representing polysomes
-    pairIdx = pairList.loc[:,['pairIDX1', 'pairIDX2']]
+    pairIdx = pairList.loc[:, ['pairIDX1', 'pairIDX2']]
     pairTomoID = pairList['pairTomoID'].values[0]
     pairTomoName = pairList['pairTomoName'].values[0]
     pairClass = pairList['pairClass'].values[0]
@@ -73,6 +74,7 @@ def ribo_fillUp(pairList, offset_PolyID):
         len_woOut = len(riboIdx_woOutList) 
         len_woIn = len(riboIdx_woInList)            
         polyLabel_list.extend([offset_PolyID]*(len_woIn + len_woOut))
+        total_node.extend([len(single_poly)]*(len_woIn + len_woOut))
                 
         if (len_woOut > 0) & (len_woIn > 0):
             riboIDX_list.extend(riboIdx_woOutList)
@@ -99,6 +101,7 @@ def ribo_fillUp(pairList, offset_PolyID):
     statePoly_forFillup = pd.DataFrame({'pairTomoName':tomoName_list,
                                         'pairTomoID':tomoID_list, 'pairClass':classNr_list,
                                         'pairIDX':[int(i) for i in riboIDX_list], 'ifWoOut':ifWoOut_list,
-                                        'ifWoIn':ifWoIn_list, 'pairLabel':polyLabel_list})
+                                        'ifWoIn':ifWoIn_list, 'pairLabel':polyLabel_list,
+                                        'polylen_riboNr':total_node})
     
     return statePoly_forFillup,offset_PolyID

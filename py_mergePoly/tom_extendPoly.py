@@ -41,7 +41,7 @@ def tom_extendPoly(riboInfo, avgRot, avgShift, particleStar , pruneRad,
             if np.sum(pos2 > xyzborder) > 0:
                 continue  
         #if exist?
-        if checkRibo(particleStar,pos2,pruneRad) == 1:
+        if checkRibo(particleStar,riboInfo[i,0], pos2,pruneRad) == 1:
             continue
         
         fillUpMiddleRibo = np.array([]).reshape(-1, 8)
@@ -63,7 +63,7 @@ def tom_extendPoly(riboInfo, avgRot, avgShift, particleStar , pruneRad,
             if xyzborder is not None:
                 if np.sum(pos2 > xyzborder) > 0:
                     continue 
-            if checkRibo(particleStar,pos2,pruneRad) == 1:
+            if checkRibo(particleStar,riboInfo[i,0], pos2,pruneRad) == 1:
                 continue
             cycles = cycles - 1
             
@@ -77,8 +77,11 @@ def tom_extendPoly(riboInfo, avgRot, avgShift, particleStar , pruneRad,
     return fillUpRibos, fillUpMiddleRibos #returned 2-2D arrays
                  
 
-def checkRibo(particleStar, riboCoord, pruneRad, factor = 10):
+def checkRibo(particleStar, idx, riboCoord, pruneRad, factor = 10):
     posAll = particleStar['p1']['positions']
+    tomoName = particleStar['p1']['tomoName'][int(idx)]
+    idx_keep = np.where(particleStar['p1']['tomoName'] == tomoName)[0]
+    posAll = posAll[idx_keep]
     difflen = np.linalg.norm(posAll - riboCoord, axis = 1)
     #assert len(difflen) == posAll.shape[0]
     if np.sum(difflen <= pruneRad/factor) > 0:

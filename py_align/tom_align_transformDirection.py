@@ -1,9 +1,7 @@
 import numpy as np
 from scipy.cluster.vq import kmeans, vq
-from py_summary.tom_analysePolysomePopulation import calcAngStat, calcVectStat
 from py_log.tom_logger import Log
 
-# N-steps kmeans to check if the iterative k-means function make the errors smaller
 def alignDir(pairList, iterN): #the input is subset of one dataframe pointer
     while iterN > 0:
         vects = np.array([pairList['pairTransVectX'].values,
@@ -95,16 +93,3 @@ def tom_align_transformDirection(transList, iterN = 1):
         idx = np.where(allClasses == single_class)[0]
         transList.iloc[idx,:] = alignDir(transList.iloc[idx,:], iterN) 
     return transList
-
-def test_distanceCalc(pairList):
-    _, distsVect = calcVectStat(pairList)
-    _, distsAng = calcAngStat(pairList)
-    distsVect2 = distsVect/(2*100)*180
-    distsCN = (distsAng+distsVect2)/2
-    stat  = (np.mean(distsVect), np.std(distsVect), 
-             np.mean(distsAng), np.std(distsAng),
-             np.mean(distsCN), np.std(distsCN))
-    return stat
-    
-    
-    

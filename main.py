@@ -1,79 +1,107 @@
 import numpy as np
+import os
+
 from polysome_class.polysome import Polysome
 
 #####BASIC PARAMTERS SETTING########
-input_star =  './dataStar/ecoli/sel5TomosEcoli.star'
-run_time = 'run6_threshold20_relink01percent' #the subfolder name 
-pixelSize = 3.52 #in Ang, the pixelsize of input starfile
-cluster_threshold = 20
-relinkWithoutSmallClasses = 1 #clean the class with #transforms<minNumTransformPairs. 0:switch off cleaning
-minNumTransformPairs = -1  #select classes with #transforms>minNumTransformPairs for storage and relink
-remove_branches=0 #1:branch removing; 0:switch off
-average_particles = 1 #average particles from each class #1.switch on
+input_star =  'all_particles_neuron_warp.star' #the star
+project_folder = 'cluster-all_particles_neuron_warp' #the folder to store all runs.
+run_time = 'threshold20_relink01percent' #the folder storing the results of each run 
+pixel_size = 3.42 #in Ang, the pixel size of input starfile
+particle_radius = 50*pixel_size #in Ang, the radius of the input particle
+cluster_threshold = 20 #the threshold to cut-off the dendrogram tree for clustering 
+minNumTransform_ratio = -1  #select clusters with at least minNumTransformRatio transforms. -1:keep any cluster regardless of the #transforms
+remove_branches = 0 #1:branch removal; 0:switch off
+average_particles = 1 #average particles from each cluster. 1:switch on, 0:switch off
+search_radius = particle_radius*2 #in Ang. The searching range for neighbors. Two neighbors will be linked within this range.
+
+#####PREPROCESS PARAMETERS####
+min_dist = particle_radius/pixel_size #in pixeles, the minmum distance to remove repeat particles
+if_stopgap = 1 #if input a stopgap starfile, then transfer into relion2. 0:input is not stopgap file type 
+subtomo_path = 'subtomograms' #if input is stopgap file, need specify the path pointing to subtomograms 
+ctf_file =  'miss30Wedge.mrc' #if input is stopgap file, need specify the missing wedge file 
+
 ####PARALLEL COMPUTATION PARAMETERS####
-cpuN = 15 #number of cores for parallel computation. 1:switch off parallel computation
-gpuList = None  #leave None if no gpu available. Else input gpuID list like [0]//[0,1]
-avg_cpuNr = 35 #the number of CPU when average particles by relion if average_particles==1
+cpuN = 15 #number of CPU for parallel computation. 1:switch off parallel computation
+gpu_list = None  #leave None if no gpu available. Else offer gpuID list like [0]//[0,1]
+avg_cpuN = 35 #the number of CPUs when average particles by relion if average_particles == 1
+
 #####VISUAL PARAMETERS######
-vectorfield_plotting = 'basic' #advance:show detail information of polysomes
-show_longestPoly = 1 #plot and save the longest polysome. 0:switch off
-longestPoly_ClassNr = np.array([-1]) #plot the longest polysome for specific class. negative value: plot for all classes
-                                     #for examle: np.array([1,2]) => plot for class1 & class2
-                                     
-if_vispoly = 0 #1:switch on. Plot polysomes with length>10. Only for vislization.
-               #If you give a positive value>1. Then the polysomes with length>if_vispoly
-               #will be displayed   
-               
+vectorfield_plotting = 'basic' #advance:show detailed information of polysomes in the vector field figure
+show_longestPoly = 1 #plot and save the longest polysome in each cluster 0:switch off
+ 
+#####AVERAGE PARAMETERS#####
+if_avg = 1  #if average particles 0:switch off 
+avg_pixS = 3.42  #the pixel size of particles for relion averaging
+avg_minPart = 50 #the minmual number of particles requirement for average of each cluster
+avg_maxRes = 20 #the maximum resolution for relion averaging
+avg_callByPython = 0 #if use python to call relion_reconstruct command 0: generate linux scripts to run relion_reconstruct, 1:use python to call relion
+              
 #####ADVANCED PARAMETERS SETTING######
-maxDist = 3.52*50 # in Ang.  #the searching region of adjacent ribosomes
-link_depth = 2 #the depth for linking adjacent transforms into longer polysomes. 0:clean branches
-fillUpPoly_classNr = np.array([-1]) #which cluster class for filling up ribosomes. -1:all classes
-fillUpPoly_addNum = 0 #number of ribosomes added in each tail of polysome  0:switch off filling up step
-fillUpPoly_riboInfo = 1 #if print out the information of filled up ribosomes. 0:switch off
-fillUpPoly_model = 'lognorm' #fit distribution(genFit:based on data/lognorm:base on lognorm model)/max:no model fitting
-fillUpPoly_threshold = 0.05 #threshold to accept filled up ribosomes
+link_depth = 2 #the searching depth for linking adjacent transforms into longer polysomes. 0:remove branches
+fillUpPoly_addN = 0 #number of particles added in each tail of polysome to fill up gaps   0:switch off filling up step
+fillUpPoly_model = 'lognorm' #the type of fitted distribution for filling up step(genFit:based on experimental data; lognorm:base on lognorm model; max:no model fitting)
+fillUpPoly_threshold = 0.05 #threshold to accept filled up particles. The smaller, the more convinced of accepted interpolated particles 
 
-avg_pixS = 3.42  #the pixel size of particles for relion alignment
-avg_minPart = 50 #the minmual number particles requirement for average
-avg_maxRes = 20 #the parameter of relion
-avg_callByPython = 0 #if use python to call relion.0: generate one script for relion, 1:python call relion
 
-def runPoly(input_star, run_time, pixelSize, maxDist, link_depth, clustThr, relinkWithoutSmallClasses, 
-            minNumTransformPairs, fillPoly, cpuN, gpuList, remove_branches, vetorPlot_type, show_longestPoly,
-            show_PolyClassNr, if_vispoly, if_avg, avg):
-
+def runPoly(input_star, run_time, project_folder, pixel_size, min_dist, if_stopgap, subtomo_path, ctf_file,
+            search_radius, link_depth, cluster_threshold, minNumTransform_ratio, fillUpPoly, cpuN, gpu_list, remove_branches, 
+            vectorfield_plotting, show_longestPoly, if_avg, average_particles, avg):
+    #check the type of input parameters 
+    assert isinstance(input_star, str)
+    assert isinstance(run_time, str)
+    assert isinstance(project_folder, str)
+    assert isinstance(pixel_size, (int, float))
+    assert isinstance(min_dist, (int, float))
+    assert isinstance(if_stopgap, (int, float))
+    assert isinstance(subtomo_path, str)
+    assert isinstance(ctf_file, str)
+    assert isinstance(search_radius, (int, float))
+    assert isinstance(link_depth, (int, float))
+    assert isinstance(cluster_threshold, (int, float))
+    assert isinstance(minNumTransform_ratio, (int, float))
+    assert isinstance(fillUpPoly, dict)
+    assert isinstance(cpuN, int)
+    assert isinstance(gpu_list, list)
+    assert isinstance(remove_branches, int)
+    assert isinstance(vectorfield_plotting, str)  
+    assert isinstance(show_longestPoly, int)
+    assert isinstance(if_avg, (int, float))
+    assert isinstance(average_particles, int)
+    assert isinstance(avg, dict)
+    #check if the project_folder exist
+    if not os.path.exists(project_folder):
+        os.mkdir(project_folder)
+    
+    
     polysome1 = Polysome(input_star = input_star, run_time = run_time)
-    polysome1.transForm['pixS'] = pixelSize 
-    polysome1.transForm['maxDist'] = maxDist 
+    #calculate transformations
+    polysome1.transForm['pixS'] = pixel_size 
+    polysome1.transForm['maxDist'] = search_radius 
     polysome1.transForm['branchDepth'] = link_depth
-    polysome1.classify['clustThr'] = clustThr
-    polysome1.classify['relinkWithoutSmallClasses'] = relinkWithoutSmallClasses
-    polysome1.sel[0]['minNumTransform'] = minNumTransformPairs
+    #do clustering and filtering
+    polysome1.classify['clustThr'] = cluster_threshold
+    polysome1.sel[0]['minNumTransform'] = minNumTransform_ratio
+       
+    polysome1.creatOutputFolder()  #create folder to store the result
+    polysome1.preProcess(if_stopgap, subtomo_path, ctf_file, min_dist) #preprocess   
+    polysome1.calcTransForms(worker_n = cpuN) #calculate transformations
+    polysome1.groupTransForms(worker_n = cpuN, gpu_list = gpu_list)  #cluster transformations 
+    transListSel, selFolds = polysome1.selectTransFormClasses() #filter clusters 
+    polysome1.genOutputList(transListSel, selFolds) #save the filtered clusters 
+    polysome1.alignTransforms() #align the transformationsto the same direction
+    polysome1.analyseTransFromPopulation('','',1, 0)  #summary the clusters but w/o any polysome information       
+    polysome1.fillPoly = fillUpPoly #fill up the gaps 
+    polysome1.link_ShortPoly(remove_branches, cpuN) #link transforms into a long linear chain
+    polysome1.analyseTransFromPopulation('','',0, 1) #summary the clusters     
+    polysome1.noiseEstimate() #estimate the purity of each cluster
     
-    
-    polysome1.creatOutputFolder()  
-    polysome1.calcTransForms(worker_n = cpuN)
-    polysome1.groupTransForms(worker_n = cpuN, gpu_list = gpuList) 
-    transListSel, selFolds = polysome1.selectTransFormClasses() 
-    polysome1.genOutputList(transListSel, selFolds)
-    polysome1.alignTransforms()   
-    polysome1.analyseTransFromPopulation('','',0)           
-    polysome1.fillPoly = fillPoly
-    polysome1.link_ShortPoly(remove_branches, cpuN) 
-    polysome1.analyseTransFromPopulation('','',1)    
-    polysome1.noiseEstimate()
-    
-    polysome1.vis['vectField']['type'] = vetorPlot_type
+    polysome1.vis['vectField']['type'] = vectorfield_plotting
     polysome1.vis['longestPoly']['render'] = show_longestPoly
-    polysome1.vis['longestPoly']['showClassNr'] = show_PolyClassNr
     polysome1.visResult()   
     polysome1.visLongestPoly()
-    
-    if if_vispoly > 0:
-        polysome1.vis['vectField']['type'] = 'advance'
-        polysome1.visPoly(if_vispoly)
-    
-    #average particles subset using relion
+       
+    #average particles subset using relion_reconstruct
     if if_avg:
         polysome1.avg = avg
         polysome1.generateTrClassAverages()
@@ -81,9 +109,7 @@ def runPoly(input_star, run_time, pixelSize, maxDist, link_depth, clustThr, reli
 if __name__ == '__main__':   
     
     fillUpPoly = { }
-    fillUpPoly['classNr'] = fillUpPoly_classNr 
-    fillUpPoly['riboInfo'] = fillUpPoly_riboInfo 
-    fillUpPoly['addNum'] = fillUpPoly_addNum 
+    fillUpPoly['addNum'] = fillUpPoly_addN
     fillUpPoly['fitModel'] = fillUpPoly_model 
     fillUpPoly['threshold'] = fillUpPoly_threshold
 
@@ -93,10 +119,12 @@ if __name__ == '__main__':
     avg['filt']['maxNumPart'] = np.inf
     avg['pixS'] = avg_pixS
     avg['maxRes'] = avg_maxRes
-    avg['cpuNr'] = avg_cpuNr
+    avg['cpuNr'] = avg_cpuN
     avg['callByPython'] = avg_callByPython
    
-    runPoly(input_star, run_time, pixelSize, maxDist, link_depth, cluster_threshold, relinkWithoutSmallClasses, 
-            minNumTransformPairs, fillUpPoly, cpuN, gpuList, remove_branches, vectorfield_plotting, 
-            show_longestPoly, longestPoly_ClassNr, if_vispoly,average_particles, avg) 
+    runPoly(input_star, run_time, project_folder, 
+            pixel_size, min_dist, if_stopgap, subtomo_path, ctf_file, 
+            search_radius, link_depth, cluster_threshold, 
+            minNumTransform_ratio, fillUpPoly, cpuN, gpu_list, remove_branches, vectorfield_plotting, 
+            show_longestPoly, if_avg, average_particles, avg) 
     

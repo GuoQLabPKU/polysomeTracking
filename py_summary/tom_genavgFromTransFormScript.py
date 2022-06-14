@@ -32,7 +32,7 @@ def tom_genavgFromTransFormScript(transList, maxRes, pixS, workerNr = 35 ,
 
     ''' 
     log = Log('average particles').getlog()
-    avgCall = 'mpirun -np %d `which relion_reconstruct_mpi` --i XXX_inList_XXX --maxres XXX_maxRes_XXX --ctf --3d_rot --o XXX_outAVG_XXX'%workerNr
+    avgCall = 'mpirun -np %d `which relion_reconstruct_mpi` --i XXX_inList_XXX --maxres XXX_maxRes_XXX --angpix  XXX_pix_XXX --ctf --3d_rot --o XXX_outAVG_XXX'%workerNr
     if isinstance(transList,str):
         isPairTransForm = len(glob.glob(transList))>1
     else:
@@ -132,6 +132,7 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS, callBy
         avgCall = avgCallTmpl.replace('XXX_inList_XXX', inputName)
         avgCall = avgCall.replace('XXX_outAVG_XXX', outputName)
         avgCall = avgCall.replace('XXX_maxRes_XXX', str(maxRes))
+        avgCall = avgCall.replace('XXX_pix_XXX', str(pixS))
         avgCallFull = "%s &> %s"%(avgCall, outputNameLog)
         if callByPython:
             p = subprocess.Popen(avgCallFull, shell = True, stdout = subprocess.PIPE)

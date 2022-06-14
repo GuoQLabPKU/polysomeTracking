@@ -40,13 +40,13 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
     #DO NOT Change the changable data struct in function/anywhere
     st = tom_extractData(transList)#st should be a dict 
     if isinstance(selList, str):
-        if selList == 'Classes-Sep': 
+        if selList == 'Cluster-Sep': 
             uClass = np.unique(st["label"]['pairClass'])  # select all the classes and ploysomes
             del selList
             selList = [ ]
             for i in range(len(uClass)):
                 selList.append({ })
-                selList[i]["classNr"] = np.array([uClass[i]]) # #can be -1 OR [0,1,2...]
+                selList[i]["clusterNr"] = np.array([uClass[i]]) # #can be -1 OR [0,1,2...]
                 selList[i]["polyNr"] = np.array([-1]) #selList is a list with dicts stored
         else:
             raise TypeError('Unrecongnized input')
@@ -56,20 +56,20 @@ def tom_selectTransFormClasses(transList, selList, minNumTransForms = -1,outputF
     idxCmb = [ ]
     transListSel = [ ]
     selFolders = [ ]
-    for i in range(len(selList)):#process each class, also class0:fail to cluster
-        clNr = selList[i]["classNr"]
+    for i in range(len(selList)):#process each class, also cluster0:fail to cluster
+        clNr = selList[i]["clusterNr"]
         polyNr = selList[i]['polyNr']
-        if not any(clNr): #if clNr only has class 0,then continue
+        if not any(clNr): #if clNr only has cluster 0,then continue
             continue
         if clNr[0] == -1:
             continue
-        idx = filterList(st, clNr, polyNr) #which class and in this class,which polysome you like?
+        idx = filterList(st, clNr, polyNr) #which cluster and in this cluster,which polysome you like?
         if len(idx) < minNumTransForms:
-            continue #this class has few transforms, if less than the threshold, continue
+            continue #this cluster has few transforms, if less than the threshold, continue
         
         trFilt = transList.iloc[idx,:]
         transListSel.append( trFilt )
-        selFolders.append(genOutput(trFilt, selList[i], outputFolder)) #contain -1 when don't save class subset
+        selFolders.append(genOutput(trFilt, selList[i], outputFolder)) #contain -1 when don't save cluster subset
         idxCmb = np.concatenate((idxCmb, idx), axis = 0)
         
     if len(idxCmb) > 0:
@@ -91,7 +91,7 @@ def genOutput(transList, selList, outputFolder):
     if outputFolder == '':
         selFolder = ''
         return selFolder
-    clNr = selList['classNr']
+    clNr = selList['clusterNr']
     polyNr = selList['polyNr']
     
     

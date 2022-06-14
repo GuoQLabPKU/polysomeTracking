@@ -69,6 +69,8 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
     if cmb_metric == 'scale2Ang':
         distsVect = distsVect/(2*maxDistInpix)*180
         distsCN = (distsAng+distsVect)/2
+#        distsCN = distsAng
+#        print('only consider angle!!!!!')
     elif cmb_metric == 'scale2AngFudge':
         distsVect = distsVect/(2*maxDistInpix)*180
         distsCN = (distsAng+(distsVect*2))/2
@@ -99,7 +101,3 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
     np.save("%s/tree.npy"%preCalcFold,ll)
     
     return ll
-
-    
-    
-    

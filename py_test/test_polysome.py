@@ -9,7 +9,7 @@ from polysome_class.polysome import Polysome
 
 ####PARAMETERS#####
 eulerAngles = '/lustre/Data/jiangwh/polysome/python_version/polysome/py_test/euler_angles.csv'
-testType = 'noise' #noise: generate noise star file
+testType = 'polysome' #noise: generate noise star file
 ##################
 
 def pick_polysome(input_star):
@@ -46,12 +46,12 @@ def pick_polysome(input_star):
 def test_polysome(eulerAngles):  
     if not os.path.exists(eulerAngles):
         eulerAngles = None
-    _ = setup(eulerAngles = eulerAngles) #create simulation data  
+    #_ = setup(eulerAngles = eulerAngles) #create simulation data  
 
-    polysome1 = Polysome(input_star = './simOrderRandomized.star', run_time = 'run0')  
-    polysome1.classify['clustThr'] = 5
+    polysome1 = Polysome(input_star = './simOrderRandomized.star', run_time = 'run1_threshold25')  
+    polysome1.classify['clustThr'] = 25
     polysome1.classify['relinkWithoutSmallClasses'] = 1
-    polysome1.sel[0]['minNumTransform'] = 10
+    polysome1.sel[0]['minNumTransform'] = -1
     polysome1.transForm['pixS'] = 3.42 # in Ang
     polysome1.transForm['maxDist'] = 342 # in Ang
 
@@ -69,10 +69,11 @@ def test_polysome(eulerAngles):
     
     polysome1.analyseTransFromPopulation('',  '', 1)
     
-    polysome1.noiseEstimate()
+    #polysome1.noiseEstimate()
     
     #use advance mode
-    polysome1.vis['vectField']['type'] = 'advance'
+    
+    #polysome1.vis['vectField']['type'] = 'advance'
     polysome1.visResult()
     
     
@@ -91,16 +92,16 @@ def test_noise(eulerAngles):
         eulerAngles = None
     _ = setup(eulerAngles = eulerAngles,  genType = 'noise' ) #create simulation data  
 
-    polysome1 = Polysome(input_star = './simNoise.star', run_time = 'run_threshold35_eulerangle_relink')  
-    polysome1.classify['clustThr'] = 35
-    polysome1.classify['relinkWithoutSmallClasses'] = 1
+    polysome1 = Polysome(input_star = './simNoise.star', run_time = 'run_threshold25_eulerangle_norelink')  
+    polysome1.classify['clustThr'] = 25
+    polysome1.classify['relinkWithoutSmallClasses'] = 0
     polysome1.sel[0]['minNumTransform'] = 25
     polysome1.transForm['pixS'] = 3.42 # in Ang
     polysome1.transForm['maxDist'] = 342 # in Ang
 
     polysome1.creatOutputFolder()
     
-    polysome1.calcTransForms(worker_n = 1) #parallel, can assert the speed of pdit next time
+    polysome1.calcTransForms(worker_n = 1) #parallel, can assert the speed of pdist next time
    
     polysome1.groupTransForms(gpu_list = [0]) #parallel 
                                             
@@ -127,6 +128,4 @@ if __name__ == '__main__':
         test_polysome(eulerAngles)
     else:
         test_noise(eulerAngles)
-    #teardown() #clean up the data 
-    
-                
+    #teardown() #clean up the data                     
