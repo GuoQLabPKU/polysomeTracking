@@ -2,47 +2,41 @@
 ![This is an image](https://github.com/werhoog/polysomeTracking/blob/main/image/concept2.PNG)
 
 this folder contains the scripts for describing quantitavely polysomes high order conformations 
+## Concept
+NEMO-TOC can classify the relative spatial arrangement of neighbors based on the positions and Euler angles. 
+Features to track ordered linear assemblies are added.
+reference:
 ## Scripts description
 - **polysome_class:** folder with polysome class written by python
-- **py_align:** folder with scripts alignning the direction of ribosome pairs transformation
-- **py_cluster:** folder with scripts classifing the ribosome pairs transformation
+- **py_align:** folder with scripts alignning the direction of particle pairs transformation
+- **py_cluster:** folder with scripts classifing the neighbors' pairs transformation
 - **py_io:** folder with scripts for star files/tomogram MRC files I/O
-- **py_link:** folders with scripts linking ribosome pairs transformation to longer polysomes
+- **py_link:** folders with scripts linking neighbors' pairs transformations to longer linear assemblies
 - **py_log:** folders with scripts making log file
 - **py_memory:** folder with scripts allocating memory of CPU/GPU
-- **py_mergePoly:** folder with scripts filling up inferred ribosomes to merge shorter polysomes to longer one
-- **py_simulation:** folder with scripts creating polysome simulation data
-- **py_stats:** folder with scripts fitting distribution and estimating the errors of transform class assignment
-- **py_summary:** folder with scripts summaring polysomes and transform classes
-- **py_test:** folder with scripts testing branches-cleaning/polysome-tracking/ribosome-fillingup
-- **py_transform:** folder with scripts calculating the transformation of ribosome pairs
+- **py_mergePoly:** folder with scripts filling up inferred particles to merge shorter linear assemblies to longer one
+- **py_simulation:** folder with scripts creating simulation datasets 
+- **py_stats:** folder with scripts fitting distribution and estimating the errors of transform cluster assignment
+- **py_summary:** folder with scripts summaring transform clusters
+- **py_test:** folder with scripts testing branches-cleaning/linear assemblies-tracking/particle-fillingup
+- **py_transform:** folder with scripts calculating the transformation of neighbors' pairs
 - **py_vis:** folder with scripts for visulization
-## Dependencies
-- python: 3.6.7(3.7.9/3.8.3)
-- numpy: 1.16.1(1.18.5/1.19.2)
-- pandas: 1.0.5(1.1.1/1.2.1)
-- jupyter: 1.0.0
-- matplotlib: 3.3.3
-- cupy: 9.0.0(for GPU calculation)
-- cudatoolkit: 11.0.3(for GPU calculation)
-- pytest: 6.2.4
-- networkx:2.6.2
-- seaborn:0.11.2
-- dill:0.3.4
+## Install
+1. activate conda enviroment 
+2. bash install.sh
 ## Flatform
-Any platform (linux/windows/macos)should be fine. But linux is largely tested to run these scripts.
+Any platform (linux/windows/macos)
 ## Usage
 Modify suitable parameters in main.py, then `python main.py`
-
 ## Debug
 ```
 pyest py_test/test_*
 ```
 This will test three functions:
-- test_polysome.py: test if track right polysomes from simulation data (uncomment the last line if want to keep and check the output)
+- test_polysome.py: test if track right  linear assemblies(polysomes) from simulation data (uncomment the last line if want to keep and check the output)
   > test_polysome.py can receive a parameter ***particleStar***. Modify this parameter to your real particle.star file. Then the euler angles
   > of simulation data will come from the particle.star
-- test_fillupRibo.py: test if fill up right ribosomes after manully delete two ribosomes
+- test_fillupRibo.py: test if fill up right particles after manully delete two particles 
 - test_branchClean.py: test if clean the branches created manully in simulation data
 
 ***NOTICE: thoes test_XXX.py need modify the sys.path.append('THE PATH YOU DOWNLOADED THESE SCRIPTS') in the head line***
@@ -56,25 +50,25 @@ cluster-particle
     - allTransforms.star 
       > *transforms starfiles after relinking*
     - allTransformsFillUp.star 
-      > *transforms starfiles after branches cleaning and ribosome fillingup*
+      > *transforms starfiles after branches cleaning and particle fillingup*
       
       | column name | description | 
       | ---- | ---- |
-      | fillUpProb | the probability of the transform. -1:none fill up/1.1: transforms with middle fillup ribosomes(fillUoPoly_addNum>1)/other:transforms with last filled up ribosomes | 
+      | fillUpProb | the probability of the transform. -1:none fill up/1.1: transforms with middle fillup particles(fillUoPoly_addNum>1)/other:transforms with last filled up particles| 
     - avg 
       - exp
       - model
-    - classes 
-      > *transList for each transform class*
+    - clusters
+      > *transList for each transform cluster*
       - c1/transList.star
       - c2/transList.star
       - cXXX/transList.star
     - scores 
-      > *transform classes assignment scores*
+      > *transform clusters assignment scores*
       - treeb4Relink.npy
       - tree.npy
     - stat
-      > *summary of each transform class and each polysome*
+      > *summary of each transform cluster and each linear assemblies*
       - statePerClass.star
       - statePerPoly.star   
     - vis
@@ -82,12 +76,12 @@ cluster-particle
       - clustering
         - linkLevel.png
         - tree.png
-      - distanceDist
-        > *the distribution of distances between each transform and the average transform from one transform class*
-        - class1.png
-        - classXXX.png
-      - fitDistanceDist
-        > *using different models to fit distribution of distances between each transform and the average transform from one transform class*
+      - innerClusterDist
+        > *the distribution of distances between each transform and the average transform from one transform cluster*
+        - cluster1.png
+        - clusterXXX.png
+      - fitInnerClusterDist
+        > *using different models to fit distribution of distances between each transform and the average transform from one transform cluster*
         - cXXX_dill.pkl 
         > *the fitting results of gauss KDE*
         - cXXX_fitDist.png
@@ -95,21 +89,18 @@ cluster-particle
         - distanceDistFit_cXXX.csv 
         > *the parameters for lognorm fitting*
       - noiseEstimate
-        > *compare the distribution of 1.distance between each transform and the average transform from the same transform class; 2.distance between transforms from other classes and the average transform from class of 1*
-        - cXXX_otherClasses_angle distance.png 
-        - cXXX_otherClasses_vect distance.png
-        - cXXX_otherClasses_combined distance.png
+        > *compare the distribution of 1.distance between each transform and the average transform from the same transform cluster; 2.distance between transforms from other clusters and the average transform from cluster of 1*
       - vectfields
         - tomoID.png 
           > *polysomes from the same tomogram*
         - cXXX_longestPoly.png
-          > *the longest polysome from classXXX*
+          > *the longest polysome from clusterXXX*
         - cXXX_polyLengthDist.png
-          > *the distribution of length of polysomes from classXXX*
+          > *the distribution of length of polysomes from clusterXXX*
      - particlesFillUp.star
-        > *the particlesFillUp.star with filled up ribosomes as well as from particles.star
+        > *the particlesFillUp.star with filled up particles as well as from particles.star
         
        | column name | description | 
        | ---- | ---- |
-       | fillUpProb | the state of ribosomes. -1:none fill up/1.1: middle fillup ribosomes(fillUoPoly_addNum>1)/1:last filled up ribosomes |
+       | fillUpProb | the state of particles. -1:none fill up/1.1: middle fillup particles(fillUoPoly_addNum>1)/1:last filled up particles |
        
