@@ -500,8 +500,8 @@ class Polysome:
         allTomos = self.transList['pairTomoID'].values
         allTomosU = np.unique(allTomos)
         
-        #if clean branch
-        if self.transForm['branchDepth'] == 0:
+        
+        if self.transForm['branchDepth'] == 0: #clean branch 
             self.log.info('Clean branches')
             #load the information of avgshift/rot           
             classSummaryList = '%s/stat/statPerClass.star'%self.io['classifyFold']
@@ -534,7 +534,7 @@ class Polysome:
                                                avgRot, worker_n, gpu_list, cmb_metric, 
                                                pruneRad) #this function can find the index with branch, which will be removed!
                 if len(idx_drop) > 0:
-                    self.log.info('Find %d branches in classes:%d, will be removed!'%(len(idx_drop),single_class))
+                    self.log.info('Find %d branches in clusters:%d, will be removed!'%(len(idx_drop),single_class))
                     idx_rm = np.concatenate((idx_rm, idx_drop))
                 
             if len(idx_rm) > 0:
@@ -552,12 +552,12 @@ class Polysome:
         else:
             self.log.info('Skip branch cleanning!')
                     
-        br = {} #1D-array, check the existence of branches
+        br = { } #1D-array, check the existence of branches
         for single_class in allClassesU:           
             if single_class == 0:  #also should aviod single_class == -1
                 continue  ##no cluster occur with class == 0  
             if single_class == -1:
-                self.log.warning('''No cluster classes detected.
+                self.log.warning('''No clusters detected.
                                     ==> highly suggest do groupTransform before this step''')
             br[single_class] = 0  
             idx1 = np.where(allClasses == single_class)[0]
@@ -582,8 +582,8 @@ class Polysome:
 
         class_branch = [key for key in br.keys() if br[key] > 0]
         if len(class_branch) > 0:
-            self.log.warning('''Warning: branches in these class: %s
-                                ==>can try to make smaller classes'''%(str(class_branch)))
+            self.log.warning('''Warning: branches in these cluster: %s
+                                ==>can try to make smaller clusters'''%(str(class_branch)))
 
         self.log.info('Polysome tracking done')
      
@@ -661,7 +661,7 @@ class Polysome:
         if np.isinf(self.avg['filt']['minNumPart']):
             self.log.info('Skip translational class density map averaging')
             return 
-        wk = "%s/classes/c*/particleCenter/allParticles.star"%self.io['classifyFold']
+        wk = "%s/clusters/c*/particleCenter/allParticles.star"%self.io['classifyFold']
         outfold = '%s/avg/exp/%s/c'%(self.io['classifyFold'], self.io['classificationRun'])
         
         tom_genavgFromTransFormScript(wk, self.avg['maxRes'], self.avg['pixS'],
@@ -684,19 +684,14 @@ class Polysome:
             self.find_connectedTransforms(classList, 0)
             saveStruct('%s/allTransformsFillUp.star'%self.io['classifyFold'], self.transList)
             return
-        
-        if self.fillPoly['classNr'][0] < 0:
-            self.log.info('fill up polysomes in all cluster classes')
-        else:
-            self.log.info('fill up polysomes in classes: %s'%str(self.fillPoly['classNr']))
-            classList = self.fillPoly['classNr']
+    
         #load summary star file
         classSummaryList = '%s/stat/statPerClass.star'%self.io['classifyFold']
         if os.path.exists(classSummaryList):
             classSummary = tom_starread(classSummaryList)
             classSummary = classSummary['data_particles']
         else:
-            self.log.error('lack file:%s, run analyseTransFromPopulation!'%classSummaryList)
+            self.log.error('lack file:%s, should run analyseTransFromPopulation!'%classSummaryList)
             return
         
         #using networkx(tom_connectGraph) to find the ribosomes to link OR to be linked
@@ -714,7 +709,7 @@ class Polysome:
         
         for pairClass in classList:
             if pairClass == -1:
-                self.log.warning('can not detect transformation class!')
+                self.log.warning('can not detect transformation cluster!')
                 return
             if pairClass == 0:
                 continue    
@@ -739,14 +734,14 @@ class Polysome:
             transNr = self.transList[self.transList['pairClass'] == pairClass].shape[0]
             
             if (transNr < 50) & (method != 'max'):
-                self.log.warning('only %d transform in class%d, sugget using max method for ribosomes fillingUp!'%(transNr, pairClass))
+                self.log.warning('only %d transform in cluster%d, sugget using max method for ribosomes fillingUp!'%(transNr, pairClass))
                    
             self.transList = tom_addTailRibo(statePolyAll_forFillUpSingleClass, self.transList, pairClass, avgRot, 
                                              avgShift, cmbDistMaxMeanStd,
                                              readPosAng, self.transForm['maxDist']/self.transForm['pixS'],                                         
                                              transListOutput, particleOutput,
                                              self.fillPoly['addNum'], 
-                                             self.fillPoly['riboInfo'], method,
+                                             0, method,
                                              self.fillPoly['threshold'], worker_n)                
 
         self.log.info('polysome filling up done')
@@ -769,7 +764,7 @@ class Polysome:
         aren't from classA and the average transform of classA.
         Finally, compare these two distributions.
         '''
-        self.log.info('Estimete classes assignment errors')
+        self.log.info('Estimate clusters assignment errors')
         
         maxDistInpix = self.transForm['maxDist']/self.transForm['pixS']
         cmb_metric = self.classify['cmb_metric']

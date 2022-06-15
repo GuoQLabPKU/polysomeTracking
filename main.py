@@ -36,6 +36,7 @@ avg_pixS = 3.42  #the pixel size of particles for relion averaging
 avg_minPart = 50 #the minmual number of particles requirement for average of each cluster
 avg_maxRes = 20 #the maximum resolution for relion averaging
 avg_callByPython = 0 #if use python to call relion_reconstruct command 0: generate linux scripts to run relion_reconstruct, 1:use python to call relion
+                     #if set to 1, you should make sure the relion_reconstruct command is searchable in the system pathway
               
 #####ADVANCED PARAMETERS SETTING######
 link_depth = 2 #the searching depth for linking adjacent transforms into longer polysomes. 0:remove branches

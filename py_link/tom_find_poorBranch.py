@@ -1,5 +1,4 @@
 import numpy as np
-
 from py_cluster.tom_A2Odist import tom_A2Odist
 
 
