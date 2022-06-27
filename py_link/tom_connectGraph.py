@@ -91,7 +91,7 @@ def ribo_fillUp(pairList, offset_PolyID):
 
         else:
             continue
-    print('detect %d polysome groups in class%d in %s'%(count, pairClass, pairTomoName))
+    #print('detect %d polysome groups in cluster%d in %s'%(count, pairClass, pairTomoName))
     
     tomoID_list.extend([pairTomoID]*len(ifWoOut_list))
     tomoName_list.extend([pairTomoName]*len(ifWoOut_list))

@@ -158,7 +158,7 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
     
     transAct_filter = transListAct[index]
     if transAct_filter.shape[0] == 0:
-        log.warning('''Can not link  polys. This is because filluped ribos form different transform class''')
+        log.warning('''Can not link  polys. This is because filluped particles form different transform clusters''')
         return pairList
     #debug for filled up ribosome infos output
     if verbose:

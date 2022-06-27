@@ -34,7 +34,7 @@ Reference:
     cd polysomeTracking/
     bash install_conda_pkgs.sh
 ## Platform
-Any platform (linux/windows/macos)
+Any platform (linux/windows/macos) was tested
 ## Usage
 Modify suitable parameters in main.py, then `python main.py`
 ## Debug
@@ -42,31 +42,26 @@ Modify suitable parameters in main.py, then `python main.py`
 pyest py_test/test_*
 ```
 This will test three functions:
-- test_polysome.py: test if track right  linear assemblies(polysomes) from simulation data (uncomment the last line if want to keep and check the output)
-  > test_polysome.py can receive a parameter ***particleStar***. Modify this parameter to your real particle.star file. Then the euler angles
-  > of simulation data will come from the particle.star
+- test_polysome.py: test if track right  linear assemblies(polysomes) from the simulation dataset 
 - test_fillupRibo.py: test if fill up right particles after manully delete two particles 
-- test_branchClean.py: test if clean the branches created manully in simulation data
+- test_branchClean.py: test if clean the branches created manully in the simulation dataset
 
-***NOTICE: thoes test_XXX.py need modify the sys.path.append('THE PATH YOU DOWNLOADED THESE SCRIPTS') in the head line***
 ### If meet any memory error, please reduce the input variable ***Chunk*** in function ***tom_memalloc*** **(py_memory/tom_memalloc.py)**
 ## Output 
 Given an input starfile named 'particles.star' in ***main.py***, for example, several folders will be created like below,
+
 cluster-particle
-  - run0   (*change the folder name using ***run_time*** in **main.py**)*
+  - run0   (*change the folder name by  changing ***run_time*** in **main.py**)*
     - allTransformsb4Relink.star  
-      > *transforms starfiles before relinking*
+      > *transforms starfiles before filtering*
     - allTransforms.star 
-      > *transforms starfiles after relinking*
+      > *transforms starfiles after filtering*
     - allTransformsFillUp.star 
-      > *transforms starfiles after branches cleaning and particle fillingup*
+      > *transforms starfiles after branches removal and particle fillingup*
       
       | column name | description | 
       | ---- | ---- |
       | fillUpProb | the probability of the transform. -1:none fill up/1.1: transforms with middle fillup particles(fillUoPoly_addNum>1)/other:transforms with last filled up particles| 
-    - avg 
-      - exp
-      - model
     - clusters
       > *transList for each transform cluster*
       - c1/transList.star
@@ -101,15 +96,15 @@ cluster-particle
         > *compare the distribution of 1.distance between each transform and the average transform from the same transform cluster; 2.distance between transforms from other clusters and the average transform from cluster of 1*
       - vectfields
         - tomoID.png 
-          > *polysomes from the same tomogram*
+          > *linear assemblies (polysomes) from the same tomogram*
         - cXXX_longestPoly.png
-          > *the longest polysome from clusterXXX*
+          > *the longest linear assemblies (polysomes) from clusterXXX*
         - cXXX_polyLengthDist.png
-          > *the distribution of length of polysomes from clusterXXX*
+          > *the distribution of length of linear assemblies (polysomes) from clusterXXX*
      - particlesFillUp.star
         > *the particlesFillUp.star with filled up particles as well as from particles.star
         
        | column name | description | 
        | ---- | ---- |
-       | fillUpProb | the state of particles. -1:none fill up/1.1: middle fillup particles(fillUoPoly_addNum>1)/1:last filled up particles |
+       | if_fillUp| the state of particles. -1:none fill up/1.1: middle fillup particles(fillUoPoly_addNum>1)/1:last filled up particles |
        

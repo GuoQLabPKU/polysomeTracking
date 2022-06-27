@@ -95,6 +95,6 @@ def nx_polysomeGroup(pairList, offset_PolyID, statePoly_dict):
             singlePolyInfo_list = [len_woOut,len_woIn,len_branchOut, len_branchIn, len(single_poly), poly_transClassList_count.keys().__len__(),0]                        
         statePoly_dict[offset_PolyID] = singlePolyInfo_list
     #return the data 
-    print('detect %d polysomes in %s'%(count, pairTomoName))
+    #print('detect %d polysomes in %s'%(count, pairTomoName))
     return pairLabelSingleTomo_dataFrame, offset_PolyID, statePoly_dict
     
