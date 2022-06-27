@@ -23,16 +23,23 @@ Reference:
 - **py_vis:** folder with scripts for visulization
 ## Install
 1. install miniconda
+
     https://docs.conda.io/en/latest/miniconda.html
 2. create enviroment
+    ```
     pathToConda/bin/conda create --name nemotoc
+    ```
 3. activate the enviroment
+    ```
     source pathToConda/etc/profile.d/conda.sh
     pathToConda/conda activate nemotoc
+    ```
 4. install dependencies 
+    ```
     git clone https://github.com/GuoQLabPKU/polysomeTracking.git
     cd polysomeTracking/
     bash install_conda_pkgs.sh
+    ```
 ## Platform
 Any platform (linux/windows/macos) was tested
 ## Usage
