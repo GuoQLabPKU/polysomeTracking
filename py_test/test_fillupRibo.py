@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/lustre/Data/jiangwh/polysome/python_version/polysome/')
+sys.path.append('./')
 import numpy as np
 import pytest
 import timeit as ti
@@ -61,16 +61,15 @@ def test_branchClean():
     riboDrop_info = generateDeletPoly()#create simulation data  
     polysome1 = Polysome(input_star = './sim_drop.star', run_time = 'run0') 
     polysome1.classify['clustThr'] = 5
-    polysome1.classify['relinkWithoutSmallClasses'] = 1
-    polysome1.sel[0]['minNumTransform'] = 20
+    polysome1.sel[0]['minNumTransform'] = -1
     polysome1.transForm['pixS'] = 3.42 # in Ang
     polysome1.transForm['maxDist'] = 342 # in Ang
 
     polysome1.creatOutputFolder()
     
-    polysome1.calcTransForms(worker_n = 3) #parallel, can assert the speed of pdit next time
+    polysome1.calcTransForms(worker_n = 1) #parallel, can assert the speed of pdit next time
    
-    polysome1.groupTransForms(worker_n = 5) #parallel 
+    polysome1.groupTransForms(worker_n = 1) #parallel 
                                          
     polysome1.alignTransforms()
     
@@ -87,8 +86,6 @@ def test_branchClean():
     
     #link the polysomes
     fillPoly = { }
-    fillPoly['classNr'] = np.array([-2])
-    fillPoly['riboInfo'] = 1
     fillPoly['addNum'] = 2
     fillPoly['fitModel'] = 'lognorm' 
     fillPoly['threshold'] = 0.05
@@ -102,7 +99,7 @@ def test_branchClean():
     #load the filled up particle.star and get the filled up ribosomes
     particlesData = tom_starread('./cluster-sim_drop/run0/sim_dropFillUp.star')
     particlesData = particlesData['data_particles']
-    fillupRibos = particlesData[particlesData['rlnClassNumber'] == -100]
+    fillupRibos = particlesData[particlesData['if_fillUp'] != -1]
     fillupRibos_coord = fillupRibos.loc[:,['rlnCoordinateX','rlnCoordinateY','rlnCoordinateZ']].values
     print('real drop:', riboDrop_info)
     print('code filled up:', fillupRibos_coord)

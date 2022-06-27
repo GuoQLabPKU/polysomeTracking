@@ -1,30 +1,39 @@
-# polysomes tracking based on ribosome positions and euler angles
+# Neighboring particles' conformation clustering  based on particles' positions and euler angles and the polyribosome tracking
 ![This is an image](https://github.com/werhoog/polysomeTracking/blob/main/image/concept2.PNG)
 
 this folder contains the scripts for describing quantitavely polysomes high order conformations 
 ## Concept
 NEMO-TOC can classify the relative spatial arrangement of neighbors based on the positions and Euler angles. 
-Features to track ordered linear assemblies are added.
-reference:
+Features to track ordered linear assemblies are also added.
+Reference:
 ## Scripts description
-- **polysome_class:** folder with polysome class written by python
+- **polysome_class:** folder with function class written by python
 - **py_align:** folder with scripts alignning the direction of particle pairs transformation
 - **py_cluster:** folder with scripts classifing the neighbors' pairs transformation
 - **py_io:** folder with scripts for star files/tomogram MRC files I/O
 - **py_link:** folders with scripts linking neighbors' pairs transformations to longer linear assemblies
 - **py_log:** folders with scripts making log file
 - **py_memory:** folder with scripts allocating memory of CPU/GPU
-- **py_mergePoly:** folder with scripts filling up inferred particles to merge shorter linear assemblies to longer one
+- **py_mergePoly:** folder with scripts filling up inferred particles to merge shorter linear assemblies to longer ones
 - **py_simulation:** folder with scripts creating simulation datasets 
-- **py_stats:** folder with scripts fitting distribution and estimating the errors of transform cluster assignment
-- **py_summary:** folder with scripts summaring transform clusters
-- **py_test:** folder with scripts testing branches-cleaning/linear assemblies-tracking/particle-fillingup
-- **py_transform:** folder with scripts calculating the transformation of neighbors' pairs
+- **py_stats:** folder with scripts fitting distribution and estimating the errors of transformation clusters assignment
+- **py_summary:** folder with scripts summaring transformation clusters
+- **py_test:** folder with scripts testing branches cleaning & linear assemblies tracking & particles' fillingup
+- **py_transform:** folder with scripts calculating the transformation of neighbor pairs
 - **py_vis:** folder with scripts for visulization
 ## Install
-1. activate conda enviroment 
-2. bash install.sh
-## Flatform
+1. install miniconda
+    https://docs.conda.io/en/latest/miniconda.html
+2. create enviroment
+    pathToConda/bin/conda create --name nemotoc
+3. activate the enviroment
+    source pathToConda/etc/profile.d/conda.sh
+    pathToConda/conda activate nemotoc
+4. install dependencies 
+    git clone https://github.com/GuoQLabPKU/polysomeTracking.git
+    cd polysomeTracking/
+    bash install_conda_pkgs.sh
+## Platform
 Any platform (linux/windows/macos)
 ## Usage
 Modify suitable parameters in main.py, then `python main.py`

@@ -49,9 +49,7 @@ def tom_genavgFromTransFormScript(transList, maxRes, pixS, workerNr = 35 ,
         return
     else:
         avgFromWildCard(transList, outputRoot, classFilt, avgCall, maxRes, pixS,callByPython, 'all')
-        avgFromWildCard(transList, outputRoot, classFilt, avgCall, maxRes, pixS,callByPython, 'p1')
-        avgFromWildCard(transList, outputRoot, classFilt, avgCall, maxRes, pixS,callByPython, 'p2')
-    
+   
 def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS, callByPython,kind):
     #list the dir of all classes
     wk_upup = os.path.split(os.path.split(os.path.split(wk)[0]) [0])[0]

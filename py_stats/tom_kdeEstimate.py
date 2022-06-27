@@ -19,7 +19,7 @@ def tom_kdeEstimate(dist1, dist1Label, fTitle = '', save_dir = '', ifDisplay = 1
     kde1 = sps.gaussian_kde(dist1)
     if ifDisplay:
         plt.figure()
-        plt.hist(dist1, label = dist1Label, density = True, alpha = 0.4, edgeColor = None)
+        plt.hist(dist1, label = dist1Label, density = True, alpha = 0.4)
         #plt.vlines(x = dist, ymin = 0, ymax = 0.09, linewidth = 2, color = 'black')
         plt.ylim([0,0.09])
         spread = np.linspace(np.min(dist1), np.max(dist1), 300)
@@ -32,7 +32,7 @@ def tom_kdeEstimate(dist1, dist1Label, fTitle = '', save_dir = '', ifDisplay = 1
         kde2 = sps.gaussian_kde(dist2)
         if ifDisplay:
             plt.hist(dist2, label = dist2Label,
-                     density = True, alpha = 0.4, edgeColor = None)   
+                     density = True, alpha = 0.4)   
             spread = np.linspace(np.min(dist2), np.max(dist2))
             plt.plot(spread, kde2.pdf(spread), label = 'KDE_%s'%dist2Label) 
             

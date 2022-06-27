@@ -136,7 +136,7 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
     if method == 'lognorm':
         #load fitparams data
         path, _ = os.path.split(tranListOutput)
-        fitData = pd.read_csv('%s/vis/fitDistanceDist/distanceDistFit_c%d.csv'%(path, pairClass), sep = ",")
+        fitData = pd.read_csv('%s/vis/fitInnerClusterDist/distanceDistFit_c%d.csv'%(path, pairClass), sep = ",")
         fitParam = fitData[fitData['distribution'] == 'lognorm']['fit_params'].values[0]       
         fitParam = literal_eval(fitParam)
         distCNNorm = (distsCN - cmbDistMaxMeanStd[1])/cmbDistMaxMeanStd[2]

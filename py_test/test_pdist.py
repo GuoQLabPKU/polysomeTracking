@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/lustre/Data/jiangwh/polysome/python_version/polysome/')
+sys.path.append('./')
 import numpy as np
 import pytest
 from py_cluster.tom_pdist_cpu import tom_pdist as tp1

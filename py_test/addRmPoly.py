@@ -35,7 +35,7 @@ def setup(conf=None, noizeDegree = 2, branch = 0, eulerAngles = None, genType = 
             zz0['increAng']= np.array([30, 10, 70])
             zz0['startPos']=np.array([20, 30, 0])
             zz0['startAng']= np.array([40, 10, 30])
-            zz0['minDist']=50 #the pixel distance between two adajcent ribosomes
+            zz0['minDist']=50 #the pixel distance between two adajcent particles
             zz0['searchRad']=100
             if branch:
                 zz0['branch']=1

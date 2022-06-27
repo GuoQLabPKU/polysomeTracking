@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/lustre/Data/jiangwh/polysome/python_version/polysome/')
+sys.path.append('./')
 import numpy as np
 import pytest
 
@@ -59,16 +59,15 @@ def test_branchClean():   #maybe the best method is directly generate transList
     idxBranches = setup(conf) #create simulation data  
     polysome1 = Polysome(input_star = './sim.star', run_time = 'run0')  
     polysome1.classify['clustThr'] = 5
-    polysome1.classify['relinkWithoutSmallClasses'] = 0
-    polysome1.sel[0]['minNumTransform'] = 0
+    polysome1.sel[0]['minNumTransform'] = -1
     polysome1.transForm['pixS'] = 3.42 # in Ang
     polysome1.transForm['maxDist'] = 342 # in Ang
 
     polysome1.creatOutputFolder()
     
-    polysome1.calcTransForms(worker_n = 3) #parallel, can assert the speed of pdit next time
+    polysome1.calcTransForms(worker_n = 1) #parallel, can assert the speed of pdit next time
    
-    polysome1.groupTransForms(worker_n = 5) #parallel 
+    polysome1.groupTransForms(worker_n = 1) #parallel 
     
     _, _ = polysome1.selectTransFormClasses()  
                                  

@@ -22,7 +22,7 @@ def genForwardPolyModel(conf = None, eulerAngles=None, save_flag = ''):
         print('pick euler angles from %s'%eulerAngles)
         eulerAngles = pd.read_csv(eulerAngles, sep=",")
     if conf == None:
-        conf = []
+        confs = []
         zz = {}
         zz['type'] = 'vect'
         zz['tomoName'] = '100.mrc'
@@ -35,7 +35,7 @@ def genForwardPolyModel(conf = None, eulerAngles=None, save_flag = ''):
         zz['searchRad'] = 100
         zz['branch'] = 0
         zz['noizeDregree'] = 2
-        conf.append(zz)
+        confs.append(zz)
         zz2 = { }
         zz2['type'] = 'noise'
         zz2['tomoName'] = '100.mrc'
@@ -49,6 +49,7 @@ def genForwardPolyModel(conf = None, eulerAngles=None, save_flag = ''):
     list_ = 'init'
     polysome_flag = dict()
     polysome_Nr = 1
+
     for single_conf in conf:
         if single_conf['type'] == 'vect':
             if isinstance(list_, str):
@@ -75,7 +76,7 @@ def genForwardPolyModel(conf = None, eulerAngles=None, save_flag = ''):
         polysome_label[begin:end] = key
     list_['polysome'] = polysome_label
     #print(list_['polysome'])
-    writeStarFile(list_, 0,save_flag)
+    writeStarFile(list_, 1,save_flag)
     
     return idxBranches
 def writeStarFile(list_, save_npy = 1, save_flag = ''):

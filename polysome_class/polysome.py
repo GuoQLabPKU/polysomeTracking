@@ -72,7 +72,7 @@ class Polysome:
         self.sel.append({})
         self.sel[0]['clusterNr'] = np.array([-1])  #select the clusters of transform
         self.sel[0]['polyNr'] = np.array([-1])   #select the polysome (by polyID)
-        self.sel[0]['list'] = 'Clusters-Sep' #select all clusters
+        self.sel[0]['list'] = 'Cluster-Sep' #select all clusters
       
         #vis
         self.vis  = { }
@@ -172,7 +172,7 @@ class Polysome:
         else:
             posAngListRelion = posAngList
         #recenter particles 
-        if dataType == 'relion2' | dataType == 'stopgap':
+        if (dataType == 'relion2') | (dataType == 'stopgap'):
             if 'rlnOriginX' in posAngListRelion.columns:
                 posAngListRelion['rlnCoordinateX'] = posAngListRelion['rlnCoordinateX'] + posAngListRelion['rlnOriginX']
                 posAngListRelion['rlnCoordinateY'] = posAngListRelion['rlnCoordinateY'] + posAngListRelion['rlnOriginY']
@@ -603,7 +603,7 @@ class Polysome:
         summary each transforms class, like if has branch/the length of the polysome
         all is saved at the stat folder 
         '''
-        self.log.info('Summary transform classes and polysomes')
+        self.log.info('Summary transform clusters and polysomes')
         if outputFolder == '':
             outputFolder = '%s/stat'%self.io['classifyFold']
         if visFolder == '':
@@ -662,8 +662,7 @@ class Polysome:
             self.log.info('Skip translational class density map averaging')
             return 
         wk = "%s/clusters/c*/particleCenter/allParticles.star"%self.io['classifyFold']
-        outfold = '%s/avg/exp/%s/c'%(self.io['classifyFold'], self.io['classificationRun'])
-        
+        outfold = '%s/vis/averages/%s/c'%(self.io['classifyFold'], self.io['classificationRun'])      
         tom_genavgFromTransFormScript(wk, self.avg['maxRes'], self.avg['pixS'],
                                        self.avg['cpuNr'], self.avg['filt'],
                                        self.avg['callByPython'],outfold)
@@ -863,7 +862,7 @@ class Polysome:
         vectVisP = self.vis['vectField']
         if vectVisP['render']:
             tom_plot_vectorField(self.transList, vectVisP['type'], vectVisP['showTomo'], 
-                                  vectVisP['showClassNr'], vectVisP['polyNr'], 
+                                  vectVisP['showClusterNr'], vectVisP['polyNr'], 
                                   vectVisP['onlySelected'],vectVisP['repVectLen'],vectVisP['repVect'],
                                   np.array([0.7,0.7,0.7]), '%s/vis/vectfields'%self.io['classifyFold'])
         else:
@@ -909,7 +908,7 @@ class Polysome:
             return 
         else:
             self.log.info('Rendering longest polysomes')
-            showClassNr = polyVisP['showClassNr']
+            showClassNr = polyVisP['showClusterNr']
             if showClassNr[0] < 0:
                 showClassNr = np.unique(self.transList['pairClass'].values)
             for singleClass in showClassNr:

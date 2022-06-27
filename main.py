@@ -39,7 +39,7 @@ avg_callByPython = 0 #if use python to call relion_reconstruct command 0: genera
                      #if set to 1, you should make sure the relion_reconstruct command is searchable in the system pathway
               
 #####ADVANCED PARAMETERS SETTING######
-link_depth = 2 #the searching depth for linking adjacent transforms into longer polysomes. 0:remove branches
+link_depth = 2 #the searching depth for linking adjacent transforms into longer polysomes. 
 fillUpPoly_addN = 0 #number of particles added in each tail of polysome to fill up gaps   0:switch off filling up step
 fillUpPoly_model = 'lognorm' #the type of fitted distribution for filling up step(genFit:based on experimental data; lognorm:base on lognorm model; max:no model fitting)
 fillUpPoly_threshold = 0.05 #threshold to accept filled up particles. The smaller, the more convinced of accepted interpolated particles 
