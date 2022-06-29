@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-from polysome_class.polysome import Polysome
+from nemotoc.polysome_class.polysome import Polysome
 
 #####BASIC PARAMTERS SETTING########
 input_star =  'data/all_particles_neuron_warp.star' #the star

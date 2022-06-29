@@ -53,12 +53,12 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
     maxChunk = tom_memalloc(freeMem, worker_n, gpu_list)
 
     if isinstance(worker_n, int):
-        from py_cluster.tom_pdist_cpu import tom_pdist
+        from nemotoc.py_cluster.tom_pdist_cpu import tom_pdist
     else:
         if len(gpu_list) == 1:
-            from py_cluster.tom_pdist_gpu2 import tom_pdist
+            from nemotoc.py_cluster.tom_pdist_gpu2 import tom_pdist
         else:
-            from py_cluster.tom_pdist_gpu import tom_pdist
+            from nemotoc.py_cluster.tom_pdist_gpu import tom_pdist
             
        
     distsVect = tom_pdist(transVect,  maxChunk , worker_n, gpu_list, 'euc', transVectInv)
