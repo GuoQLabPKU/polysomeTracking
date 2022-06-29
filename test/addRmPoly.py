@@ -1,8 +1,8 @@
 import numpy as np
 import os
 import shutil
-from py_test.genSimForwardPolyModel import genForwardPolyModel
-from py_test.genSimNoise import genNoise
+from test.genSimForwardPolyModel import genForwardPolyModel
+from test.genSimNoise import genNoise
 
 def setup(conf=None, noizeDegree = 2, branch = 0, eulerAngles = None, genType = 'poly'):
     '''

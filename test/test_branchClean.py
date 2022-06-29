@@ -3,7 +3,7 @@ sys.path.append('./')
 import numpy as np
 import pytest
 
-from py_test.addRmPoly import setup, teardown
+from test.addRmPoly import setup, teardown
 from polysome_class.polysome import Polysome
 
 def swapIdx(idxPair):

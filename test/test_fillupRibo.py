@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import timeit as ti
 
-from py_test.addRmPoly import setup, teardown
+from test.addRmPoly import setup, teardown
 from py_io.tom_starread import tom_starread, generateStarInfos
 from py_io.tom_starwrite import tom_starwrite
 from polysome_class.polysome import Polysome

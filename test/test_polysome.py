@@ -3,7 +3,7 @@ import os
 sys.path.append('./')
 import numpy as np
 import pytest
-from py_test.addRmPoly import setup, teardown
+from test.addRmPoly import setup, teardown
 from py_io.tom_starread import tom_starread
 from polysome_class.polysome import Polysome
 

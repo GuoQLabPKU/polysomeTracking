@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages 
-
+import os, sys 
+sys.path.insert(0, f'{os.path.dirname(__file__)}/nemotoc')
 setup(     
       name = 'nemotoc',
       version = '1.0.0b0',
@@ -7,21 +8,21 @@ setup(
       author='Wenhong Jiang',
       author_email='jiangwh@pku.edu.cn',
       url='https://github.com/GuoQLabPKU/polysomeTracking',
-      packages=find_packages(),
-      
+      packages=find_packages('nemotoc'),
       include_package_data = True,
+     
       install_requires = [
               'numpy',
               'pandas',
-              'matplotlib',
+              'matplotlib', 
               'cupy',
               'pytest',
               'networkx',
               'seaborn',
               'dill',
               'alive-progress',
-              'psutil' ]
+              'psutil' ],
       
-      
+      python_requires = '>=3'
   
       )
