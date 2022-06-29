@@ -907,7 +907,7 @@ class Polysome:
             self.log.info('Render figures done')
             return 
         else:
-            self.log.info('Rendering longest polysomes')
+            self.log.info('Render longest polysomes')
             showClassNr = polyVisP['showClusterNr']
             if showClassNr[0] < 0:
                 showClassNr = np.unique(self.transList['pairClass'].values)
@@ -933,6 +933,6 @@ class Polysome:
                                      outputFolder = '%s/vis/vectfields/c%d_longestPoly.png'%(self.io['classifyFold'],singleClass)
                                      ,if_2views = 1) 
                 del transListLongestPoly
-                self.log.info('Render figures done')
+            self.log.info('Render figures done')
      
 

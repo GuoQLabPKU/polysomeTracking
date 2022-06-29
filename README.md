@@ -1,7 +1,5 @@
 # Neighboring particles' conformation clustering  based on particles' positions and euler angles and the polyribosome tracking
 ![This is an image](https://github.com/werhoog/polysomeTracking/blob/main/image/concept2.PNG)
-
-this folder contains the scripts for describing quantitavely polysomes high order conformations 
 ## Concept
 NEMO-TOC can classify the relative spatial arrangement of neighbors based on the positions and Euler angles. 
 Features to track ordered linear assemblies are also added.
@@ -40,6 +38,7 @@ Reference:
     cd polysomeTracking/
     bash install_conda_pkgs.sh
     ```
+    > *Replace the cudatoolkit version with the appropriate version of CUDA installed with the GPU drivers (you can check the CUDA version with nvidia-smi)*
 ## Platform
 Any platform (linux/windows/macos) was tested
 ## Usage
@@ -57,7 +56,7 @@ This will test three functions:
 ## Output 
 Given an input starfile named 'particles.star' in ***main.py***, for example, several folders will be created like below,
 
-cluster-particle
+cluster-particle\
   - run0   (*change the folder name by  changing ***run_time*** in **main.py**)*
     - allTransformsb4Relink.star  
       > *transforms starfiles before filtering*
