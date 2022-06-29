@@ -1,7 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt
 
-from py_io.tom_starread import tom_starread
+from nemotoc.py_io.tom_starread import tom_starread
 
 def tom_plot_transVectXYZ(allTransList, statPerClassList, kind, cellLine, classList = None):
     '''

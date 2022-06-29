@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 
-from py_transform.tom_sum_rotation import tom_sum_rotation
-from py_transform.tom_pointrotate import tom_pointrotate
-from py_io.tom_starread import tom_starread 
+from nemotoc.py_transform.tom_sum_rotation import tom_sum_rotation
+from nemotoc.py_transform.tom_pointrotate import tom_pointrotate
+from nemotoc.py_io.tom_starread import tom_starread 
 
 def tom_genForwardCoordPairTransForm(centerCoord, transList, stateTransList = None):
     '''

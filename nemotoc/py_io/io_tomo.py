@@ -1,4 +1,4 @@
-from py_io.tomo_io.image_io import ImageIO as ImageIO
+from nemotoc.py_io.tomo_io.image_io import ImageIO as ImageIO
 import numpy 
 import os
 

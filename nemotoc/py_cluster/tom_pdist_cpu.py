@@ -6,9 +6,9 @@ import multiprocessing as mp
 from alive_progress import alive_bar 
 import random
 
-from py_cluster.tom_calc_packages import tom_calc_packages
-from py_transform.tom_sum_rotation import tom_sum_rotation
-from py_log.tom_logger import Log
+from nemotoc.py_cluster.tom_calc_packages import tom_calc_packages
+from nemotoc.py_transform.tom_sum_rotation import tom_sum_rotation
+from nemotoc.py_log.tom_logger import Log
 
 def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc', 
               in_Inv = '', jobListSt = None,  tmpDir = '',  cleanTmpDir = 1, verbose = 1):

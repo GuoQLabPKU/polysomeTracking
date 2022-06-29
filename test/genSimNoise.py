@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-from py_io.tom_starwrite import tom_starwrite
-from py_io.tom_starread import generateStarInfos
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_io.tom_starread import generateStarInfos
 
 def genNoise(eulerAngles = None):
     '''

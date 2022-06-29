@@ -4,10 +4,10 @@ import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
 from scipy import spatial
 
-from py_io.tom_starread import tom_starread,generateStarInfos
-from py_io.tom_starwrite import tom_starwrite
-from py_transform.tom_pointrotate import tom_pointrotate
-from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
+from nemotoc.py_io.tom_starread import tom_starread,generateStarInfos
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_transform.tom_pointrotate import tom_pointrotate
+from nemotoc.py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 
 def tom_plot_mRNAPath(allTransList, relCoordA = np.array([15,1,3]), relCoordE = np.array([6,-13,7]), 
              saveFileName = '', figsave_dir = '', classList = None, minPolyLen = 10, if_disp = 1):

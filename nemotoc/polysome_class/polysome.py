@@ -8,28 +8,28 @@ import copy
 import scipy.spatial.distance as ssd
 
 
-from py_io.tom_starread import tom_starread, generateStarInfos
-from py_io.tom_starwrite import tom_starwrite
-from py_transform.tom_calcTransforms import tom_calcTransforms
-from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
-from py_cluster.tom_calcLinkage import tom_calcLinkage
-from py_cluster.tom_dendrogram import tom_dendrogram
-from py_cluster.tom_selectTransFormClasses import tom_selectTransFormClasses
-from py_cluster.tom_A2Odist import tom_A2Odist
-from py_cluster.tom_assignTransFromCluster import tom_assignTransFromCluster
-from py_align.tom_align_transformDirection import tom_align_transformDirection
-from py_link.tom_linkTransforms import tom_linkTransforms
-from py_link.tom_find_poorBranch import tom_find_poorBranch
-from py_link.tom_connectGraph import tom_connectGraph
-from py_link.tom_find_transFormNeighbours import *
-from py_summary.tom_analysePolysomePopulation import *
-from py_summary.tom_analyseRiboAttrib import tom_analyseRiboAttrib
-from py_summary.tom_genListFromTransForm import tom_genListFromTransForm
-from py_summary.tom_genavgFromTransFormScript import tom_genavgFromTransFormScript
-from py_stats.tom_kdeEstimate import tom_kdeEstimate
-from py_vis.tom_plot_vectorField import tom_plot_vectorField
-from py_mergePoly.tom_addTailRibo import tom_addTailRibo,saveStruct 
-from py_log.tom_logger import Log
+from nemotoc.py_io.tom_starread import tom_starread, generateStarInfos
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_transform.tom_calcTransforms import tom_calcTransforms
+from nemotoc.py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
+from nemotoc.py_cluster.tom_calcLinkage import tom_calcLinkage
+from nemotoc.py_cluster.tom_dendrogram import tom_dendrogram
+from nemotoc.py_cluster.tom_selectTransFormClasses import tom_selectTransFormClasses
+from nemotoc.py_cluster.tom_A2Odist import tom_A2Odist
+from nemotoc.py_cluster.tom_assignTransFromCluster import tom_assignTransFromCluster
+from nemotoc.py_align.tom_align_transformDirection import tom_align_transformDirection
+from nemotoc.py_link.tom_linkTransforms import tom_linkTransforms
+from nemotoc.py_link.tom_find_poorBranch import tom_find_poorBranch
+from nemotoc.py_link.tom_connectGraph import tom_connectGraph
+from nemotoc.py_link.tom_find_transFormNeighbours import *
+from nemotoc.py_summary.tom_analysePolysomePopulation import *
+from nemotoc.py_summary.tom_analyseRiboAttrib import tom_analyseRiboAttrib
+from nemotoc.py_summary.tom_genListFromTransForm import tom_genListFromTransForm
+from nemotoc.py_summary.tom_genavgFromTransFormScript import tom_genavgFromTransFormScript
+from nemotoc.py_stats.tom_kdeEstimate import tom_kdeEstimate
+from nemotoc.py_vis.tom_plot_vectorField import tom_plot_vectorField
+from nemotoc.py_mergePoly.tom_addTailRibo import tom_addTailRibo,saveStruct 
+from nemotoc.py_log.tom_logger import Log
 
 
 

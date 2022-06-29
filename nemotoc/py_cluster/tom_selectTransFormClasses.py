@@ -1,6 +1,6 @@
-from py_io.tom_starread import generateStarInfos
-from py_io.tom_starwrite import tom_starwrite
-from py_io.tom_extractData import tom_extractData
+from nemotoc.py_io.tom_starread import generateStarInfos
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_io.tom_extractData import tom_extractData
 
 import numpy as np
 import os

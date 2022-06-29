@@ -3,9 +3,9 @@ import pandas as pd
 import itertools
 
 
-from py_io.tom_starread import tom_starread, generateStarInfos
-from py_io.tom_starwrite import tom_starwrite
-from py_log.tom_logger import Log
+from nemotoc.py_io.tom_starread import tom_starread, generateStarInfos
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_log.tom_logger import Log
 
 def tom_analyseRiboAttrib(transList, save_dir = '',
                           transListB4Relink = None, particleStar = None):

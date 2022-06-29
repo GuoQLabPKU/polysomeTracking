@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.cluster.vq import kmeans, vq
-from py_log.tom_logger import Log
+from nemotoc.py_log.tom_logger import Log
 
 def alignDir(pairList, iterN): #the input is subset of one dataframe pointer
     while iterN > 0:

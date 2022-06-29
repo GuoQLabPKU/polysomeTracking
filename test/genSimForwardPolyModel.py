@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
-from py_transform.tom_sum_rotation import tom_sum_rotation
-from py_transform.tom_pointrotate import tom_pointrotate
-from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
-from py_io.tom_starwrite import tom_starwrite
-from py_io.tom_starread import generateStarInfos
+from nemotoc.py_transform.tom_sum_rotation import tom_sum_rotation
+from nemotoc.py_transform.tom_pointrotate import tom_pointrotate
+from nemotoc.py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_io.tom_starread import generateStarInfos
 
 def genForwardPolyModel(conf = None, eulerAngles=None, save_flag = ''):
     '''

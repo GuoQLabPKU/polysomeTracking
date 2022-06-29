@@ -1,8 +1,8 @@
 import numpy as np
 
-from py_transform.tom_eulerconvert_Quaternion import tom_eulerconvert_Quaternion
-from py_transform.tom_quaternion2rotMatrix import tom_quaternion2rotMatrix
-from py_transform.tom_rotmatrix2angles import tom_rotmatrix2angles
+from nemotoc.py_transform.tom_eulerconvert_Quaternion import tom_eulerconvert_Quaternion
+from nemotoc.py_transform.tom_quaternion2rotMatrix import tom_quaternion2rotMatrix
+from nemotoc.py_transform.tom_rotmatrix2angles import tom_rotmatrix2angles
 def tom_average_rotations(rotations, rotFlav = 'zxz'):
     '''
     

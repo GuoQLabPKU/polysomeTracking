@@ -1,5 +1,5 @@
-from  py_summary.tom_analysePolysomePopulation import calcVectStat, calcAngStat
-from py_cluster.tom_A2Odist import tom_A2Odist
+from nemotoc.py_summary.tom_analysePolysomePopulation import calcVectStat, calcAngStat
+from nemotoc.py_cluster.tom_A2Odist import tom_A2Odist
 
 import numpy as np
 

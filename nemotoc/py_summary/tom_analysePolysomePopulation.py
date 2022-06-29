@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from py_io.tom_starwrite import tom_starwrite
-from py_io.tom_starread import generateStarInfos
-from py_transform.tom_angular_distance import tom_angular_distance
-from py_transform.tom_average_rotations import tom_average_rotations
-from py_stats.tom_fitDist import tom_fitDist
-from py_vis.tom_visDist import tom_visDist
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_io.tom_starread import generateStarInfos
+from nemotoc.py_transform.tom_angular_distance import tom_angular_distance
+from nemotoc.py_transform.tom_average_rotations import tom_average_rotations
+from nemotoc.py_stats.tom_fitDist import tom_fitDist
+from nemotoc.py_vis.tom_visDist import tom_visDist
 
 
 def analysePopulation(pairList, maxDistInpix, visFolder = '', cmb_metric = 'scale2Ang'): 

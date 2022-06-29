@@ -2,8 +2,8 @@ import sys
 sys.path.append('./')
 import numpy as np
 import pytest
-from py_cluster.tom_pdist_cpu import tom_pdist as tp1
-from py_cluster.tom_pdist_gpu import tom_pdist as tp2
+from nemotoc.py_cluster.tom_pdist_cpu import tom_pdist as tp1
+from nemotoc.py_cluster.tom_pdist_gpu import tom_pdist as tp2
 
 def eulerInv(ang):
     angInv =  np.array([-ang[1], -ang[0], -ang[2]])   

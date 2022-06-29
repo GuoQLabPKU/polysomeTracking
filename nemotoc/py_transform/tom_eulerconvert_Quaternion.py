@@ -1,7 +1,8 @@
 import numpy as np
 import os
-from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
-from py_transform.tom_sum_rotation import tom_sum_rotation
+
+from nemotoc.py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
+from nemotoc.py_transform.tom_sum_rotation import tom_sum_rotation
 def tom_eulerconvert_Quaternion(angles, rotFlav = 'zxz'):  #the input should be 2D array, not 1D array
     '''
     

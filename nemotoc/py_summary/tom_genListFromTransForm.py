@@ -1,11 +1,11 @@
 import os
 import numpy as np
 
-from py_io.tom_starread import tom_starread
-from py_io.tom_extractData import tom_extractData
-from py_io.tom_starwrite import tom_starwrite
-from py_transform.tom_average_rotations import tom_average_rotations
-from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
+from nemotoc.py_io.tom_starread import tom_starread
+from nemotoc.py_io.tom_extractData import tom_extractData
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_transform.tom_average_rotations import tom_average_rotations
+from nemotoc.py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
 
 def tom_genListFromTransForm(transList, outputFolder, polyType = 'center', listFlav = 'rel'):
     '''

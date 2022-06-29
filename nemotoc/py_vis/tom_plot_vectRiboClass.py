@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import collections 
 import copy  
 
-from py_io.tom_starread import tom_starread
+from nemotoc.py_io.tom_starread import tom_starread
 
 def tom_plot_vectRiboClass(allTransList, if_norm = 1, if_show = 1, 
                            classList = None, save_dir = ''):

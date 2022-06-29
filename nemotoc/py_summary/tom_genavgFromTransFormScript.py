@@ -4,7 +4,7 @@ import subprocess
 import re
 import glob
 
-from py_log.tom_logger import Log
+from nemotoc.py_log.tom_logger import Log
 def tom_genavgFromTransFormScript(transList, maxRes, pixS, workerNr = 35 ,
                                   classFilt = -1, callByPython = 0,
                                   outputRoot = 'avg/r1'):

@@ -1,5 +1,5 @@
 import numpy as np
-from py_cluster.tom_A2Odist import tom_A2Odist
+from nemotoc.py_cluster.tom_A2Odist import tom_A2Odist
 
 
 def tom_find_poorBranch(pairList, shift, rot, worker_n = 1, gpu_list = None, cmb_metric = 'scale2Ang',

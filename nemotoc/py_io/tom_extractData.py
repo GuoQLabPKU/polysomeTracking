@@ -1,8 +1,8 @@
 #import pandas as pd
 import numpy as np
 
-from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
-from py_io.tom_starread import tom_starread
+from nemotoc.py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
+from nemotoc.py_io.tom_starread import tom_starread
 
 def tom_extractData(listFile, pixS = -1, makePosUnique = 0):
     '''

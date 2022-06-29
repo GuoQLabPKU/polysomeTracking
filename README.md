@@ -39,6 +39,12 @@ Reference:
     bash install_conda_pkgs.sh
     ```
     > *Replace the cudatoolkit version with the appropriate version of CUDA installed with the GPU drivers (you can check the CUDA version with nvidia-smi)*
+5. install NEMO-TOC
+    ```
+    python setup.py build
+    python setup.py sdist
+    pip install dist/nemotoc-1.0.0b0.tar.gz
+    ```
 ## Platform
 Any platform (linux/windows/macos) was tested
 ## Usage

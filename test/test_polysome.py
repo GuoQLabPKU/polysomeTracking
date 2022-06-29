@@ -4,8 +4,8 @@ sys.path.append('./')
 import numpy as np
 import pytest
 from test.addRmPoly import setup, teardown
-from py_io.tom_starread import tom_starread
-from polysome_class.polysome import Polysome
+from nemotoc.py_io.tom_starread import tom_starread
+from nemotoc.polysome_class.polysome import Polysome
 
 ####PARAMETERS#####
 eulerAngles = 'py_test/euler_angles.csv'

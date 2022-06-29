@@ -15,8 +15,8 @@ import logging
 from copy import copy
 import numpy
 
-from py_io.tomo_io.local_exceptions import FileTypeError
-import py_io.tomo_io.microscope_db as microscope_db
+from nemotoc.py_io.tomo_io.local_exceptions import FileTypeError
+import nemotoc.py_io.tomo_io.microscope_db as microscope_db
 
 class ImageIO():
     """

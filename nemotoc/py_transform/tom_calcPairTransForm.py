@@ -1,7 +1,7 @@
 import numpy as np
-from py_transform.tom_sum_rotation import tom_sum_rotation
-from py_transform.tom_pointrotate import tom_pointrotate
-from py_transform.tom_angular_distance import tom_angular_distance
+from nemotoc.py_transform.tom_sum_rotation import tom_sum_rotation
+from nemotoc.py_transform.tom_pointrotate import tom_pointrotate
+from nemotoc.py_transform.tom_angular_distance import tom_angular_distance
 
 def tom_calcPairTransForm(pos1, ang1, pos2, ang2, dMetric = 'exact'):
     '''

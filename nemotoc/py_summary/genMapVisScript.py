@@ -2,8 +2,8 @@ import os
 import numpy as np
 
 
-from py_io.io_tomo import load_tomo 
-from py_io.tom_starread import tom_starread
+from nemotoc.py_io.io_tomo import load_tomo 
+from nemotoc.py_io.tom_starread import tom_starread
 
 def genMapVisScript(mapfold, classFile, scriptName, transList, voxelSize, offSet):
     

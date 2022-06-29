@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.cluster.hierarchy import linkage
-from py_memory.tom_memalloc import tom_memalloc
-from py_log.tom_logger import Log
+from nemotoc.py_memory.tom_memalloc import tom_memalloc
+from nemotoc.py_log.tom_logger import Log
 import random
 
 def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std', worker_n = None, gpu_list = None,freeMem = None ):

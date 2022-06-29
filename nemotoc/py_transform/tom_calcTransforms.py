@@ -6,11 +6,11 @@ import shutil
 import gc
 from alive_progress import alive_bar 
 
-from py_io.tom_starread import generateStarInfos
-from py_io.tom_extractData import tom_extractData
-from py_io.tom_starwrite import tom_starwrite
-from py_transform.tom_calcPairTransForm import tom_calcPairTransForm
-from py_log.tom_logger import Log
+from nemotoc.py_io.tom_starread import generateStarInfos
+from nemotoc.py_io.tom_extractData import tom_extractData
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_transform.tom_calcPairTransForm import tom_calcPairTransForm
+from nemotoc.py_log.tom_logger import Log
 
 
 def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', outputName='', verbose=1, worker_n = 1):

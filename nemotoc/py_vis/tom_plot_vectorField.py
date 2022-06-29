@@ -3,9 +3,9 @@ import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from py_io.tom_extractData import tom_extractData
-from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
-from py_transform.tom_pointrotate import tom_pointrotate
+from nemotoc.py_io.tom_extractData import tom_extractData
+from nemotoc.py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
+from nemotoc.py_transform.tom_pointrotate import tom_pointrotate
 
 def tom_plot_vectorField(posAng, mode = 'basic', tomoID = np.array([-1]), classNr = np.array([-1]), \
                          polyNr = np.array([-1]), onlySelected = 1, scale=20, \

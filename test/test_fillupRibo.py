@@ -5,10 +5,10 @@ import pytest
 import timeit as ti
 
 from test.addRmPoly import setup, teardown
-from py_io.tom_starread import tom_starread, generateStarInfos
-from py_io.tom_starwrite import tom_starwrite
-from polysome_class.polysome import Polysome
-from py_vis.tom_plot_vectorField import tom_plot_vectorField
+from nemotoc.py_io.tom_starread import tom_starread, generateStarInfos
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.polysome_class.polysome import Polysome
+from nemotoc.py_vis.tom_plot_vectorField import tom_plot_vectorField
 
 def generateDeletPoly():
     #generate polysome information

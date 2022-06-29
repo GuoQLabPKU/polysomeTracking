@@ -9,15 +9,15 @@ import multiprocessing as mp
 import shutil
 import gc
 
-from py_log.tom_logger import Log
-from py_io.tom_starread import tom_starread, generateStarInfos
-from py_io.tom_starwrite import tom_starwrite
-from py_io.tom_extractData import tom_extractData
-from py_mergePoly.tom_extendPoly import tom_extendPoly
-from py_cluster.tom_A2Odist import tom_A2Odist
-from py_transform.tom_calcPairTransForm import tom_calcPairTransForm
-from py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
-from py_stats.tom_calcPvalues import tom_calcPvalues
+from nemotoc.py_log.tom_logger import Log
+from nemotoc.py_io.tom_starread import tom_starread, generateStarInfos
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_io.tom_extractData import tom_extractData
+from nemotoc.py_mergePoly.tom_extendPoly import tom_extendPoly
+from nemotoc.py_cluster.tom_A2Odist import tom_A2Odist
+from nemotoc.py_transform.tom_calcPairTransForm import tom_calcPairTransForm
+from nemotoc.py_transform.tom_eulerconvert_xmipp import tom_eulerconvert_xmipp
+from nemotoc.py_stats.tom_calcPvalues import tom_calcPvalues
 
 def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
                     cmbDistMaxMeanStd, oriPartList, pruneRad, 

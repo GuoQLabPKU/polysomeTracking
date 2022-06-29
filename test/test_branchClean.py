@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from test.addRmPoly import setup, teardown
-from polysome_class.polysome import Polysome
+from nemotoc.polysome_class.polysome import Polysome
 
 def swapIdx(idxPair):
     

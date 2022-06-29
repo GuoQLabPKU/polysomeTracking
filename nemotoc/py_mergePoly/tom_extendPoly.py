@@ -1,7 +1,7 @@
 import numpy as np
 
-from py_transform.tom_sum_rotation import tom_sum_rotation
-from py_transform.tom_pointrotate import tom_pointrotate
+from nemotoc.py_transform.tom_sum_rotation import tom_sum_rotation
+from nemotoc.py_transform.tom_pointrotate import tom_pointrotate
 
 def tom_extendPoly(riboInfo, avgRot, avgShift, particleStar , pruneRad, 
                    numAddRibo = 1, xyzborder = None):

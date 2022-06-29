@@ -8,7 +8,7 @@ setup(
       author='Wenhong Jiang',
       author_email='jiangwh@pku.edu.cn',
       url='https://github.com/GuoQLabPKU/polysomeTracking',
-      packages=find_packages('nemotoc'),
+      packages=find_packages(),
       include_package_data = True,
      
       install_requires = [

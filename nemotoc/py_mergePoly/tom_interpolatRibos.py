@@ -3,14 +3,14 @@ import warnings
 import pandas as pd
 
 
-from py_io.tom_starread import tom_starread, generateStarInfos
-from py_io.tom_starwrite import tom_starwrite
-from py_io.tom_extractData import tom_extractData
-from py_link.tom_connectGraph import tom_connectGraph
-from py_mergePoly.tom_extendPoly import checkRibo
-from py_mergePoly.tom_addTailRibo import updateParticle
-from py_transform.tom_sum_rotation import tom_sum_rotation
-from py_transform.tom_pointrotate import tom_pointrotate
+from nemotoc.py_io.tom_starread import tom_starread, generateStarInfos
+from nemotoc.py_io.tom_starwrite import tom_starwrite
+from nemotoc.py_io.tom_extractData import tom_extractData
+from nemotoc.py_link.tom_connectGraph import tom_connectGraph
+from nemotoc.py_mergePoly.tom_extendPoly import checkRibo
+from nemotoc.py_mergePoly.tom_addTailRibo import updateParticle
+from nemotoc.py_transform.tom_sum_rotation import tom_sum_rotation
+from nemotoc.py_transform.tom_pointrotate import tom_pointrotate
 
                     
 def tom_interpolatRibos(allTransListFile, stateFile, particleDetect, particleOut, interpoltaN = 10, classList = None, 
