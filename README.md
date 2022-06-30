@@ -48,7 +48,14 @@ Reference:
 ## Platform
 Any platform (linux/windows/macos) was tested
 ## Usage
-Modify suitable parameters in main.py, then `python main.py`
+1. generate configure file. Run the command below will generate a configure file conf.py
+    ```
+    nemotocGen
+    ```
+2. modify suitable parameters in the generated conf.py and run the command below  
+    ```
+    nemotocRun -c conf.py
+    ```
 ## Debug
 ```
 python nemotoc_test/test_*

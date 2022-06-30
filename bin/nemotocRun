@@ -1,4 +1,16 @@
 #!/usr/bin/bash 
 
-conf=$1
-`which python` $conf
+while getopts ":c:" opt
+do 
+    case $opt in 
+        c)
+        `which python` $OPTARG
+        ;;
+        ?)
+        echo "unknown parameters"
+        exit 1;;
+        :)
+        echo "-c [configure file] $OPTARG"
+        ;;
+        
+esac done

@@ -1,4 +1,5 @@
 def genConf():
+    print('generate configure file')
     f = open('conf.py', 'a+')
     print('import numpy as np', file = f)
     print('import os', file = f)
@@ -131,6 +132,7 @@ def genConf():
     print('            show_longestPoly, if_avg, average_particles, avg)', file = f) 
     print("    print('Successfully finish NEMO-TOC')", file = f)
     
+    print('the generated configure file is named conf.py')
 
 if __name__ == '__main__': 
     genConf()
