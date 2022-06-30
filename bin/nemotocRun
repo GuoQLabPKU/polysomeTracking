@@ -1,6 +1,6 @@
 #!/usr/bin/bash 
 
-while getopts ":c:" opt
+while getopts ":c:h" opt
 do 
     case $opt in 
         c )
@@ -12,6 +12,9 @@ do
         : ) 
         echo "Usage:nemotocRun -c [configure file]"
         exit 1;;
+        h ) 
+        echo "Usage:nemotocRun -c [configure file]"
+        exit 1;;        
         
 esac 
 done
