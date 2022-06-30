@@ -50,7 +50,7 @@ Any platform (linux/windows/macos) was tested
 ## Usage
 1. generate configure file. Run the command below will generate a configure file conf.py
     ```
-    nemotocGen
+    nemotocGen --getConf
     ```
 2. modify suitable parameters in the generated conf.py and run the command below  
     ```
