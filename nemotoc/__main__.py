@@ -1,7 +1,7 @@
 import optparse 
 def genConf():
     parse=optparse.OptionParser(usage='"Usage:nemotocGen --getConf"')  
-    parse.add_option('-g','--getConf',dest='getConf', choices = [0,1], type=int, help='if generate configure file. 1:yes/0:no')  
+    parse.add_option('-g','--getConf',dest='getConf', type=int, help='if generate configure file. 1:yes/0:no')  
     parse.set_defaults(g=1) 
     options,args=parse.parse_args()
     if options.getConf:
