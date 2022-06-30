@@ -907,7 +907,7 @@ class Polysome:
             self.log.info('Render figures done')
             return 
         else:
-            self.log.info('Render longest polysomes')
+            self.log.info('Render longest polysomes figures')
             showClassNr = polyVisP['showClusterNr']
             if showClassNr[0] < 0:
                 showClassNr = np.unique(self.transList['pairClass'].values)

@@ -51,7 +51,7 @@ def plot_vectField(posAng, mode, repVect, scale, col, classNr, polyNr, onlySelec
             print('can use tomoID parameter to select specific tomograms')
             uTomoID = uTomoID[:5]            
         
-        print('rendering vector fields')
+        #print('rendering vector fields')
         
         for i in range(len(uTomoID)):
             tmpInd = np.where(allTomoID == uTomoID[i])[0]

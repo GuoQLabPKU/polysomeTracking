@@ -1,0 +1,4 @@
+#!/usr/bin/bash 
+
+conf=$1
+`which python` $conf

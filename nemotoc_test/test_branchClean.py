@@ -3,7 +3,7 @@ sys.path.append('./')
 import numpy as np
 import pytest
 
-from test.addRmPoly import setup, teardown
+from nemotoc_test.addRmPoly import setup, teardown
 from nemotoc.polysome_class.polysome import Polysome
 
 def swapIdx(idxPair):

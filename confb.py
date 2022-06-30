@@ -128,4 +128,5 @@ if __name__ == '__main__':
             search_radius, link_depth, cluster_threshold, 
             minNumTransform_ratio, fillUpPoly, cpuN, gpu_list, remove_branches, vectorfield_plotting, 
             show_longestPoly, if_avg, average_particles, avg) 
+    print('Successfully finish NEMO-TOC')
     

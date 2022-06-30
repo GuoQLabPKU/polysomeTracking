@@ -102,7 +102,7 @@ def writeStarFile(list_, save_npy = 1, save_flag = ''):
         ori_polysome[np.min(idx)] = set(idx)
     #save the dict 
     if save_npy:
-        np.save('./py_test/ori_polysome.npy', ori_polysome)      
+        np.save('./nemotoc_test/ori_polysome.npy', ori_polysome)      
     list_.drop('polysome',axis = 1,inplace = True)
     starInfo['data_particles'] = list_
     if len(save_flag) == 0:

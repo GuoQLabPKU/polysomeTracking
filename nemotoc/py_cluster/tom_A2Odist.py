@@ -41,14 +41,14 @@ def tom_A2Odist(transVect, transAng, shift, rot,
 def getDist(transVect, transAng,worker_n, gpu_list, cmb_metric, pruneRad):  
     maxChunk = tom_memalloc(None, worker_n, gpu_list) #mallocal the memory
     if isinstance(worker_n, int):
-        from py_cluster.tom_pdist_cpu import tom_pdist
+        from nemotoc.py_cluster.tom_pdist_cpu import tom_pdist
         tmpDir = 'tmpA2Odistcpu' 
         jobListdict = genJobListCPU(transVect.shape[0] - 1, tmpDir, maxChunk)
     else:        
         if (isinstance(gpu_list,list)) & (len(gpu_list) == 1):
-            from py_cluster.tom_pdist_gpu2 import tom_pdist                
+            from nemotoc.py_cluster.tom_pdist_gpu2 import tom_pdist                
         else:
-            from py_cluster.tom_pdist_gpu import tom_pdist
+            from nemotoc.py_cluster.tom_pdist_gpu import tom_pdist
         tmpDir = 'tmpA2Odistgpu' 
         jobListdict = genJobListGpu(transVect.shape[0] - 1, tmpDir, maxChunk)
 

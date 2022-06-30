@@ -4,7 +4,7 @@
 NEMO-TOC can classify the relative spatial arrangement of neighbors based on the positions and Euler angles. 
 Features to track ordered linear assemblies are also added.
 Reference:
-## Scripts description
+## Scripts description (located at nemotoc/)
 - **polysome_class:** folder with function class written by python
 - **py_align:** folder with scripts alignning the direction of particle pairs transformation
 - **py_cluster:** folder with scripts classifing the neighbors' pairs transformation
@@ -51,18 +51,18 @@ Any platform (linux/windows/macos) was tested
 Modify suitable parameters in main.py, then `python main.py`
 ## Debug
 ```
-pyest py_test/test_*
+python nemotoc_test/test_*
 ```
 This will test three functions:
 - test_polysome.py: test if track right  linear assemblies(polysomes) from the simulation dataset 
 - test_fillupRibo.py: test if fill up right particles after manully delete two particles 
 - test_branchClean.py: test if clean the branches created manully in the simulation dataset
 
-### If meet any memory error, please reduce the input variable ***Chunk*** in function ***tom_memalloc*** **(py_memory/tom_memalloc.py)**
+### If meet any memory error, please reduce the input variable ***Chunk*** in function ***tom_memalloc*** **(nemotoc/py_memory/tom_memalloc.py)**
 ## Output 
 Given an input starfile named 'particles.star' in ***main.py***, for example, several folders will be created like below,
 
-cluster-particle\
+cluster-particles\
   - run0   (*change the folder name by  changing ***run_time*** in **main.py**)*
     - allTransformsb4Relink.star  
       > *transforms starfiles before filtering*

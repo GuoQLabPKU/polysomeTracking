@@ -3,12 +3,12 @@ import os
 sys.path.append('./')
 import numpy as np
 import pytest
-from test.addRmPoly import setup, teardown
+from nemotoc_test.addRmPoly import setup, teardown
 from nemotoc.py_io.tom_starread import tom_starread
 from nemotoc.polysome_class.polysome import Polysome
 
 ####PARAMETERS#####
-eulerAngles = 'py_test/euler_angles.csv'
+eulerAngles = 'test/euler_angles.csv'
 testType = 'polysome' #noise: generate noise star file
 ##################
 
@@ -78,7 +78,7 @@ def test_polysome(eulerAngles):
     
       
     track_polysome = pick_polysome('./cluster-simOrderRandomized/run0/allTransforms.star')   
-    real_polysome = np.load('./py_test/ori_polysome.npy',allow_pickle=True).item()
+    real_polysome = np.load('./nemotoc_test/ori_polysome.npy',allow_pickle=True).item()
     assert len(track_polysome) == len(real_polysome)
     for single_key in real_polysome.keys():
         print('real poly idx:',real_polysome)
