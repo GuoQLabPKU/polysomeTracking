@@ -7,8 +7,8 @@ import nemotoc
 
 def genConf():
     parse=optparse.OptionParser(usage='"Usage:nemotocGen [--getConf|--getTestData]"')  
-    parse.add_option('-gC','--getConf',dest='getConf', type=int, help='if fetch configure file. 1:yes/0:no',default=1)  
-    parse.add_option('-gT','--getTestData',dest='getTest', type=int, help='if fetch test star file. 1:yes/0:no',default=1)
+    parse.add_option('-c','--getConf',dest='getConf', type=int, help='fetch configure file. 1:yes/0:no')  
+    parse.add_option('-t','--getTestData',dest='getTest', type=int, help='fetch test star file. 1:yes/0:no')
     options,args=parse.parse_args()
     
     nemoPath = nemotoc.__path__[0]
@@ -24,7 +24,7 @@ def genConf():
     else:
         print('no configure file will be fetched.')
         
-    if options.getTestData:
+    if options.getTest:
         testFile = '%s/data/all_particles_neuron_warp.star'%nemoPath
         if os.path.exists(testFile):
             shutil.copyfile(testFile, 'all_particles_neuron_warp.star')

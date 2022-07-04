@@ -14,8 +14,7 @@ setup(
               'console_scripts':['nemotocGen=nemotoc.__main__:genConf'],
               },
       packages=find_packages(),
-      include_package_data = True,
-     
+      include_package_data = True, 
       install_requires = [
               'numpy',
               'pandas',
