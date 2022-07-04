@@ -2,13 +2,13 @@ import sys
 sys.path.append('./')
 import numpy as np
 import pytest
-import timeit as ti
+
 
 from nemotoc_test.addRmPoly import setup, teardown
-from nemotoc.py_io.tom_starread import tom_starread, generateStarInfos
+from nemotoc.py_io.tom_starread import tom_starread
 from nemotoc.py_io.tom_starwrite import tom_starwrite
 from nemotoc.polysome_class.polysome import Polysome
-from nemotoc.py_vis.tom_plot_vectorField import tom_plot_vectorField
+
 
 def generateDeletPoly():
     #generate polysome information

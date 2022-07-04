@@ -3,12 +3,13 @@ import os
 sys.path.append('./')
 import numpy as np
 import pytest
+
 from nemotoc_test.addRmPoly import setup, teardown
 from nemotoc.py_io.tom_starread import tom_starread
 from nemotoc.polysome_class.polysome import Polysome
 
 ####PARAMETERS#####
-eulerAngles = 'test/euler_angles.csv'
+eulerAngles = 'nemotoc_test/euler_angles.csv'
 testType = 'polysome' #noise: generate noise star file
 ##################
 
@@ -43,7 +44,7 @@ def pick_polysome(input_star):
     return polysome
 
 
-def test_polysome(eulerAngles):  
+def test_polysome(eulerAngles=''):  
     if not os.path.exists(eulerAngles):
         eulerAngles = None
     _ = setup(eulerAngles = eulerAngles) #create simulation data  
@@ -73,7 +74,7 @@ def test_polysome(eulerAngles):
     #use advance mode
     
     #polysome1.vis['vectField']['type'] = 'advance'
-    polysome1.visResult()
+    #polysome1.visResult()
     
     
       
@@ -86,7 +87,7 @@ def test_polysome(eulerAngles):
         assert real_polysome[single_key] == track_polysome[single_key]
    
 
-def test_noise(eulerAngles):
+def test_noise(eulerAngles = ''):
     if not os.path.exists(eulerAngles):
         eulerAngles = None
     _ = setup(eulerAngles = eulerAngles,  genType = 'noise' ) #create simulation data  

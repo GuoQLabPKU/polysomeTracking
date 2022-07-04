@@ -1,6 +1,9 @@
 import numpy as np
 import os
+import sys
 import shutil
+sys.path.append('./')
+
 from nemotoc_test.genSimForwardPolyModel import genForwardPolyModel
 from nemotoc_test.genSimNoise import genNoise
 

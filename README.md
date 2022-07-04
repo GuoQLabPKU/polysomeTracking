@@ -55,8 +55,8 @@ Any platform (linux/windows/macos) was tested
    ```
 2. generate a configure file. Running the command below will generate a configure file named conf.py
     ```
-    nemotocGen --getTestData #copies or fetches the testData
-    nemotocGen --getConf  #copies or fetches the configure script
+    nemotocGen --getTestData 1 #copies or fetches the testData
+    nemotocGen --getConf 1 #copies or fetches the configure script
     ```
 3. modify suitable parameters in the generated conf.py and run the command below  
     ```
@@ -64,7 +64,7 @@ Any platform (linux/windows/macos) was tested
     ```
 ## Debug
 ```
-python nemotoc_test/test_*
+pytest nemotoc_test/test_*
 ```
 This will test three functions:
 - test_polysome.py: test if track right  linear assemblies(polysomes) from the simulation dataset 
