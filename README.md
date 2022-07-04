@@ -48,11 +48,17 @@ Reference:
 ## Platform
 Any platform (linux/windows/macos) was tested
 ## Usage
-1. generate a configure file. Run the command below will generate a configure file conf.py
+1. make one directory to do the analysis 
+   ```
+   mkdir myNemoProj
+   cd myNemoProj
+   ```
+2. generate a configure file. Running the command below will generate a configure file named conf.py
     ```
-    nemotocGen --getConf 1
+    nemotocGen --getTestData #copies or fetches the testData
+    nemotocGen --getConf  #copies or fetches the configure script
     ```
-2. modify suitable parameters in the generated conf.py and run the command below  
+3. modify suitable parameters in the generated conf.py and run the command below  
     ```
     nemotocRun -c conf.py
     ```
