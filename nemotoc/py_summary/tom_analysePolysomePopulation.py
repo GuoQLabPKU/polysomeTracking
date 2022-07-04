@@ -255,7 +255,7 @@ def genOutput(stat, minTransMembers):
         print(i, end = "\t")
     print('\t')
     for row in range(stat.shape[0]):
-        print("%d\t\t%d\t\t%.1f\t\t\t\t%.1f\t\t\t%d\t\t\t\t%d\t\t\t\t%d\t\t%d"%(stat['classNr'].values[row], stat['num'].values[row], 
+        print("%d\t\t%d\t%.1f\t\t%.1f\t\t%d\t\t%d\t\t%d\t\t%d"%(stat['classNr'].values[row], stat['num'].values[row], 
                                                     stat['stdTransVect'].values[row],
                                                     stat['stdTransAng'].values[row], stat['numPolybg5'].values[row],
                                                     stat['numPolybg3'].values[row], stat['numPolyMax'].values[row],
