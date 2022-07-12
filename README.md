@@ -3,7 +3,7 @@
 ## Concept
 NEMO-TOC can classify the relative spatial arrangement of neighbors based on the positions and Euler angles. 
 Features to track ordered linear assemblies are also added.
-Reference:
+Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6633900
 ## Scripts description (located at nemotoc/)
 - **polysome_class:** folder with function class written by python
 - **py_align:** folder with scripts alignning the direction of particle pairs transformation
