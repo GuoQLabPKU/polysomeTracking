@@ -4,7 +4,7 @@ import os
 from nemotoc.polysome_class.polysome import Polysome
 
 #####BASIC PARAMTERS SETTING########
-input_star =  'data/all_particles_neuron_warp.star' #the star
+input_star =  'all_particles_neuron_warp.star' #the star
 project_folder = 'cluster-all_particles_neuron_warp' #the folder to store all runs.
 run_time = 'threshold20_relink01percent' #the folder storing the results of each run
 pixel_size = 3.42 #in Ang, the pixel size of input starfile
