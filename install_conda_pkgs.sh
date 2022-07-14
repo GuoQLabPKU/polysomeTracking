@@ -16,5 +16,6 @@ seaborn \
 dill \
 alive-progress \
 psutil \
+pynvml \
 
 `which conda` clean --yes --all
