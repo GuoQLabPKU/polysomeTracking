@@ -26,12 +26,13 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
     https://docs.conda.io/en/latest/miniconda.html
 2. create enviroment
     ```
-    pathToConda/bin/conda create --name nemotoc
+    export PATH=pathToConda/bin:$PATH #add the conda path 
+    conda create --name nemotoc
     ```
 3. activate the enviroment
     ```
     source pathToConda/etc/profile.d/conda.sh
-    pathToConda/conda activate nemotoc
+    conda activate nemotoc
     ```
 4. install dependencies 
     ```
