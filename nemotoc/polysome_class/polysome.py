@@ -432,7 +432,7 @@ class Polysome:
             ifSel = 0
         
         if ifSel:
-            if self.sel[0]['minNumTransform'] != -1:
+            if self.sel[0]['minNumTransform']  == -1:
                 self.sel[0]['minNumTransform'] = 0.01       
             self.sel[0]['minNumTransform'] = int(self.sel[0]['minNumTransform']*self.transList.shape[0]) #default is 1%
             self.log.info('set #minTransform as %d to select clusters'%self.sel[0]['minNumTransform'])                          
