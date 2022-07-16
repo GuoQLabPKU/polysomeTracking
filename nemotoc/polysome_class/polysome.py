@@ -256,6 +256,7 @@ class Polysome:
         plt.figure()
         plt.hist(distanceNeighborsB4RmDup,bins = 50, label = 'before duplicates removal')
         plt.hist(distanceNeighborsAfterRmDup,bins = 50, label = 'after duplicates removal')
+        plt.legend()
         plt.xlabel('Euclidean distances between the most neighbors(pixels)')
         plt.ylabel('# of distances')
         plt.savefig('%s/vis/neighborsDist/neighborsDistance.png'%self.io['classifyFold'], dpi = 300)
@@ -425,11 +426,16 @@ class Polysome:
         '''
         transListSel = ''
         selFolds = ''
-        if self.sel[0]['minNumTransform'] != -1:
+        
+        ifSel = 1
+        if self.sel[0]['minNumTransform'] == 0:
+            ifSel = 0
+        
+        if ifSel:
+            if self.sel[0]['minNumTransform'] != -1:
+                self.sel[0]['minNumTransform'] = 0.01       
             self.sel[0]['minNumTransform'] = int(self.sel[0]['minNumTransform']*self.transList.shape[0]) #default is 1%
-            self.log.info('set #minTransform as %d to select clusters'%self.sel[0]['minNumTransform'])
-                          
-    
+            self.log.info('set #minTransform as %d to select clusters'%self.sel[0]['minNumTransform'])                          
             for _ in range(itrClean):  
                 #this step can keep classes we want for further analysis as well as remove cluster 0                 
                 _,_, transListSelCmb = tom_selectTransFormClasses(self.transList,

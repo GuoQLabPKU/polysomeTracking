@@ -249,7 +249,7 @@ def genOutput(stat, minTransMembers):
         stat = stat[stat['num'] > minTransMembers] #each row represent one cluster, this number represent the #transformation in this class
         stat.reset_index(inplace = True, drop = True)
 
-    select_col = ['clusterNr', 'num', 'stdTransVect', 'stdTransAng', 'numPolybg5', 'numPolybg3', 'numPolyMax', 'numBranch']
+    select_col = ['clusterNr', '#trans', 'stdTransVect', 'stdTransAng', 'numPolybg5', 'numPolybg3', 'numPolyMax', 'numBranch']
     #print the whole data set
     for i in select_col:
         print(i, end = "\t")

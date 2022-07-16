@@ -10,7 +10,6 @@ from nemotoc.polysome_class.polysome import Polysome
 
 ####PARAMETERS#####
 eulerAngles = 'nemotoc_test/euler_angles.csv'
-testType = 'polysome' #noise: generate noise star file
 ##################
 
 def pick_polysome(input_star):
@@ -85,46 +84,7 @@ def test_polysome(eulerAngles=''):
         print('real poly idx:',real_polysome)
         print('tracking poly idx:',track_polysome)
         assert real_polysome[single_key] == track_polysome[single_key]
-   
-
-def test_noise(eulerAngles = ''):
-    if not os.path.exists(eulerAngles):
-        eulerAngles = None
-    _ = setup(eulerAngles = eulerAngles,  genType = 'noise' ) #create simulation data  
-
-    polysome1 = Polysome(input_star = './simNoise.star', run_time = 'run_threshold25_eulerangle_norelink')  
-    polysome1.classify['clustThr'] = 25
-    polysome1.sel[0]['minNumTransform'] = 25
-    polysome1.transForm['pixS'] = 3.42 # in Ang
-    polysome1.transForm['maxDist'] = 342 # in Ang
-
-    polysome1.creatOutputFolder()
-    
-    polysome1.calcTransForms(worker_n = 1) #parallel, can assert the speed of pdist next time
-   
-    polysome1.groupTransForms(worker_n = 1) #parallel 
-                                            
-    polysome1.selectTransFormClasses()
-    
-    polysome1.alignTransforms()
-    
-    polysome1.find_connectedTransforms()  #can assert here next time 
-    
-    polysome1.analyseTransFromPopulation('',  '', 1)
-    
-    
-    #use advance mode
-    #polysome1.vis['vectField']['type'] = 'advance'
-    
-    polysome1.vis['longestPoly']['render'] = 1
-    polysome1.visResult()
-    polysome1.visLongestPoly()
-    
-    assert 1==1
     
 if __name__ == '__main__':
-    if testType == 'polysome':
-        test_polysome(eulerAngles)
-    else:
-        test_noise(eulerAngles)
+    test_polysome(eulerAngles)
     teardown() #clean up the data                     

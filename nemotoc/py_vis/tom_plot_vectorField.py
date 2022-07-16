@@ -186,8 +186,8 @@ def plotPairs(st, mode, idx, ax):
     h_label = [ ]
     if_legend = 0
     for i in range(len(uClasses)):  #plot each trans class
-#        if uClasses[i] == 0:
-#            continue#I don't want to show class 0 --> noise!
+        if uClasses[i] == 0:
+            continue#I don't want to show class 0 --> noise!
         
         tmpIdx = np.where(allClasses == uClasses[i])[0]  #find the specific class of trans
         connVect = allTrans[tmpIdx,:]
@@ -221,8 +221,9 @@ def plotPairs(st, mode, idx, ax):
                 ax.text(x,y,z, lbl, size = 10) 
         
         if mode == 'basic':
-            h_plot.append(ax.plot(conPos[0,0], conPos[0,1], conPos[0,2],color = conCol))
-            h_label.append('cl%d'%(uClasses[i]))  
+            h_plot.append(ax.plot([conPos[0,0], p2Pos[0,0]], [conPos[0,1], p2Pos[0,1]], 
+                                  [conPos[0,2], p2Pos[0,2]],color = conCol))
+            h_label.append('c%d'%(uClasses[i]))  
             
                        
         #plot for fillUp ribos
@@ -236,6 +237,8 @@ def plotPairs(st, mode, idx, ax):
         if_legend += 1
         conPosfill = conPos[fillIdx,:]
         connVectfill = connVect[fillIdx,:]
+        p2Posfill = p2Pos[fillIdx,:]
+        
         ax.quiver(conPosfill[:,0], conPosfill[:,1], conPosfill[:,2],
                   connVectfill[:,0], connVectfill[:,1], connVectfill[:,2], linewidths = 1.5,
                   color = np.array([1,0,0]), arrow_length_ratio=0.4)
@@ -249,12 +252,13 @@ def plotPairs(st, mode, idx, ax):
         
     #add filled up transform
     if (if_legend > 0) & (mode == 'basic'):
-        h_plot.append(ax.plot(conPosfill[0,0], conPosfill[0,1], conPosfill[0,2], 
+        h_plot.append(ax.plot([conPosfill[0,0], p2Posfill[0,0]], [conPosfill[0,1],p2Posfill[0,1]], 
+                              [conPosfill[0,2], p2Posfill[0,2]],
                                color = np.array([1,0,0])))
         h_label.append('fillup')   
     if  mode == 'basic':  
         ax.legend(h_plot,labels = h_label,fontsize = 10,#bbox_to_anchor=(1.15, 1),
-                   title = 'class')  
+                   title = 'cluster')  
 
 def plotRepVects(pos,angles, repVect, scale, col,ax):
     for i in range(repVect.shape[0]):
