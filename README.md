@@ -62,11 +62,11 @@ Any platform (linux/windows/macos) was tested
     ```
 3. modify suitable parameters in the generated conf.py and run the command below  
     ```
-    nemotocRun -c conf.py
+    nemotocRun -c conf.py #for windows user:python conf.py
     ```
 ## Debug
 ```
-pytest nemotoc_test/test_*
+pytest nemotoc_test/test_* #for windows user:python nemotoc_test/test_XXX.py (replace XXX with the function you want to test)
 ```
 This will test three functions:
 - test_polysome.py: test if track right  linear assemblies(polysomes) from the simulation dataset 
