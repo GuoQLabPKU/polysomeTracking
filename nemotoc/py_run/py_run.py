@@ -1,4 +1,5 @@
 import os
+import platform
 
 from nemotoc.polysome_class.polysome import Polysome
 
@@ -59,6 +60,12 @@ def runPoly(input_star, run_time, project_folder, pixel_size, min_dist, if_stopg
     polysome1.visLongestPoly()
 
     #average particles subset using relion_reconstruct
+    #detect the operation system type, if windows, skip!
+    system = platform.system()
+    if system == 'Windows':
+        if_avg = 0       
+        print('%s platform detected. Particle average commands could not be generated.'%system)
+        print('Please find particles at %s/%s/%s for averaging.'%(project_folder, run_time, 'cluster'))
     if if_avg:
         polysome1.avg = avg
         polysome1.generateTrClassAverages()

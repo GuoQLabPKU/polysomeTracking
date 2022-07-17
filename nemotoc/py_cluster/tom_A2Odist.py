@@ -3,7 +3,7 @@ import os
 import shutil
 
 from nemotoc.py_memory.tom_memalloc import tom_memalloc
-from nemotoc.py_cluster.tom_pdist_gpu2 import fileSplit,genjobsList_oneGPU
+from nemotoc.py_cluster.tom_pdist_cpu import fileSplit,genjobsList_oneGPU
 from nemotoc.py_cluster.tom_calc_packages import tom_calc_packages
 
 def tom_A2Odist(transVect, transAng, shift, rot, 

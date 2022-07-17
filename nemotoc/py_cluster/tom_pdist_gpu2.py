@@ -7,6 +7,7 @@ from alive_progress import alive_bar
 import random
 
 from nemotoc.py_cluster.tom_calc_packages import tom_calc_packages
+from nemotoc.py_cluster.tom_pdist_cpu import fileSplit,genjobsList_oneGPU
 from nemotoc.py_transform.tom_sum_rotation_gpu import tom_sum_rotation
 from nemotoc.py_log.tom_logger import Log
 
@@ -210,27 +211,3 @@ def genJobList(szIn, tmpDir, maxChunk):
         jobsListSt_dict[gpu_id] = jobListSt
     return jobsListSt_dict
         
-def fileSplit(maxChunk, lenJobs):
-    gpulist = [ ]
-    file_size = [ ]
-    start_site = [ ]
-    for key in maxChunk.keys():
-        gpulist.append(key)
-        file_size.append(maxChunk[key]) 
-    sumF = np.sum(file_size)
-    file_size = [np.uint64(i/sumF*lenJobs) for i in file_size]
-    #give the start sites of lenJobs for each gpu
-    start_site.append(np.uint64(0))
-    forward_site = np.uint64(0) 
-    for file_len in file_size[:-1]:       
-        site = forward_site + file_len
-        start_site.append(site)
-        forward_site = site
-    file_size[-1] = lenJobs - start_site[-1]
-    return gpulist, start_site, file_size    
-        
-    
-def genjobsList_oneGPU(startsite, lenJobs, maxChunk):
-    numOfPackages = int(np.ceil(lenJobs/maxChunk))       
-    packages = tom_calc_packages(numOfPackages, lenJobs, startsite) #split the jobList into different size, the packages is one array
-    return packages
