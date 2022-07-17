@@ -21,6 +21,7 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
 - **py_transform:** folder with scripts calculating the transformation of neighbor pairs
 - **py_vis:** folder with scripts for visulization
 ## Install
+***for mac and linux user***
 1. install miniconda
 
     https://docs.conda.io/en/latest/miniconda.html
@@ -41,7 +42,25 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
     bash install_conda_pkgs.sh
     ```
     > *Replace the cudatoolkit version with the appropriate version of CUDA installed with the GPU drivers (you can check the CUDA version with nvidia-smi)*
-5. install NEMO-TOC
+***for windows user***
+1. install anaconda
+
+    https://www.anaconda.com/products/distribution#Downloads
+2. create and activate enviroment
+    ```
+    #open the Anaconda Prompt window
+    conda create --name nemotoc
+    conda activate nemotoc
+    ```
+3. install dependencies 
+    ```
+    git clone https://github.com/GuoQLabPKU/polysomeTracking.git
+    cd polysomeTracking/
+    call install_conda_pkgs.bat
+    ```
+    > *Replace the cudatoolkit version with the appropriate version of CUDA installed with the GPU drivers (you can check the CUDA version with nvidia-smi)*
+***for any platform user***
+Final. install NEMO-TOC
     ```
     python setup.py build
     python setup.py sdist
@@ -62,11 +81,13 @@ Any platform (linux/windows/macos) was tested
     ```
 3. modify suitable parameters in the generated conf.py and run the command below  
     ```
-    nemotocRun -c conf.py #for windows user:python conf.py
+    nemotocRun -c conf.py 
+    #for windows user:python conf.py
     ```
 ## Debug
 ```
-pytest nemotoc_test/test_* #for windows user:python nemotoc_test/test_XXX.py (replace XXX with the function you want to test)
+pytest nemotoc_test/test_* 
+#for windows user:python nemotoc_test/test_XXX.py (replace XXX with the function you want to test)
 ```
 This will test three functions:
 - test_polysome.py: test if track right  linear assemblies(polysomes) from the simulation dataset 
