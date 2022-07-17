@@ -42,6 +42,7 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
     bash install_conda_pkgs.sh
     ```
     > *Replace the cudatoolkit version with the appropriate version of CUDA installed with the GPU drivers (you can check the CUDA version with nvidia-smi)*
+
 ***for windows user***
 1. install anaconda
 
@@ -59,6 +60,7 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
     call install_conda_pkgs.bat
     ```
     > *Replace the cudatoolkit version with the appropriate version of CUDA installed with the GPU drivers (you can check the CUDA version with nvidia-smi)*
+
 ***for any platform user***
 Final. install NEMO-TOC
     ```
