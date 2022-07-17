@@ -62,8 +62,9 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
     > *Replace the cudatoolkit version with the appropriate version of CUDA installed with the GPU drivers (you can check the CUDA version with nvidia-smi)*
 
 ***for any platform user***
+Final:
+install NEMO-TOC
 
-Final. install NEMO-TOC
     ```
     python setup.py build
     python setup.py sdist
