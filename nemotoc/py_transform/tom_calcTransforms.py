@@ -4,6 +4,7 @@ import pandas as pd
 import multiprocessing as mp
 import shutil
 import gc
+import warnings
 from alive_progress import alive_bar 
 
 from nemotoc.py_io.tom_starread import generateStarInfos
@@ -69,8 +70,13 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
             posAct = st["p1"]["positions"][idx,:]
             anglesAct = st["p1"]["angles"][idx,:]
             transListAct = calcTransforms(posAct, anglesAct, maxDist, dmetric, uTomoId[i], idxAct, verbose)
+            if isinstance(transListAct, type(None)):
+                continue
             transList = np.concatenate((transList, transListAct),axis=0)
             log.info('Transforms for tomo%d done'%(i))
+        if transList.shape[0] == 0:
+            raise RuntimeError("The distances between neighbors are bigger than %d pixels! Set bigger search_radius!"%pruneRad)
+            
     else:
         #make temp directory to store the transListAct and then reload merge them!
         temp_dir = "%s/tempTrans"%os.path.split(outputName)[0]
@@ -95,7 +101,6 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
         spl_ids = np.array_split(uTomoId,npr) #one cpu/one tomogram
         #remove the empty spl_ids
         spl_ids = [i for i in spl_ids if len(i) > 0]
-        
         for pr_id, spl_id in enumerate(spl_ids):
             pr = mp.Process(target = pr_worker, args=(pr_id, st, spl_id, maxDist, dmetric, temp_dir, verbose))
             pr.start()
@@ -109,8 +114,13 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
                 
         gc.collect() #free the memory      
         for single_id in uTomoId:
-            transListAct = np.load('%s/tomo%d_trans.npy'%(temp_dir, single_id))
-            transList = np.concatenate((transList, transListAct),axis=0)
+            try:
+                transListAct = np.load('%s/tomo%d_trans.npy'%(temp_dir, single_id))
+                transList = np.concatenate((transList, transListAct),axis=0)
+            except FileNotFoundError:
+                continue
+        if transList.shape[0] == 0:
+            raise RuntimeError("The distances between neighbors are bigger than %d pixels! Set bigger search_radius!"%pruneRad)        
         #delete the temp files       
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
@@ -129,6 +139,8 @@ def pr_worker(pr_id, st, tomo_ids, maxDist, dmetric, temp_dir,verbose):
         posAct = st["p1"]["positions"][idx,:]
         anglesAct = st["p1"]["angles"][idx,:]
         transListAct = calcTransforms(posAct, anglesAct, maxDist, dmetric, i, idxAct, verbose)
+        if isinstance(transListAct, type(None)):
+            continue
         np.save('%s/tomo%d_trans.npy'%(temp_dir, i), transListAct)
         print("Transforms for tomo%d done"%(i))
                                                                                                        
@@ -153,7 +165,8 @@ def calcTransforms(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose):
     jobList = jobListN
     
     if jobList.shape[0] == 0:
-        raise RuntimeError("The distances between neighbors are bigger than %d pixels! Set bigger maxDist!"%pruneRad)  
+        warnings.warn("The distances between neighbors are bigger than %d pixels in tomo%d!"%(pruneRad, tomoID))
+        return None
         
     transListAct_inner = np.zeros([jobList.shape[0],29], dtype = np.float) 
     with alive_bar(int(np.floor(jobList.shape[0]/100)+1), title="calculate transforms") as bar:
