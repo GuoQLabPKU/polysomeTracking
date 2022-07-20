@@ -21,7 +21,7 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
 - **py_transform:** folder with scripts calculating the transformation of neighbor pairs
 - **py_vis:** folder with scripts for visulization
 ## Install
-###for mac and linux user:
+### for mac and linux user:
 1. install miniconda
 
     https://docs.conda.io/en/latest/miniconda.html
@@ -48,7 +48,7 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
     python setup.py sdist
     pip install dist/nemotoc-1.0.0b0.tar.gz
     ```
-###for windows user
+### for windows user
 1. install anaconda
 
     https://www.anaconda.com/products/distribution#Downloads
