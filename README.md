@@ -89,6 +89,13 @@ Any platform (linux/windows/macos) was tested
     nemotocRun -c conf.py 
     #for windows user:python conf.py
     ```
+## Speed with the tutorial data
+### tested CPU:Intel(R) Xeon(R) Gold 6230 CPU @ 2.10GHz
+### tested GPU:Nvidia GeForce RTX 3090
+#### 1 CPU: 
+#### 1 GPU : 
+#### 15 CPUs : 12min19s
+#### 15 CPUs + 1GPU: 10min29s
 ## Debug
 ```
 pytest nemotoc_test/test_* 

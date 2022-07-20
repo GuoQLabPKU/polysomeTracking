@@ -229,15 +229,16 @@ class Polysome:
         else:
             keepIdx = np.asarray(posAngListRelion.index)       
         fileNameNew = '%s/%s_recenter_rmDup.star'%(self.io['projectFolder'], fileName.split('.')[0])
-        fileNameNewDrop = '%s/stat/%s_recenter_dup.star'%(self.io['classifyFold'], fileName.split('.')[0])
+        fileNameNewDrop = '%s/stat/%s_recenter_dups.star'%(self.io['classifyFold'], fileName.split('.')[0])
         
-        posAngListRelion = posAngListRelion.iloc[keepIdx]
-        posAngListRelion.reset_index(drop=True, inplace = True)
+        posAngListRelionKeep = posAngListRelion.iloc[keepIdx]
+        posAngListRelionKeep.reset_index(drop=True, inplace = True)
         
         #save drop particle above search radius 
         posAngListRelionDrop = posAngListRelion.iloc[rmIdx]
         posAngListRelionDrop.reset_index(drop=True, inplace = True)   
         
+        posAngListRelion = posAngListRelionKeep
         #record the distances after duplicated remove
         distanceNeighborsAfterRmDup = [ ]
         for single_mrc in uniq_mrc:
@@ -674,7 +675,7 @@ class Polysome:
                                        self.avg['callByPython'],outfold)
            
               
-    def link_ShortPoly(self, remove_branch = 1, worker_n = 1):
+    def link_ShortPoly(self, remove_branch = 1, worker_n = 1, gpu_list = None):
         '''
         link shorter polysomes 
         logic: put ribos at end of each polysome, and judge if added ribosomes 
@@ -747,7 +748,7 @@ class Polysome:
                                              transListOutput, particleOutput,
                                              self.fillPoly['addNum'], 
                                              0, method,
-                                             self.fillPoly['threshold'], worker_n)                
+                                             self.fillPoly['threshold'], worker_n, gpu_list)                
 
         self.log.info('polysome filling up done')
         #retrack the polysomes 
@@ -761,7 +762,7 @@ class Polysome:
         saveStruct(transListOutput,self.transList)
         
         
-    def noiseEstimate(self):
+    def noiseEstimate(self,worker_n = 1, gpu_list = None):
         '''
         this method estimates the errors of transform classes assignment.
         First, calculating the distance between each transform from classA and the average
@@ -830,7 +831,7 @@ class Polysome:
     
             distVectSame, distAngSame, distCombineSame = tom_A2Odist(transVectSame, transRotSame, 
                                                                      avgShift, avgRot,                                                         
-                                                                     1, None, cmb_metric, maxDistInpix)
+                                                                     worker_n, gpu_list, cmb_metric, maxDistInpix)
             
             #for distance calculation from different class
             transVectDiff = transList[transList['pairClass'] != classN].loc[:,['pairTransVectX',

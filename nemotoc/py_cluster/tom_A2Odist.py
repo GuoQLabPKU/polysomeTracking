@@ -38,7 +38,9 @@ def tom_A2Odist(transVect, transAng, shift, rot,
                                               cmb_metric, pruneRad)
     return distVect, distAng, distCombine
               
-def getDist(transVect, transAng,worker_n, gpu_list, cmb_metric, pruneRad):  
+def getDist(transVect, transAng,worker_n, gpu_list, cmb_metric, pruneRad): 
+    if gpu_list is not None:
+        worker_n = None
     maxChunk = tom_memalloc(None, worker_n, gpu_list) #mallocal the memory
     if isinstance(worker_n, int):
         from nemotoc.py_cluster.tom_pdist_cpu import tom_pdist

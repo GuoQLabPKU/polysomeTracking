@@ -127,7 +127,7 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
     _,_,distsCN = tom_A2Odist(transListAct[:, 4:7], 
                               transListAct[:, 7:10],
                               avgShift, avgRot,
-                              10, gpu_list,
+                              worker_n, gpu_list,
                               cmb_metric, pruneRad)
     
     if method == 'max':
