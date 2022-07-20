@@ -1,4 +1,4 @@
-# Neighboring particles' conformation clustering  based on particles' positions and euler angles and the polyribosome tracking
+# Neighboring particles' conformation clustering  based on particles' positions and euler angles (NEMO-TOC) AND the polyribosome tracking
 ![This is an image](https://github.com/werhoog/polysomeTracking/blob/main/image/concept2.PNG)
 ## Concept
 NEMO-TOC can classify the relative spatial arrangement of neighbors based on the positions and Euler angles. 
@@ -21,7 +21,7 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
 - **py_transform:** folder with scripts calculating the transformation of neighbor pairs
 - **py_vis:** folder with scripts for visulization
 ## Install
-***for mac and linux user***
+###for mac and linux user:
 1. install miniconda
 
     https://docs.conda.io/en/latest/miniconda.html
@@ -42,8 +42,13 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
     bash install_conda_pkgs.sh
     ```
     > *Replace the cudatoolkit version with the appropriate version of CUDA installed with the GPU drivers (you can check the CUDA version with nvidia-smi)*
-
-***for windows user***
+5. install NEMO-TOC
+    ```
+    python setup.py build
+    python setup.py sdist
+    pip install dist/nemotoc-1.0.0b0.tar.gz
+    ```
+###for windows user
 1. install anaconda
 
     https://www.anaconda.com/products/distribution#Downloads
@@ -60,9 +65,7 @@ Reference:https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac547/6
     call install_conda_pkgs.bat
     ```
     > *Replace the cudatoolkit version with the appropriate version of CUDA installed with the GPU drivers (you can check the CUDA version with nvidia-smi)*
-
-***install NEMO-TOC(for any platform user)***
-
+4. install NEMO-TOC
     ```
     python setup.py build
     python setup.py sdist
@@ -96,7 +99,7 @@ This will test three functions:
 - test_fillupRibo.py: test if fill up right particles after manully delete two particles 
 - test_branchClean.py: test if clean the branches created manully in the simulation dataset
 
-### If meet any memory error, please reduce the input variable ***Chunk*** in function ***tom_memalloc*** **(nemotoc/py_memory/tom_memalloc.py)**
+#### If meet any memory error, please reduce the input variable ***Chunk*** in function ***tom_memalloc*** **(nemotoc/py_memory/tom_memalloc.py)**
 ## Output 
 Given an input starfile named 'particles.star' in ***main.py***, for example, several folders will be created like below,
 
