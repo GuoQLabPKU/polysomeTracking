@@ -92,8 +92,8 @@ Any platform (linux/windows/macos) was tested
 ## Speed with the tutorial data
 ### tested CPU:Intel(R) Xeon(R) Gold 6230 CPU @ 2.10GHz
 ### tested GPU:Nvidia GeForce RTX 3090
-#### 1 CPU: 53min 27s
-#### 1 GPU : 49min 19s
+#### 1 CPU: 53min27s
+#### 1 GPU : 49min19s
 #### 15 CPUs : 12min19s
 #### 15 CPUs + 1GPU: 10min29s
 ## Debug
