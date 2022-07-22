@@ -50,7 +50,9 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
         lenJobs = np.uint64(in_Fw.shape[0] - 1)
         
     dists = np.zeros(lenJobs, dtype = np.single) # the distance between pairs of ribosomes , one dimention array
-    log.info('Calculate %s for %d transforms'%(dmetric, in_Fw.shape[0]))
+    
+    if verbose:
+        log.info('Calculate %s for %d transforms'%(dmetric, in_Fw.shape[0]))
 
     job_n = len(jobListSt) #number of chunks of joblists to process
     if dmetric == 'euc':
@@ -87,8 +89,9 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
         if (worker_n == 1) | (job_n == 1):  
             log.debug('Use single cpu')
             dists = calcVectDist_mp(-1, jobListSt, in_Fw, in_Inv, dists) 
-            
-        log.info('Calculate euc transforms distance done!')
+        
+        if verbose:
+            log.info('Calculate euc transforms distance done!')
  
                     
     elif dmetric == 'ang':
@@ -132,8 +135,8 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
         if (worker_n == 1) | (job_n == 1): 
             log.debug('Use single cpu')
             dists = calcAngDist_mp(-1, jobListSt, Rin,Rin_Inv, dists) 
-            
-        log.info('Calculate ang transforms distance done')         
+        if verbose:   
+            log.info('Calculate ang transforms distance done')         
        
     if cleanTmpDir == 1:   
         shutil.rmtree(tmpDir) #remove the dirs  
@@ -143,22 +146,22 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
 def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
     with alive_bar(len(jobList_single), title="euc distances") as bar:
         for single_job in jobList_single:           
-            jobListChunk = np.load(single_job["file"],allow_pickle=True)
+            with open(single_job["file"], 'rb') as job:
+                jobListChunk = np.load(job, allow_pickle=True)               
+                g1 = in_Fw[jobListChunk[:,0],:]
+                g2 = in_Fw[jobListChunk[:,1],:]
+                if len(in_Inv)  == 0:
+                    g1Inv = ''
+                    g2Inv = ''
+                else:
+                    g1Inv = in_Inv[jobListChunk[:,0],:]
+                    g2Inv = in_Inv[jobListChunk[:,1],:]
             
-            g1 = in_Fw[jobListChunk[:,0],:]
-            g2 = in_Fw[jobListChunk[:,1],:]
-            if len(in_Inv)  == 0:
-                g1Inv = ''
-                g2Inv = ''
-            else:
-                g1Inv = in_Inv[jobListChunk[:,0],:]
-                g2Inv = in_Inv[jobListChunk[:,1],:]
-        
-            dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)
-            shared_ncc[single_job["start"]:single_job["stop"]] = dtmp
-            del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
-            gc.collect()  
-            bar()
+                dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)
+                shared_ncc[single_job["start"]:single_job["stop"]] = dtmp
+                del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
+                gc.collect()  
+                bar()
    
     if pr_id == -1:
         return shared_ncc    
@@ -201,22 +204,22 @@ def calcRotMatrices(in_angs, verbose):
   
 def calcAngDist_mp(pr_id, jobList_single, Rin, Rin_Inv,shared_ncc):
     with alive_bar(len(jobList_single), title="ang distances") as bar:
-        for singlejobs in jobList_single:         
-            jobListChunk = np.load(singlejobs["file"])
-            
-            dtmp = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
-            if len(Rin_Inv) > 0:
-                dtmpInv = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])               
-                dtmpInv2 = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6])
-                dtmpInv3 = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6] )              
-                dists_all = np.array([dtmp, dtmpInv, dtmpInv2,dtmpInv3 ])
-                dtmp = np.min(dists_all, axis = 0)
-                del dtmpInv, dtmpInv2, dtmpInv3, dists_all
-                
-            shared_ncc[singlejobs["start"]:singlejobs["stop"]] = dtmp  
-            del jobListChunk, dtmp
-            gc.collect()                                       
-            bar()
+        for singlejobs in jobList_single:                
+            with open(singlejobs["file"], 'rb') as job:
+                jobListChunk = np.load(job, allow_pickle=True)                      
+                dtmp = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
+                if len(Rin_Inv) > 0:
+                    dtmpInv = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])               
+                    dtmpInv2 = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6])
+                    dtmpInv3 = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6] )              
+                    dists_all = np.array([dtmp, dtmpInv, dtmpInv2,dtmpInv3 ])
+                    dtmp = np.min(dists_all, axis = 0)
+                    del dtmpInv, dtmpInv2, dtmpInv3, dists_all
+                    
+                shared_ncc[singlejobs["start"]:singlejobs["stop"]] = dtmp  
+                del jobListChunk, dtmp
+                gc.collect()                                       
+                bar()
           
     if pr_id == -1:
         return shared_ncc

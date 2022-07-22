@@ -79,7 +79,8 @@ def getCluster(vects, cl):
         return meanV0
     
     
-def tom_align_transformDirection(transList, iterN = 1):
+def tom_align_transformDirection(transList, iterN = 1, mode = 1):
+    indexList = transList._stat_axis.values.tolist()
     log = Log('align transforms').getlog()   
     allClasses = transList['pairClass'].values
     allClassesU = np.unique(allClasses)
@@ -89,7 +90,9 @@ def tom_align_transformDirection(transList, iterN = 1):
         if single_class == -1:
             log.warning('No cluster classes detected. Skip align the transforms.')
             break
-        log.info('Align class%d for %d iterations'%(single_class, iterN))
+        if mode:
+            log.info('Align class%d for %d iterations'%(single_class, iterN))
         idx = np.where(allClasses == single_class)[0]
-        transList.iloc[idx,:] = alignDir(transList.iloc[idx,:], iterN) 
+        sgCIdx = [indexList[i] for i in idx]
+        transList.loc[sgCIdx,:] = alignDir(transList.loc[sgCIdx,:], iterN) 
     return transList

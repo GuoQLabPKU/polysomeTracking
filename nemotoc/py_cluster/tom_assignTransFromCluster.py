@@ -1,9 +1,10 @@
 from nemotoc.py_summary.tom_analysePolysomePopulation import calcVectStat, calcAngStat
 from nemotoc.py_cluster.tom_A2Odist import tom_A2Odist
+from nemotoc.py_align.tom_align_transformDirection import tom_align_transformDirection
 
 import numpy as np
 
-def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, iterN = 5):
+def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, iterN = 5, worker_n = 1, gpu_list = None, freeMem = None):
     '''
     assign each transform into one cluster 
     transList: pairList retunred by NEMO-TOC 
@@ -16,8 +17,8 @@ def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, ite
         clusterId = { }
         for i,j in enumerate(clusterStat.keys()):
             clusterId[i] = j 
-            transVect[i, :] = clusterStat[1:4]
-            angVect[i, :] = clusterStat[4:7]
+            transVect[i, :] = clusterStat[j][1:4]
+            angVect[i, :] = clusterStat[j][4:7]
         #assign each transform into each cluster        
         pairClassList = np.zeros(transList.shape[0], dtype = np.int)
         for i in range(transList.shape[0]):
@@ -25,12 +26,12 @@ def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, ite
             ang = np.array([transList['pairTransAngleZXZPhi'].values[i], transList['pairTransAngleZXZPsi'].values[i], transList['pairTransAngleZXZTheta'].values[i]])
             transInv = np.array([transList['pairInvTransVectX'].values[i], transList['pairInvTransVectY'].values[i], transList['pairInvTransVectZ'].values[i]])
             angInv = np.array([transList['pairInvTransAngleZXZPhi'].values[i], transList['pairInvTransAngleZXZPsi'].values[i], transList['pairInvTransAngleZXZTheta'].values[i]])
-            _,_, distCmb = tom_A2Odist(transVect, angVect, trans, ang, 1, None, cmb_metric, pruneRad)
-            _,_, distCmbInv = tom_A2Odist(transVect, angVect, transInv, angInv, 1, None, cmb_metric, pruneRad)
-            minDist, argMin = np.min(distCmb), np.argmin(distCmbInv)
+            _,_, distCmb = tom_A2Odist(transVect, angVect, trans, ang, worker_n, gpu_list, cmb_metric, pruneRad)
+            _,_, distCmbInv = tom_A2Odist(transVect, angVect, transInv, angInv, worker_n, gpu_list, cmb_metric, pruneRad)
+            minDist, argMin = np.min(distCmb), np.argmin(distCmb)
             minDistInv, argMinInv = np.min(distCmbInv), np.argmin(distCmbInv)
             if minDist <= minDistInv:
-                clusterSg  = clusterId[argMin]
+                clusterSg = clusterId[argMin]
                 if minDist > clusterStat[clusterSg][0]:
                     clusterSg = 0
             else:
@@ -38,9 +39,13 @@ def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, ite
                 if minDistInv >  clusterStat[clusterSg][0]:
                      clusterSg = 0
                     
-            pairClassList.append(clusterSg)
+            pairClassList[i] = clusterSg
             
-        #update the centeroid of each cluster              
+        #update the centeroid of each cluster   
+        #firstly, update the cluster number and align the direction
+        transList['pairClass'] = pairClassList  
+        transList = tom_align_transformDirection(transList, 1, 0)
+        
         clusterStat = { }
         allClustersU = np.unique(pairClassList)
         for single_cluster in allClustersU:

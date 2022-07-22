@@ -187,7 +187,7 @@ class Polysome:
         uniq_mrc = np.unique(posAngListRelion['rlnMicrographName'].values)
         #remove the duplicates and also store the distance of two neighbors 
         rmIdx = [ ]
-        distanceNeighborsB4RmDup = [ ]
+        NNdistanceNeighborsB4RmDup = [ ]
         for single_mrc in uniq_mrc:
             posAngListRelionSingle = posAngListRelion[posAngListRelion['rlnMicrographName'] == single_mrc]
             posAngListRelionSingleArray = posAngListRelionSingle[['rlnCoordinateX',
@@ -197,10 +197,9 @@ class Polysome:
             distances = ssd.pdist(posAngListRelionSingleArray, metric = 'euclidean')
             distancesMatrix = ssd.squareform(distances)
             #record the distance 
-            for i in range(distancesMatrix.shape[0]):
-                for j in range(i+1, distancesMatrix.shape[0]):    
-                    distanceNeighborsB4RmDup.append(distancesMatrix[i][j])
-                                   
+            distancesMatrix_sort = np.sort(distancesMatrix)
+            NNdistanceNeighborsB4RmDup = distancesMatrix_sort[:,1]
+            
             #bigger lowtri matrix
             minDistMatrix = np.ones((distancesMatrix.shape[0], distancesMatrix.shape[0]))*(minDist+100)
             minDistMatrix_lowTri = np.tril(minDistMatrix, k=0)
@@ -240,7 +239,7 @@ class Polysome:
         
         posAngListRelion = posAngListRelionKeep
         #record the distances after duplicated remove
-        distanceNeighborsAfterRmDup = [ ]
+        NNdistanceNeighborsAfterRmDup = [ ]
         for single_mrc in uniq_mrc:
             posAngListRelionSingle = posAngListRelion[posAngListRelion['rlnMicrographName'] == single_mrc]
             posAngListRelionSingleArray = posAngListRelionSingle[['rlnCoordinateX',
@@ -249,14 +248,14 @@ class Polysome:
             distances = ssd.pdist(posAngListRelionSingleArray, metric = 'euclidean')
             distancesMatrix = ssd.squareform(distances)
             #record the distance 
-            for i in range(distancesMatrix.shape[0]):
-                for j in range(i+1, distancesMatrix.shape[0]):    
-                    distanceNeighborsAfterRmDup.append(distancesMatrix[i][j])    
+            #record the distance 
+            distancesMatrix_sort = np.sort(distancesMatrix)
+            NNdistanceNeighborsAfterRmDup = distancesMatrix_sort[:,1]
                     
         #plot and store the distance distribution
         plt.figure()
-        plt.hist(distanceNeighborsB4RmDup,bins = 50, label = 'before duplicates removal')
-        plt.hist(distanceNeighborsAfterRmDup,bins = 50, label = 'after duplicates removal')
+        plt.hist(NNdistanceNeighborsB4RmDup,bins = 50, label = 'before duplicates removal')
+        plt.hist(NNdistanceNeighborsAfterRmDup,bins = 50, label = 'after duplicates removal')
         plt.legend()
         plt.xlabel('Euclidean distances between the most neighbors(pixels)')
         plt.ylabel('# of distances')
@@ -338,7 +337,7 @@ class Polysome:
             self.transList = tom_calcTransforms(self.io['posAngList'], self.transForm['pixS'], maxDistInPix, '',
                                                 'exact', transFormFile, 1, worker_n)
     
-    def groupTransForms(self, worker_n = 1, iterN = 1, gpu_list = None, freeMem = None):
+    def groupTransForms(self, worker_n = 1, gpu_list = None, freeMem = None, transNr = 100000, transNr_initialCluster = 10000, iterN = 1):
         '''
         generate the clustering transform clusters
         '''
@@ -349,9 +348,9 @@ class Polysome:
         outputFold = '%s/scores'%self.io['classifyFold']
         treeFile = '%s/tree.npy'%outputFold
         ###if do clustering in a small subset 
-        if self.transList.shape[0] > 100000:
-            self.log.info('The number of transforms is to big, will cluster top 100,000 transforms.')           
-            transList_subset = self.transList.iloc[0:100000, :]
+        if self.transList.shape[0] > transNr:
+            self.log.info('The number of transforms is to big with %d, will cluster top %d transforms.'%(self.transList.shape[0],transNr_initialCluster))        
+            transList_subset = self.transList.iloc[0:transNr_initialCluster, :]
         else:
             transList_subset = self.transList
       
@@ -367,8 +366,9 @@ class Polysome:
         self.classify['clustThr'] = thres  
         
         if len(clusters) == 0:
-            self.log.warning('''No clusters! Check the threshold you input! You put 
-                                a very high/low threshold.''')
+            self.log.error('''No clusters! Check the cluster_threshold you input! You put 
+                                a very high/low cluster_threshold.''')
+            
 
         else:
             #this step give the cluster id for each transform
@@ -382,9 +382,17 @@ class Polysome:
                                            single_dict['color'][2])
                 transList_subset.loc[idx, "pairClass"] = classes
                 transList_subset.loc[idx, 'pairClassColour'] = colour
+        #check if cluster == 0
+        if any(transList_subset['pairClass'].values) == False:
+            errorInfo = '''No meanning clusters detected! Check the cluster_threshold you input! You put 
+                                a very high/low cluster_threshold.'''
+            self.log.error(errorInfo)    
+            raise TypeError(errorInfo)            
+               
         if transList_subset.shape[0] < self.transList.shape[0]:
             #first aligned the transforms and summary it!
-            transList_subset = tom_align_transformDirection(transList_subset)
+            self.log.info('Assign clusterID to remaining transformations.')
+            transList_subset = tom_align_transformDirection(transList_subset,1,0)
             allClusters = transList_subset['pairClass'].values
             allClustersU = np.unique(allClusters)
             cmb_metric = self.classify['cmb_metric']
@@ -407,7 +415,7 @@ class Polysome:
                 stats_cluster[single_cluster][1:4] = [vectStat['meanTransVectX'], vectStat['meanTransVectY'], vectStat['meanTransVectZ']]
                 stats_cluster[single_cluster][4:7] = [angStat['meanTransAngPhi'], angStat['meanTransAngPsi'], angStat['meanTransAngTheta']]
                 
-            pairClassList, _ = tom_assignTransFromCluster(self.transList, stats_cluster, cmb_metric, maxDistInPix, iterN)
+            pairClassList, _ = tom_assignTransFromCluster(self.transList, stats_cluster, cmb_metric, maxDistInPix, iterN, worker_n, gpu_list, freeMem)
             #update the pairClass as well as the color 
             clusterColor = { }
             for sgCluster, sgColor in zip(transList_subset['pairClass'].values, transList_subset['pairClassColour'].values):
@@ -417,10 +425,12 @@ class Polysome:
                 pairClassColorList.append(clusterColor[sgCluster])
             self.transList["pairClass"] = pairClassList
             self.transList['pairClassColour'] = pairClassColorList
-                       
+        else:
+            self.transList = transList_subset
+                          
         self.log.info('Clustering done')
       
-    def selectTransFormClasses(self, worker_n = 1, gpu_list = None, itrClean = 1):
+    def selectTransFormClasses(self, worker_n = 1, gpu_list = None, itrClean = 1, iterN = 1):
         '''
         select any cluster and Relink
         itrClean: # of cycles to clean the data 
@@ -452,7 +462,7 @@ class Polysome:
                 #this select can discard the transforms with class ==0 (which failed to form cluster)
                 os.rename('%s/scores/tree.npy'%self.io['classifyFold'],
                          '%s/scores/treeb4Relink.npy'%self.io['classifyFold'])
-                self.groupTransForms(worker_n, gpu_list)
+                self.groupTransForms(worker_n = worker_n, gpu_list = gpu_list, iterN = iterN)
                 
             if os.path.exists('%s/allTransforms.star'%self.io['classifyFold']):
                 os.rename('%s/allTransforms.star'%self.io['classifyFold'],

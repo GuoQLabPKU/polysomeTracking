@@ -60,12 +60,14 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
         lenJobs = in_Fw.shape[0] - 1
       
     dists = cp.zeros(int(lenJobs), dtype = cp.single) 
-    log.info('Calculate %s for %d transforms'%(dmetric, in_Fw.shape[0]))
+    if verbose:
+        log.info('Calculate %s for %d transforms'%(dmetric, in_Fw.shape[0]))
     
     if dmetric == 'euc':  
         log.debug("Use single gpu")           
         dists = calcVectDist_mp(jobListSt[main_gpu], in_Fw, in_Inv, dists) 
-        log.info('Calculate transforms euc distance done!')   
+        if verbose:
+            log.info('Calculate transforms euc distance done!')   
           
     elif dmetric == 'ang':
         Rin= calcRotMatrices(in_Fw, verbose)
@@ -76,7 +78,8 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
       
         log.debug("Use single gpu")    
         dists = calcAngDist_mp(jobListSt[main_gpu], Rin, Rin_Inv,dists)  
-        log.info('Calculate ang transforms distance done!')                        
+        if verbose:
+            log.info('Calculate ang transforms distance done!')                        
        
     if cleanTmpDir == 1:    
         shutil.rmtree(tmpDir) #remove the dirs 
@@ -90,22 +93,23 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
  
 def calcVectDist_mp(jobList, in_Fw, in_Inv, dists):  
     with alive_bar(len(jobList), title="euc distances") as bar:  
-        for jobList_single in jobList:           
-            jobListChunk = cp.load(jobList_single["file"],allow_pickle=True)
-            g1 = in_Fw[jobListChunk[:,0],:]
-            g2 = in_Fw[jobListChunk[:,1],:]
-            if len(in_Inv)  == 0:
-                g1Inv = ''
-                g2Inv = ''
-            else:
-                g1Inv = in_Inv[jobListChunk[:,0],:]
-                g2Inv = in_Inv[jobListChunk[:,1],:]
-          
-            dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)             
-            dists[jobList_single["start"]:jobList_single["stop"]] = dtmp
-            del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
-            gc.collect()        
-            bar()
+        for jobList_single in jobList:  
+            with open(jobList_single["file"], 'rb') as job:
+                jobListChunk = cp.load(job,allow_pickle=True)
+                g1 = in_Fw[jobListChunk[:,0],:]
+                g2 = in_Fw[jobListChunk[:,1],:]
+                if len(in_Inv)  == 0:
+                    g1Inv = ''
+                    g2Inv = ''
+                else:
+                    g1Inv = in_Inv[jobListChunk[:,0],:]
+                    g2Inv = in_Inv[jobListChunk[:,1],:]
+              
+                dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)             
+                dists[jobList_single["start"]:jobList_single["stop"]] = dtmp
+                del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
+                gc.collect()        
+                bar()
     
     return dists
 
@@ -144,22 +148,23 @@ def calcRotMatrices(in_angs, verbose):
   
 def calcAngDist_mp(jobList, Rin, Rin_Inv,dists):
     with alive_bar(len(jobList), title="ang distance") as bar:
-        for singlejobs in jobList:          
-            jobListChunk = cp.load(singlejobs["file"])
-            dtmp = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
-            if len(Rin_Inv) > 0:
-                dtmpInv = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
-                dtmpInv2 = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6])
-                dtmpInv3 = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6] )
-                
-                dists_all = cp.array([dtmp, dtmpInv, dtmpInv2, dtmpInv3])
-                dtmp = cp.min(dists_all, axis = 0)
-                del  dtmpInv, dtmpInv2, dtmpInv3, dists_all
-                
-            dists[singlejobs["start"]:singlejobs["stop"]] = dtmp                 
-            del jobListChunk, dtmp
-            gc.collect()                            
-            bar()
+        for singlejobs in jobList:   
+            with open(singlejobs["file"], 'rb') as job:
+                jobListChunk = cp.load(job, allow_pickle=True)      
+                dtmp = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
+                if len(Rin_Inv) > 0:
+                    dtmpInv = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
+                    dtmpInv2 = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6])
+                    dtmpInv3 = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6] )
+                    
+                    dists_all = cp.array([dtmp, dtmpInv, dtmpInv2, dtmpInv3])
+                    dtmp = cp.min(dists_all, axis = 0)
+                    del  dtmpInv, dtmpInv2, dtmpInv3, dists_all
+                    
+                dists[singlejobs["start"]:singlejobs["stop"]] = dtmp                 
+                del jobListChunk, dtmp
+                gc.collect()                            
+                bar()
             
     return dists
             
