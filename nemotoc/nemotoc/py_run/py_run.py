@@ -52,7 +52,7 @@ def runPoly(input_star, run_time, project_folder, pixel_size, min_dist, if_stopg
     polysome1.fillPoly = fillUpPoly #fill up the gaps
     polysome1.link_ShortPoly(remove_branches, cpuN,gpu_list) #link transforms into a long linear chain
     polysome1.analyseTransFromPopulation('','',0, 1) #summary the clusters
-    #polysome1.noiseEstimate(worker_n = cpuN, gpu_list = gpu_list) #estimate the purity of each cluster
+    polysome1.noiseEstimate(worker_n = cpuN, gpu_list = gpu_list) #estimate the purity of each cluster
 
     polysome1.vis['vectField']['type'] = vectorfield_plotting
     polysome1.vis['longestPoly']['render'] = show_longestPoly
