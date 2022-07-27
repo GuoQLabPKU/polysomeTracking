@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import warnings
 import copy
 import scipy.spatial.distance as ssd
+import copy
+import random
+import seaborn as sns
 
 
 from nemotoc.py_io.tom_starread import tom_starread, generateStarInfos
@@ -349,10 +352,14 @@ class Polysome:
         treeFile = '%s/tree.npy'%outputFold
         ###if do clustering in a small subset 
         if self.transList.shape[0] > transNr:
-            self.log.info('The number of transforms is to big with %d, will cluster top %d transforms.'%(self.transList.shape[0],transNr_initialCluster))        
-            transList_subset = self.transList.iloc[0:transNr_initialCluster, :]
+            self.log.info('The number of transforms is too big with %d, will cluster top %d transforms.'%(self.transList.shape[0],transNr_initialCluster))        
+            random.seed(0)
+            idxList = random.sample(range(self.transList.shape[0]),transNr_initialCluster)
+            transList_subset = copy.deepcopy(self.transList.iloc[idxList, :])
+            transList_subset.reset_index(drop=True, inplace=True)
+            
         else:
-            transList_subset = self.transList
+            transList_subset = copy.deepcopy(self.transList)
       
         if os.path.exists(treeFile):
             self.log.info('load tree from %s'%treeFile)
@@ -389,12 +396,42 @@ class Polysome:
             self.log.error(errorInfo)    
             raise TypeError(errorInfo)            
                
-        if transList_subset.shape[0] < self.transList.shape[0]:
-            #first aligned the transforms and summary it!
-            self.log.info('Assign clusterID to remaining transformations.')
-            transList_subset = tom_align_transformDirection(transList_subset,1,0)
+        if transList_subset.shape[0] < self.transList.shape[0]:            
+            oriTrans = copy.deepcopy(self.transList)
+            
             allClusters = transList_subset['pairClass'].values
-            allClustersU = np.unique(allClusters)
+            allClustersU = np.unique(allClusters) 
+            self.log.info('Detect %d clusters of %d transformations.'%(len(allClustersU), transList_subset.shape[0])) 
+            
+            ratio =  self.sel[0]['minNumTransform']
+            if ratio == -1:
+                ratio = 0.01       
+            limit = int(ratio*transList_subset.shape[0]) #default is 1%
+            self.log.info('And will filter non-meaningful clusters with min %d trans.'%limit) 
+            _,_, transListSelCmb = tom_selectTransFormClasses(transList_subset,
+                                                              self.sel[0]['list'],
+                                                              limit, '')
+            if len(transListSelCmb) == 0:
+                errorInfo = """No transform members kept after cleaning. Try to reduce   
+                               parameter:minNumTransform_ratio and try again!"""
+                self.log.error(errorInfo)
+                raise TypeError(errorInfo)
+            else:           
+                self.transList =  transListSelCmb               
+                os.rename('%s/scores/tree.npy'%self.io['classifyFold'],
+                             '%s/scores/treeb4Relink.npy'%self.io['classifyFold'])
+                self.groupTransForms(worker_n = worker_n, gpu_list = gpu_list, iterN = iterN)               
+                if os.path.exists('%s/allTransforms.star'%self.io['classifyFold']):
+                    os.rename('%s/allTransforms.star'%self.io['classifyFold'],
+                                  '%s/allTransformsb4Relink.star'%self.io['classifyFold'])
+                transList_subset = copy.deepcopy(self.transList)
+                
+                
+            allClusters = transList_subset['pairClass'].values
+            allClustersU = np.unique(allClusters) 
+            self.log.info('%d clusters kept for clusterIDs assignment.'%(len(allClustersU)))
+            #first aligned the transforms and summary it!
+            transList_subset = tom_align_transformDirection(transList_subset,1,0)
             cmb_metric = self.classify['cmb_metric']
             stats_cluster = { }
             for single_cluster in allClustersU:
@@ -414,15 +451,20 @@ class Polysome:
                 stats_cluster[single_cluster][0] = np.max(distsCN)
                 stats_cluster[single_cluster][1:4] = [vectStat['meanTransVectX'], vectStat['meanTransVectY'], vectStat['meanTransVectZ']]
                 stats_cluster[single_cluster][4:7] = [angStat['meanTransAngPhi'], angStat['meanTransAngPsi'], angStat['meanTransAngTheta']]
-                
-            pairClassList, _ = tom_assignTransFromCluster(self.transList, stats_cluster, cmb_metric, maxDistInPix, iterN, worker_n, gpu_list, freeMem)
+                          
+            pairClassList, _ = tom_assignTransFromCluster(oriTrans, stats_cluster, cmb_metric, maxDistInPix, iterN, worker_n, gpu_list, freeMem)
             #update the pairClass as well as the color 
             clusterColor = { }
             for sgCluster, sgColor in zip(transList_subset['pairClass'].values, transList_subset['pairClassColour'].values):
                 clusterColor[sgCluster] = sgColor
             pairClassColorList = [ ]
             for sgCluster in pairClassList:
-                pairClassColorList.append(clusterColor[sgCluster])
+                if sgCluster == 0:
+                    pairClassColorList.append('0-0-0')
+                else:    
+                    pairClassColorList.append(clusterColor[sgCluster])
+            
+            self.transList = oriTrans
             self.transList["pairClass"] = pairClassList
             self.transList['pairClassColour'] = pairClassColorList
         else:
@@ -454,7 +496,7 @@ class Polysome:
                                                                   self.sel[0]['minNumTransform'], '')
                 if len(transListSelCmb) == 0:
                     errorInfo = """No transform members kept after cleaning. Try to reduce   
-                                   parameter:minNumTransformPairs and try again!"""
+                                   parameter:minNumTransform_ratio and try again!"""
                     self.log.error(errorInfo)
                     raise TypeError(errorInfo)
                     
@@ -462,8 +504,26 @@ class Polysome:
                 #this select can discard the transforms with class ==0 (which failed to form cluster)
                 os.rename('%s/scores/tree.npy'%self.io['classifyFold'],
                          '%s/scores/treeb4Relink.npy'%self.io['classifyFold'])
-                self.groupTransForms(worker_n = worker_n, gpu_list = gpu_list, iterN = iterN)
                 
+                #reassign the clusterID
+                clusterU = np.unique(self.transList['pairClass'])
+                clusterNr = len(clusterU)
+                clusterDict = { }
+                for i,j in enumerate(clusterU):
+                    clusterDict[j] = i+1
+                    
+                pairClassList = [ ]
+                pairColorList = [ ]
+                colorm = sns.color_palette('hls', clusterNr)
+                
+                for sgC in self.transList['pairClass']:
+                    pairClassList.append(clusterDict[sgC])
+                    colorg = colorm[clusterDict[sgC]-1]                    
+                    pairColorList.append('%.2f-%.2f-%.2f'%(colorg[0], colorg[1], colorg[2]))
+                
+                self.transList['pairClass'] = pairClassList
+                self.transList['pairClassColour'] = pairColorList
+                                  
             if os.path.exists('%s/allTransforms.star'%self.io['classifyFold']):
                 os.rename('%s/allTransforms.star'%self.io['classifyFold'],
                               '%s/allTransformsb4Relink.star'%self.io['classifyFold'])
@@ -480,7 +540,7 @@ class Polysome:
            
         if len(transListSel) == 0:
             self.log.warning('''No translist has been selected for further analysis!
-                                Try to reduce minNumTransformPairs and try again!''')
+                                Try to reduce minNumTransform_ratio and try again!''')
      
         return transListSel, selFolds  #transListSel be empty when on clustering performs  
     

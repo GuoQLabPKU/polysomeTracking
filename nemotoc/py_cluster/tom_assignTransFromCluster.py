@@ -10,36 +10,47 @@ def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, ite
     transList: pairList retunred by NEMO-TOC 
     clusterStat: the detailed information of each cluster, dict [clusterNr:[maxDist,X,Y,Z,phi,psi,theta]]
     '''
+    
+    transAngVect = np.array([transList["pairTransAngleZXZPhi"].values, 
+                             transList["pairTransAngleZXZPsi"].values, 
+                             transList["pairTransAngleZXZTheta"].values]).transpose()
+    transAngVectInv = np.array([transList["pairInvTransAngleZXZPhi"].values, 
+                             transList["pairInvTransAngleZXZPsi"].values, 
+                             transList["pairInvTransAngleZXZTheta"].values]).transpose()
+    
+    transVect = np.array([transList["pairTransVectX"].values, 
+                             transList["pairTransVectY"].values, 
+                             transList["pairTransVectZ"].values]).transpose()  
+    transVectInv = np.array([transList["pairInvTransVectX"].values, 
+                             transList["pairInvTransVectY"].values, 
+                            transList["pairInvTransVectZ"].values]).transpose()
+    #merge two arrays
+    vectList = np.concatenate((transVect,transVectInv))
+    angList = np.concatenate((transAngVect,transAngVectInv))
+    
     for _ in range(iterN):
-        #transfer the clusterStat into array to calculate these distances 
-        transVect = np.zeros((len(clusterStat.keys()), 3))
-        angVect = np.zeros((len(clusterStat.keys()), 3))
-        clusterId = { }
-        for i,j in enumerate(clusterStat.keys()):
-            clusterId[i] = j 
-            transVect[i, :] = clusterStat[j][1:4]
-            angVect[i, :] = clusterStat[j][4:7]
-        #assign each transform into each cluster        
+        #record the information of each trans
+        forwardBackwardDist = np.zeros((transList.shape[0],2))
         pairClassList = np.zeros(transList.shape[0], dtype = np.int)
-        for i in range(transList.shape[0]):
-            trans = np.array([transList['pairTransVectX'].values[i], transList['pairTransVectY'].values[i], transList['pairTransVectZ'].values[i]])
-            ang = np.array([transList['pairTransAngleZXZPhi'].values[i], transList['pairTransAngleZXZPsi'].values[i], transList['pairTransAngleZXZTheta'].values[i]])
-            transInv = np.array([transList['pairInvTransVectX'].values[i], transList['pairInvTransVectY'].values[i], transList['pairInvTransVectZ'].values[i]])
-            angInv = np.array([transList['pairInvTransAngleZXZPhi'].values[i], transList['pairInvTransAngleZXZPsi'].values[i], transList['pairInvTransAngleZXZTheta'].values[i]])
-            _,_, distCmb = tom_A2Odist(transVect, angVect, trans, ang, worker_n, gpu_list, cmb_metric, pruneRad)
-            _,_, distCmbInv = tom_A2Odist(transVect, angVect, transInv, angInv, worker_n, gpu_list, cmb_metric, pruneRad)
-            minDist, argMin = np.min(distCmb), np.argmin(distCmb)
-            minDistInv, argMinInv = np.min(distCmbInv), np.argmin(distCmbInv)
-            if minDist <= minDistInv:
-                clusterSg = clusterId[argMin]
-                if minDist > clusterStat[clusterSg][0]:
-                    clusterSg = 0
-            else:
-                clusterSg = clusterId[argMinInv]
-                if minDistInv >  clusterStat[clusterSg][0]:
-                     clusterSg = 0
-                    
-            pairClassList[i] = clusterSg
+        transDistMin = np.ones(transList.shape[0])*100000
+
+        for j in clusterStat.keys():
+            maxDist = clusterStat[j][0]
+            clusterId = j 
+            transVectCluster = clusterStat[j][1:4]
+            angVectCluster = clusterStat[j][4:7]
+            
+            _, _, distCmb = tom_A2Odist(vectList, angList, transVectCluster, angVectCluster, worker_n, gpu_list, cmb_metric, pruneRad)
+            assert len(distCmb) == transList.shape[0]*2
+            forwardBackwardDist[:,0] = distCmb[0:transList.shape[0]]
+            forwardBackwardDist[:,1] = distCmb[transList.shape[0]:transList.shape[0]*2]
+            forwardBackwardDistSort = np.sort(forwardBackwardDist, axis = 1)
+            transIdList = np.where(forwardBackwardDistSort[:,0] < maxDist)[0]
+            
+            for sgId in transIdList:
+                if transDistMin[sgId] > forwardBackwardDistSort[sgId,0]:
+                    transDistMin[sgId] = forwardBackwardDistSort[sgId,0]
+                    pairClassList[sgId] = clusterId
             
         #update the centeroid of each cluster   
         #firstly, update the cluster number and align the direction
