@@ -501,10 +501,6 @@ class Polysome:
                     raise TypeError(errorInfo)
                     
                 self.transList = transListSelCmb
-                #this select can discard the transforms with class ==0 (which failed to form cluster)
-                os.rename('%s/scores/tree.npy'%self.io['classifyFold'],
-                         '%s/scores/treeb4Relink.npy'%self.io['classifyFold'])
-                
                 #reassign the clusterID
                 clusterU = np.unique(self.transList['pairClass'])
                 clusterNr = len(clusterU)
