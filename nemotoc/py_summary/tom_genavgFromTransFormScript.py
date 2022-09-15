@@ -73,10 +73,10 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, workerNr, maxRes, pi
             inputName = "%s/%s"%(wk_upup, d[i]) #each transList from one class
             #get the up-dir 
             if 'maxNumPart' in classFilt.keys():
-                call = 'cat %s  | awk \"NF>5{print $0}\" | wc -l'%inputName
+                call = 'cat %s  | awk \"NF>5{print }\" | wc -l'%inputName
             else:
                 inputNameTR = inputName.replace('/particleCenter/allParticles.star', '/transList.star')
-                call = 'cat %s  | awk \"NF>5{print $0}\" | wc -l '%inputNameTR
+                call = 'cat %s  | awk \"NF>5{print }\" | wc -l '%inputNameTR
             
             p = subprocess.Popen(call, shell = True, stdout = subprocess.PIPE)
             out, err = p.communicate()
@@ -115,9 +115,9 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, workerNr, maxRes, pi
             
         if lens[uPos] > maxLen:  
             inputNameTmp = inputName.replace('.star', '_subset.star')
-            call = 'cat %s | awk \"NF<4{print $0}\" > %s'%(inputName, inputNameTmp)
+            call = 'cat %s | awk \"NF<4{print }\" > %s'%(inputName, inputNameTmp)
             p = subprocess.Popen(call, shell = True, stdout = subprocess.PIPE)
-            call = 'awk \"NF>5{print $0}\" %s | sort -R | awk \"NR<%d{print $0}\" >> %s'%(inputName, 
+            call = 'awk \"(NF>5 && NR<%d){print }\" >> %s'%(inputName, 
                               maxLen, inputNameTmp)
             
             p = subprocess.Popen(call, shell = True, stdout = subprocess.PIPE)
