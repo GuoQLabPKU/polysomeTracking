@@ -10,7 +10,7 @@ def recall_Precision(idxPair_std, idxPair_cmp):
     FP = len(idxPair_cmp_set - idxPair_std_set)
     FN = len(idxPair_std_set - idxPair_cmp_set)
     recall = 100*TP/(TP+FN)
-    precision = 100*TP(TP+FP)
+    precision = 100*TP/(TP+FP)
     return recall, precision
        
 def tom_compTransList(stdard, comp):
@@ -49,8 +49,8 @@ def tom_compTransList(stdard, comp):
         if sgC_cmp == 0:
             continue
         trans_cmp_sgC_idxPair = transList_cmp[transList_cmp['pairClass'] == sgC_cmp]['idx1-idx2'].values
-        recall_array[sgC_cmp] = 0
-        precision_array[sgC_cmp] = 0
+        recall_dict[sgC_cmp] = 0
+        precision_dict[sgC_cmp] = 0
         for sgC_std in clusterU_std:
             trans_std_sgC_idxPair = transList_std[transList_std['pairClass'] == sgC_std]['idx1-idx2'].values
             recall, precision = recall_Precision(trans_std_sgC_idxPair, trans_cmp_sgC_idxPair)
@@ -64,10 +64,12 @@ def tom_compTransList(stdard, comp):
     summary_data = pd.DataFrame({'score':list(recall_dict.values()) + list(precision_dict.values()),
                                  'type':['recall']*len(clusterU_cmp) + ['precision']*len(clusterU_cmp)})
     sns.boxplot(x = 'type', y = 'score', data = summary_data)
-    
+    sns.stripplot(x = 'type', y = 'score',size=10
+          ,jitter=0.1, data = summary_data, color = 'black')
             
             
-    
-    
+  
+tom_compTransList("../../myNemoProj/projNeuron/run0/allTransformsFillUp.star",
+                  "../../myNemoProj/projNeuron/run2/allTransformsFillUp.star",)
     
     
