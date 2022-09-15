@@ -6,7 +6,7 @@ import glob
 
 from nemotoc.py_log.tom_logger import Log
 def tom_genavgFromTransFormScript(transList, maxRes, pixS, workerNr = 35 ,
-                                  classFilt = -1, callByPython = 0,
+                                  classFilt = -1, callByPython = 0, avgCall = 'mpirun -np XXX_cpuNr_XXX `which relion_reconstruct_mpi` --i XXX_inList_XXX --maxres XXX_maxRes_XXX --angpix  XXX_pix_XXX --ctf --3d_rot --o XXX_outAVG_XXX',                                
                                   outputRoot = 'avg/r1'):
     '''
     TOM_AVGFROMTRANSFORM generate avg volumes form transform paris 
@@ -32,7 +32,6 @@ def tom_genavgFromTransFormScript(transList, maxRes, pixS, workerNr = 35 ,
 
     ''' 
     log = Log('average particles').getlog()
-    avgCall = 'mpirun -np %d `which relion_reconstruct_mpi` --i XXX_inList_XXX --maxres XXX_maxRes_XXX --angpix  XXX_pix_XXX --ctf --3d_rot --o XXX_outAVG_XXX'%workerNr
     if isinstance(transList,str):
         isPairTransForm = len(glob.glob(transList))>1
     else:
@@ -48,9 +47,9 @@ def tom_genavgFromTransFormScript(transList, maxRes, pixS, workerNr = 35 ,
         log.warning('No particles files detect. Skip average particles')  
         return
     else:
-        avgFromWildCard(transList, outputRoot, classFilt, avgCall, maxRes, pixS,callByPython, 'all')
+        avgFromWildCard(transList, outputRoot, classFilt, avgCall, workerNr, maxRes, pixS,callByPython, 'all')
    
-def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS, callByPython,kind):
+def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, workerNr, maxRes, pixS, callByPython, kind):
     #list the dir of all classes
     wk_upup = os.path.split(os.path.split(os.path.split(wk)[0]) [0])[0]
     d = [ i+ '/particleCenter/%sParticles.star'%kind for i in os.listdir(wk_upup)]     
@@ -127,10 +126,13 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS, callBy
         
         
         #process by relion
-        avgCall = avgCallTmpl.replace('XXX_inList_XXX', inputName)
+        avgCall = avgCallTmpl.replace('XXX_cpuNr_XXX', str(workerNr))
+        avgCall = avgCall.replace('XXX_inList_XXX', inputName)     
         avgCall = avgCall.replace('XXX_outAVG_XXX', outputName)
-        avgCall = avgCall.replace('XXX_maxRes_XXX', str(maxRes))
-        avgCall = avgCall.replace('XXX_pix_XXX', str(pixS))
+        if 'XXX_maxRes_XXX' in avgCall:
+            avgCall = avgCall.replace('XXX_maxRes_XXX', str(maxRes))
+        if 'XXX_pix_XXX' in avgCall:
+            avgCall = avgCall.replace('XXX_pix_XXX', str(pixS))
         avgCallFull = "%s &> %s"%(avgCall, outputNameLog)
         if callByPython:
             p = subprocess.Popen(avgCallFull, shell = True, stdout = subprocess.PIPE)
@@ -138,5 +140,4 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, maxRes, pixS, callBy
             f = open(scriptName, 'a+')
             f.write(avgCallFull + '\n')
             f.close()
-                
                 

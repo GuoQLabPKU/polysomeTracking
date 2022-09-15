@@ -64,7 +64,7 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
     distsVect = tom_pdist(transVect,  maxChunk , worker_n, gpu_list, 'euc', transVectInv)
     distsAng =  tom_pdist(transAngVect,  maxChunk, worker_n, gpu_list, 'ang', transAngVectInv)  
 
-    log.info("Use %s to combine angles and shifts"%cmb_metric)    
+    #log.info("Use %s to combine angles and shifts"%cmb_metric)    
     
     if cmb_metric == 'scale2Ang':
         distsVect = distsVect/(2*maxDistInpix)*180
@@ -95,9 +95,9 @@ def tom_calcLinkage(transList, preCalcFold, maxDistInpix, cmb_metric='mean0+1std
         else:
             distsCN = (distsCN - np.mean(distsCN)) + 1.0 #(1,1,1)
     
-    log.info('Calculate linkage')
+    #log.info('Calculate linkage')
     ll = linkage(distsCN,'average') 
-    log.info('Calculate linkage done')
+    #log.info('Calculate linkage done')
     np.save("%s/tree.npy"%preCalcFold,ll)
     
     return ll

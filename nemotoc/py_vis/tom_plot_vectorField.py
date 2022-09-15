@@ -43,9 +43,6 @@ def plot_vectField(posAng, mode, repVect, scale, col, classNr, polyNr, onlySelec
             uTomoID = tomoID  #only keep this tomoID further analysis
         if len(uTomoID) > 1:
             print('more than one tomogram in list')          
-            for i in range(len(uTomoID)):
-                tmpInd = np.where(allTomoID == uTomoID[i])[0]
-                print('tomoID: %d  tomoName: %s'%(uTomoID[i], allTomoLabel[tmpInd[0]]))
         if (len(uTomoID) > 5) & (tomoID[0] == -1) & (len(outputFolder) == 0):  ##TomoID  = -1 ==> All tomo and only for vislization
             print('warning found %d tomograms reducing to 5'%len(uTomoID))
             print('can use tomoID parameter to select specific tomograms')
@@ -190,6 +187,10 @@ def plotPairs(st, mode, idx, ax):
             continue#I don't want to show class 0 --> noise!
         
         tmpIdx = np.where(allClasses == uClasses[i])[0]  #find the specific class of trans
+        allLabel_sgC = allLabel[tmpIdx]
+        allColClass = allCol[tmpIdx,:]
+        noFillIdx = np.where((allColClass != np.array([100,100,100])).all(1))[0]
+        
         connVect = allTrans[tmpIdx,:]
         conCol = allCol[tmpIdx[0],:]
         conPos = allPos1[tmpIdx,:]
@@ -199,35 +200,42 @@ def plotPairs(st, mode, idx, ax):
         posInPoly2 = allPosInpoly2[tmpIdx]
         classInPoly1 = allClassP1[tmpIdx]
         classInPoly2 = allClassP2[tmpIdx]
+               
+        connVectNoF = connVect[noFillIdx,:]
+        conPosNoF = conPos[noFillIdx,:]
+        midPosNoF = conPosNoF + connVectNoF*0.35
+        p2PosNoF = p2Pos[noFillIdx,:]
+        posInPoly1NoF = posInPoly1[noFillIdx]
+        posInPoly2NoF = posInPoly2[noFillIdx]
+        classInPoly1NoF = classInPoly1[noFillIdx]
+        classInPoly2NoF = classInPoly2[noFillIdx]
         
-        ax.quiver(conPos[:,0], conPos[:,1], conPos[:,2],
-                  connVect[:,0], connVect[:,1], connVect[:,2], color = conCol,
+        ax.quiver(conPosNoF[:,0], conPosNoF[:,1], conPosNoF[:,2],
+                  connVectNoF[:,0], connVectNoF[:,1], connVectNoF[:,2], color = conCol,
                   arrow_length_ratio=0.4, linewidths = 0.7) #from each ribosome to the adaject pair
  
         if mode == 'advance':
             labelPoly = [ ]
             labelPosInPoly1 = [ ]
             labelPosInPoly2 = [ ]
-            for ii in range(len(tmpIdx)):
-                labelPoly.append('cl%s,p%.1f'%(uClasses[i],  allLabel[tmpIdx[ii]]))
-                labelPosInPoly1.append('%d/c%d'%(posInPoly1[ii], classInPoly1[ii]))
-                labelPosInPoly2.append('%d/c%d'%(posInPoly2[ii], classInPoly2[ii]))
+            for ii in range(len(noFillIdx)):
+                labelPoly.append('cl%s,p%.1f'%(uClasses[i],  allLabel_sgC[noFillIdx[ii]]))
+                labelPosInPoly1.append('%d/c%d'%(posInPoly1NoF[ii], classInPoly1NoF[ii]))
+                labelPosInPoly2.append('%d/c%d'%(posInPoly2NoF[ii], classInPoly2NoF[ii]))
            
-            for x,y,z, lbl in zip(midPos[:,0], midPos[:, 1], midPos[:,2], labelPoly):
+            for x,y,z, lbl in zip(midPosNoF[:,0], midPosNoF[:, 1], midPosNoF[:,2], labelPoly):
                 ax.text(x,y,z,lbl, size = 10)
-            for x,y,z, lbl in zip(conPos[:,0], conPos[:,1],conPos[:,2],labelPosInPoly1):
+            for x,y,z, lbl in zip(conPosNoF[:,0], conPosNoF[:,1],conPosNoF[:,2],labelPosInPoly1):
                 ax.text(x,y,z,lbl, size = 10 )
-            for x,y,z,lbl in zip(p2Pos[:,0],p2Pos[:,1],p2Pos[:,2], labelPosInPoly2):
+            for x,y,z,lbl in zip(p2PosNoF[:,0],p2PosNoF[:,1],p2PosNoF[:,2], labelPosInPoly2):
                 ax.text(x,y,z, lbl, size = 10) 
         
         if mode == 'basic':
-            h_plot.append(ax.plot([conPos[0,0], p2Pos[0,0]], [conPos[0,1], p2Pos[0,1]], 
-                                  [conPos[0,2], p2Pos[0,2]],color = conCol))
-            h_label.append('c%d'%(uClasses[i]))  
-            
-                       
+            h_plot.append(ax.plot([conPosNoF[0,0], p2PosNoF[0,0]], [conPosNoF[0,1], p2PosNoF[0,1]], 
+                                  [conPosNoF[0,2], p2PosNoF[0,2]], color = conCol))
+            h_label.append('c%d'%(uClasses[i]))                                    
         #plot for fillUp ribos
-        allColClass = allCol[tmpIdx,:]
+        
         fillIdx = np.where((allColClass == np.array([100,100,100])).all(1))[0]
         if len(fillIdx) == 0:
             if mode == 'advance':
@@ -241,20 +249,20 @@ def plotPairs(st, mode, idx, ax):
         
         ax.quiver(conPosfill[:,0], conPosfill[:,1], conPosfill[:,2],
                   connVectfill[:,0], connVectfill[:,1], connVectfill[:,2], linewidths = 1.5,
-                  color = np.array([1,0,0]), arrow_length_ratio=0.4)
+                  color = np.array([0.7,0.7,0.7]), arrow_length_ratio=0.4,  linestyle='dashed')
               
         if mode == 'advance':
             #change the color of label 
             for sIdx in fillIdx:
                 ax.text(midPos[sIdx,0], midPos[sIdx,1], midPos[sIdx,2],
-                        labelPoly[sIdx], size = 15, color = 'red')          
+                        allLabel_sgC[sIdx], size = 15, color = 'grey')          
             del labelPoly, labelPosInPoly1, labelPosInPoly2
         
     #add filled up transform
     if (if_legend > 0) & (mode == 'basic'):
         h_plot.append(ax.plot([conPosfill[0,0], p2Posfill[0,0]], [conPosfill[0,1],p2Posfill[0,1]], 
                               [conPosfill[0,2], p2Posfill[0,2]],
-                               color = np.array([1,0,0])))
+                               color = np.array([0.7,0.7,0.7]), linestyle='dashed'))
         h_label.append('fillup')   
     if  mode == 'basic':  
         ax.legend(h_plot,labels = h_label,fontsize = 10,#bbox_to_anchor=(1.15, 1),

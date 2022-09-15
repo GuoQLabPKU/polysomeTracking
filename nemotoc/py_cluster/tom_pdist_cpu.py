@@ -63,10 +63,12 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
             shared_ncc = mp.Array('f', np.int(in_Fw.shape[0]*(in_Fw.shape[0]-1)/2)) #store the distance results for all cpus
             spl_ids = np.array_split(range(job_n),worker_n) #split the jobs into workers
             processes = [ ]
-            for pr_id,  jobs_split in enumerate(spl_ids):            
+            for pr_id,  jobs_split in enumerate(spl_ids):  
                 jobList_single = [jobListSt[i] for i in jobs_split]
+                if pr_id > 0:
+                    verbose = 0 
                 pr = mp.Process(target = calcVectDist_mp,
-                        args = (pr_id, jobList_single, in_Fw, in_Inv, shared_ncc))               
+                        args = (pr_id, jobList_single, in_Fw, in_Inv, shared_ncc, verbose))               
                 pr.start()
                 processes.append(pr)
             #collect the running results
@@ -88,7 +90,7 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
                 
         if (worker_n == 1) | (job_n == 1):  
             log.debug('Use single cpu')
-            dists = calcVectDist_mp(-1, jobListSt, in_Fw, in_Inv, dists) 
+            dists = calcVectDist_mp(-1, jobListSt, in_Fw, in_Inv, dists, verbose) 
         
         if verbose:
             log.info('Calculate euc transforms distance done!')
@@ -110,9 +112,11 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
             spl_ids = np.array_split(range(job_n),worker_n) #split the jobs into workers
             processes = [ ]
             for pr_id,  jobs_split in enumerate(spl_ids):            
-                jobList_single = [jobListSt[i] for i in jobs_split]           
+                jobList_single = [jobListSt[i] for i in jobs_split]       
+                if pr_id > 0:
+                    verbose = 0 
                 pr = mp.Process(target = calcAngDist_mp,
-                                args = (pr_id, jobList_single, Rin, Rin_Inv,shared_ncc))        
+                                args = (pr_id, jobList_single, Rin, Rin_Inv,shared_ncc, verbose))        
                 pr.start()
                 processes.append(pr)
             #collect the running results
@@ -134,7 +138,7 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
                         
         if (worker_n == 1) | (job_n == 1): 
             log.debug('Use single cpu')
-            dists = calcAngDist_mp(-1, jobListSt, Rin,Rin_Inv, dists) 
+            dists = calcAngDist_mp(-1, jobListSt, Rin,Rin_Inv, dists, verbose) 
         if verbose:   
             log.info('Calculate ang transforms distance done')         
        
@@ -143,8 +147,27 @@ def tom_pdist(in_Fw, maxChunk, worker_n = 1, gpu_list = None, dmetric = 'euc',
     return dists  # one dimension array float 32          
             
 
-def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
-    with alive_bar(len(jobList_single), title="euc distances") as bar:
+def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc, verbose = 1):
+    if verbose:
+        with alive_bar(len(jobList_single), title="euc distances") as bar:
+            for single_job in jobList_single:           
+                with open(single_job["file"], 'rb') as job:
+                    jobListChunk = np.load(job, allow_pickle=True)               
+                    g1 = in_Fw[jobListChunk[:,0],:]
+                    g2 = in_Fw[jobListChunk[:,1],:]
+                    if len(in_Inv)  == 0:
+                        g1Inv = ''
+                        g2Inv = ''
+                    else:
+                        g1Inv = in_Inv[jobListChunk[:,0],:]
+                        g2Inv = in_Inv[jobListChunk[:,1],:]
+                
+                    dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)
+                    shared_ncc[single_job["start"]:single_job["stop"]] = dtmp
+                    del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
+                    gc.collect()  
+                    bar()
+    else:
         for single_job in jobList_single:           
             with open(single_job["file"], 'rb') as job:
                 jobListChunk = np.load(job, allow_pickle=True)               
@@ -160,9 +183,7 @@ def calcVectDist_mp(pr_id, jobList_single, in_Fw, in_Inv, shared_ncc):
                 dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)
                 shared_ncc[single_job["start"]:single_job["stop"]] = dtmp
                 del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
-                gc.collect()  
-                bar()
-   
+                gc.collect()                  
     if pr_id == -1:
         return shared_ncc    
     os._exit(pr_id)
@@ -202,8 +223,26 @@ def calcRotMatrices(in_angs, verbose):
     return  Rin
     
   
-def calcAngDist_mp(pr_id, jobList_single, Rin, Rin_Inv,shared_ncc):
-    with alive_bar(len(jobList_single), title="ang distances") as bar:
+def calcAngDist_mp(pr_id, jobList_single, Rin, Rin_Inv,shared_ncc, verbose = 1):
+    if verbose:
+        with alive_bar(len(jobList_single), title="ang distances") as bar:
+            for singlejobs in jobList_single:                
+                with open(singlejobs["file"], 'rb') as job:
+                    jobListChunk = np.load(job, allow_pickle=True)                      
+                    dtmp = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
+                    if len(Rin_Inv) > 0:
+                        dtmpInv = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])               
+                        dtmpInv2 = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6])
+                        dtmpInv3 = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6] )              
+                        dists_all = np.array([dtmp, dtmpInv, dtmpInv2,dtmpInv3 ])
+                        dtmp = np.min(dists_all, axis = 0)
+                        del dtmpInv, dtmpInv2, dtmpInv3, dists_all
+                        
+                    shared_ncc[singlejobs["start"]:singlejobs["stop"]] = dtmp  
+                    del jobListChunk, dtmp
+                    gc.collect()                                       
+                    bar()
+    else:
         for singlejobs in jobList_single:                
             with open(singlejobs["file"], 'rb') as job:
                 jobListChunk = np.load(job, allow_pickle=True)                      
@@ -218,8 +257,7 @@ def calcAngDist_mp(pr_id, jobList_single, Rin, Rin_Inv,shared_ncc):
                     
                 shared_ncc[singlejobs["start"]:singlejobs["stop"]] = dtmp  
                 del jobListChunk, dtmp
-                gc.collect()                                       
-                bar()
+                gc.collect()             
           
     if pr_id == -1:
         return shared_ncc
@@ -242,16 +280,16 @@ def genJobList(szIn, tmpDir, maxChunk, verbose):
     jobList = np.zeros([lenJobs,2], dtype = np.uint32) #expand the range of positive int save memory(no negative int)
     startA = 0  
     
-    with alive_bar(int(np.floor(szIn/100)+1), title="jobList generation") as bar:
-        for i in range(szIn):
-            v2 = np.arange(i+1,szIn, dtype = np.uint32)
-            v1 = np.repeat(i, len(v2)).astype(np.uint32)
-            endA = startA+len(v2)
-            jobList[startA:endA,0] = v1
-            jobList[startA:endA,1] = v2
-            startA = endA 
-            if ((i%100) == 0) & verbose:
-                bar()  
+    #with alive_bar(int(np.floor(szIn/100)+1), title="jobList generation") as bar:
+    for i in range(szIn):
+        v2 = np.arange(i+1,szIn, dtype = np.uint32)
+        v1 = np.repeat(i, len(v2)).astype(np.uint32)
+        endA = startA+len(v2)
+        jobList[startA:endA,0] = v1
+        jobList[startA:endA,1] = v2
+        startA = endA 
+            #if ((i%100) == 0) & verbose:
+            #    bar()  
                 
     numOfPackages = np.int(np.ceil(lenJobs/maxChunk)) #if the size of joblist < maxChunck, only single cpu will used  
     packages = tom_calc_packages(numOfPackages, lenJobs) #split the jobList into different size, the packages is one array

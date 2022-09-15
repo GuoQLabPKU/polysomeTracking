@@ -8,7 +8,7 @@ from nemotoc.py_cluster.tom_calc_packages import tom_calc_packages
 
 def tom_A2Odist(transVect, transAng, shift, rot, 
                 worker_n = 1, gpu_list = None, 
-                cmb_metric = 'scale2Ang', pruneRad = 100):
+                cmb_metric = 'scale2Ang', pruneRad = 100,verbose = 1):
     '''
     TOM_A2DIST is aimed to calculate the distance between 
     one group of transforms with another one transform
@@ -35,13 +35,13 @@ def tom_A2Odist(transVect, transAng, shift, rot,
     transAng = np.append(transAng,rot.reshape(-1,3), axis = 0)
     distVect, distAng, distCombine = getDist(transVect, transAng, 
                                               worker_n, gpu_list, 
-                                              cmb_metric, pruneRad)
+                                              cmb_metric, pruneRad, verbose)
     return distVect, distAng, distCombine
               
-def getDist(transVect, transAng,worker_n, gpu_list, cmb_metric, pruneRad): 
+def getDist(transVect, transAng,worker_n, gpu_list, cmb_metric, pruneRad,verbose = 1): 
     if gpu_list is not None:
         worker_n = None
-    maxChunk = tom_memalloc(None, worker_n, gpu_list) #mallocal the memory
+    maxChunk = tom_memalloc(freeMem = None, worker_n = worker_n, gpu_list = gpu_list, verbose = verbose) #mallocal the memory
     if isinstance(worker_n, int):
         from nemotoc.py_cluster.tom_pdist_cpu import tom_pdist
         tmpDir = 'tmpA2Odistcpu' 

@@ -70,7 +70,7 @@ def oneDirectionBranchClean(pairList, clean_direction,
     _, _, combDist = tom_A2Odist(pairList.loc[:,['pairTransVectX', 'pairTransVectY', 'pairTransVectZ']].values,
                                        pairList.loc[:,['pairTransAngleZXZPhi', 'pairTransAngleZXZPsi', 
                                                      'pairTransAngleZXZTheta']].values,
-                                       shift, rot, worker_n, gpu_list, cmb_metric, pruneRad)
+                                       shift, rot, worker_n, gpu_list, cmb_metric, pruneRad,0)
     #sort the combDist 
     idxSort = np.argsort(combDist)
     pairListSort = pairList.iloc[idxSort, :]

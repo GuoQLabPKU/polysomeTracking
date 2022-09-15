@@ -40,7 +40,7 @@ def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, ite
             transVectCluster = clusterStat[j][1:4]
             angVectCluster = clusterStat[j][4:7]
             
-            _, _, distCmb = tom_A2Odist(vectList, angList, transVectCluster, angVectCluster, worker_n, gpu_list, cmb_metric, pruneRad)
+            _, _, distCmb = tom_A2Odist(vectList, angList, transVectCluster, angVectCluster, worker_n, gpu_list, cmb_metric, pruneRad,0)
             assert len(distCmb) == transList.shape[0]*2
             forwardBackwardDist[:,0] = distCmb[0:transList.shape[0]]
             forwardBackwardDist[:,1] = distCmb[transList.shape[0]:transList.shape[0]*2]

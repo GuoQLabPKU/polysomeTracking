@@ -64,8 +64,10 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
         processes = [ ]
         for pr_id, gpu_id in enumerate(jobListSt.keys()):
             jobList = jobListSt[gpu_id]
+            if pr_id > 0:
+                verbose = 0
             pr = mp.Process(target = calcVectDist_mp,
-                    args = (pr_id, jobList, in_Fw, in_Inv, shared_ncc,gpu_id))
+                    args = (pr_id, jobList, in_Fw, in_Inv, shared_ncc,gpu_id, verbose))
             
             pr.start()
             processes.append(pr)
@@ -99,8 +101,10 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
         processes = [ ]
         for pr_id, gpu_id in enumerate(jobListSt.keys()):
             jobList = jobListSt[gpu_id]
+            if pr_id > 0:
+                verbose = 0 
             pr = mp.Process(target = calcAngDist_mp,
-                            args = (pr_id, jobList, Rin, Rin_Inv,shared_ncc, gpu_id))        
+                            args = (pr_id, jobList, Rin, Rin_Inv,shared_ncc, gpu_id, verbose))        
             pr.start()
             processes.append(pr)
         pr_results = [ ]
@@ -125,12 +129,31 @@ def tom_pdist(in_Fw, maxChunk ,worker_n = 1, gpu_list = None,
     return dists  # one dimension array           
             
   
-def calcVectDist_mp(pr_id, jobList, in_Fw, in_Inv, shared_ncc, gpu_id):
+def calcVectDist_mp(pr_id, jobList, in_Fw, in_Inv, shared_ncc, gpu_id,verbose = 1):
     cp.cuda.Device(gpu_id).use()
     in_Fw = cp.asarray(in_Fw) #move array into different GPUs
     if len(in_Inv) > 0:
         in_Inv = cp.asarray(in_Inv)
-    with alive_bar(len(jobList), title="euc distances") as bar:  
+    if verbose:
+        with alive_bar(len(jobList), title="euc distances") as bar:  
+            for jobList_single in jobList:
+                with open(jobList_single["file"], 'rb') as job:
+                    jobListChunk = cp.load(job, allow_pickle=True)   
+                    g1 = in_Fw[jobListChunk[:,0],:]
+                    g2 = in_Fw[jobListChunk[:,1],:]
+                    if len(in_Inv)  == 0:
+                        g1Inv = ''
+                        g2Inv = ''
+                    else:
+                        g1Inv = in_Inv[jobListChunk[:,0],:]
+                        g2Inv = in_Inv[jobListChunk[:,1],:]
+                    dtmp = calcVectDist(g1,g2,g1Inv,g2Inv)
+                    dtmp = cp.asnumpy(dtmp)        
+                    shared_ncc[jobList_single["start"]:jobList_single["stop"]] = dtmp
+                    del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
+                    gc.collect()
+                    bar()
+    else:
         for jobList_single in jobList:
             with open(jobList_single["file"], 'rb') as job:
                 jobListChunk = cp.load(job, allow_pickle=True)   
@@ -146,9 +169,7 @@ def calcVectDist_mp(pr_id, jobList, in_Fw, in_Inv, shared_ncc, gpu_id):
                 dtmp = cp.asnumpy(dtmp)        
                 shared_ncc[jobList_single["start"]:jobList_single["stop"]] = dtmp
                 del jobListChunk, g1, g2, g1Inv, g2Inv, dtmp
-                gc.collect()
-                bar()
-            
+                gc.collect()        
         
     cp.get_default_memory_pool().free_all_blocks()   #free the blocked memory 
     cp.get_default_pinned_memory_pool().free_all_blocks() #free the blocked memory
@@ -186,12 +207,31 @@ def calcRotMatrices(in_angs, verbose):
     return  Rin
     
   
-def calcAngDist_mp(pr_id, jobList, Rin, Rin_Inv,shared_ncc,gpu_id):
+def calcAngDist_mp(pr_id, jobList, Rin, Rin_Inv,shared_ncc,gpu_id, verbose = 1):
     cp.cuda.Device(gpu_id).use()
     Rin = cp.asarray(Rin) #move array into different GPUs
     if len(Rin_Inv) > 0:
-        Rin_Inv = cp.asarray(Rin_Inv)   
-    with alive_bar(len(jobList), title="ang distances") as bar:
+        Rin_Inv = cp.asarray(Rin_Inv)  
+    if verbose:
+        with alive_bar(len(jobList), title="ang distances") as bar:
+            for singlejobs in jobList: 
+                with open(singlejobs["file"], 'rb') as job:
+                    jobListChunk = cp.load(job, allow_pickle=True)                              
+                    dtmp = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])
+                    if len(Rin_Inv) > 0:
+                        dtmpInv = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin[jobListChunk[:,1],:,3:6])             
+                        dtmpInv2 = calcAngDist(Rin[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6])
+                        dtmpInv3 = calcAngDist(Rin_Inv[jobListChunk[:,0],:,0:3], Rin_Inv[jobListChunk[:,1],:,3:6] )
+            
+                        dists_all = cp.array([dtmp, dtmpInv, dtmpInv2, dtmpInv3])
+                        dtmp = cp.min(dists_all, axis = 0)
+                        del  dtmpInv, dtmpInv2, dtmpInv3, dists_all
+                        
+                    shared_ncc[singlejobs["start"]:singlejobs["stop"]] = dtmp  
+                    del jobListChunk, dtmp
+                    gc.collect() 
+                    bar()
+    else:
         for singlejobs in jobList: 
             with open(singlejobs["file"], 'rb') as job:
                 jobListChunk = cp.load(job, allow_pickle=True)                              
@@ -207,9 +247,7 @@ def calcAngDist_mp(pr_id, jobList, Rin, Rin_Inv,shared_ncc,gpu_id):
                     
                 shared_ncc[singlejobs["start"]:singlejobs["stop"]] = dtmp  
                 del jobListChunk, dtmp
-                gc.collect() 
-                bar()
-                            
+                gc.collect()                        
     cp.get_default_memory_pool().free_all_blocks()   #free the blocked memory 
     cp.get_default_pinned_memory_pool().free_all_blocks() #free the blocked memory
     os._exit(pr_id)        
@@ -232,16 +270,16 @@ def genJobList(szIn, tmpDir, maxChunk):
     jobList = np.zeros([lenJobs,2], dtype = np.uint32) #expand the range of positive int save memory(no negative int)
     startA = 0  
     
-    with alive_bar(int(np.floor(szIn/100)+1), title="jobList generation") as bar:
-        for i in range(szIn):
-            v2 = np.arange(i+1,szIn, dtype = np.uint32)
-            v1 = np.repeat(i, len(v2)).astype(np.uint32)
-            endA = startA+len(v2)
-            jobList[startA:endA,0] = v1
-            jobList[startA:endA,1] = v2
-            startA = endA 
-            if (i%100) == 0:
-                bar()      
+    #with alive_bar(int(np.floor(szIn/100)+1), title="jobList generation") as bar:
+    for i in range(szIn):
+        v2 = np.arange(i+1,szIn, dtype = np.uint32)
+        v1 = np.repeat(i, len(v2)).astype(np.uint32)
+        endA = startA+len(v2)
+        jobList[startA:endA,0] = v1
+        jobList[startA:endA,1] = v2
+        startA = endA 
+            #if (i%100) == 0:
+            #    bar()      
         
     #split the jobsList into different GPUs
     gpu_list, startSiteList, fileSizeList  = fileSplit(maxChunk, lenJobs)  

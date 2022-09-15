@@ -64,6 +64,8 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
   
     if worker_n == 1:
         for i in range(len_tomo):
+            if i>0 :
+                verbose = 0
             log.info('Calculate transformations for tomo %s'%uTomoId[i])
             idx = list(np.where(st["label"]["tomoID"] == uTomoId[i])[0])
             idxAct = idx
@@ -102,6 +104,8 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
         #remove the empty spl_ids
         spl_ids = [i for i in spl_ids if len(i) > 0]
         for pr_id, spl_id in enumerate(spl_ids):
+            if pr_id > 0:
+                verbose = 0
             pr = mp.Process(target = pr_worker, args=(pr_id, st, spl_id, maxDist, dmetric, temp_dir, verbose))
             pr.start()
             processes[pr_id] = pr
@@ -133,11 +137,13 @@ def tom_calcTransforms(posAng, pixS, maxDist, tomoNames='', dmetric='exact', out
         return startSt 
 
 def pr_worker(pr_id, st, tomo_ids, maxDist, dmetric, temp_dir,verbose):
-    for i in tomo_ids:
+    for j, i in enumerate(tomo_ids):
         idx = list(np.where(st["label"]["tomoID"] == i)[0])
         idxAct = idx
         posAct = st["p1"]["positions"][idx,:]
-        anglesAct = st["p1"]["angles"][idx,:]
+        anglesAct = st["p1"]["angles"][idx,:]        
+        if j>0:
+            verbose = 0
         transListAct = calcTransforms(posAct, anglesAct, maxDist, dmetric, i, idxAct, verbose)
         if isinstance(transListAct, type(None)):
             continue
@@ -169,7 +175,26 @@ def calcTransforms(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose):
         return None
         
     transListAct_inner = np.zeros([jobList.shape[0],29], dtype = np.float) 
-    with alive_bar(int(np.floor(jobList.shape[0]/100)+1), title="calculate transforms") as bar:
+    if  verbose:
+        with alive_bar(int(np.floor(jobList.shape[0]/100)+1), title="calculate transforms") as bar:
+            for i in range(jobList.shape[0]):             
+                icmb0,icmb1 = jobList[i,:]
+                pos1 = pos[icmb0,:]
+                pos2 = pos[icmb1,:]
+                ang1 = angles[icmb0,:]
+                ang2 = angles[icmb1,:]
+                posTr1, angTr1, lenPosTr1, lenAngTr1 = tom_calcPairTransForm(pos1,ang1,pos2,ang2,dmetric)
+                posTr2, angTr2, _, _ = tom_calcPairTransForm(pos2,ang2,pos1,ang1,dmetric)
+                transListAct_inner[i,:] = np.array([idxAct[icmb0], idxAct[icmb1],tomoID,
+                                                     posTr1[0], posTr1[1], posTr1[2], angTr1[0], angTr1[1], angTr1[2],                                        
+                                                     posTr2[0], posTr2[1], posTr2[2], angTr2[0], angTr2[1], angTr2[2],
+                                                     lenPosTr1, lenAngTr1,
+                                                     pos1[0],pos1[1],pos1[2],ang1[0],ang1[1],ang1[2],
+                                                     pos2[0],pos2[1],pos2[2],ang2[0],ang2[1],ang2[2]])
+                if i%100 == 0:
+                    bar()
+                    bar.text("calculate transfroms done with %d pairs"%(i))
+    else:
         for i in range(jobList.shape[0]):             
             icmb0,icmb1 = jobList[i,:]
             pos1 = pos[icmb0,:]
@@ -183,10 +208,7 @@ def calcTransforms(pos, angles, pruneRad, dmetric, tomoID, idxAct, verbose):
                                                  posTr2[0], posTr2[1], posTr2[2], angTr2[0], angTr2[1], angTr2[2],
                                                  lenPosTr1, lenAngTr1,
                                                  pos1[0],pos1[1],pos1[2],ang1[0],ang1[1],ang1[2],
-                                                 pos2[0],pos2[1],pos2[2],ang2[0],ang2[1],ang2[2]])
-            if (verbose == 1) & (i%100 == 0):
-                bar()
-                bar.text("calculate transfroms done with %d pairs"%(i))
+                                                 pos2[0],pos2[1],pos2[2],ang2[0],ang2[1],ang2[2]])        
     return transListAct_inner
       
     

@@ -4,7 +4,7 @@ while getopts ":c:h" opt
 do 
     case $opt in 
         c )
-        `which python` $OPTARG
+        `which python` main.py $OPTARG
         ;;
         \? )
         echo "Invalid Option"

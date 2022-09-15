@@ -14,8 +14,10 @@ def genConf():
     nemoPath = nemotoc.__path__[0]
     if options.getConf:     
         confFile = '%s/conf.py'%nemoPath
+        mainFile = '%s/main.py'%nemoPath
         if os.path.exists(confFile):
             shutil.copyfile(confFile, 'conf.py')
+            shutil.copyfile(mainFile, 'main.py')
             print('the configure file is named conf.py')
         else:
             print('can not find %s. Can download conf.py from the github'%confFile)
@@ -36,8 +38,7 @@ def genConf():
     else:
         print('no all_particles_neuron_warp.star file will be fetched.')
 
+
 if __name__ == '__main__': 
     genConf()
     
-    
-

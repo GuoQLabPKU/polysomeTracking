@@ -128,7 +128,7 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
                               transListAct[:, 7:10],
                               avgShift, avgRot,
                               worker_n, gpu_list,
-                              cmb_metric, pruneRad)
+                              cmb_metric, pruneRad,0)
     
     if method == 'max':
         index = np.argwhere(distsCN <= cmbDistMaxMeanStd[0]).reshape(1,-1)[0]      
@@ -267,7 +267,7 @@ def tom_addTailRibo(statePolyAll_list, pairList, pairClass, avgRot, avgShift,
 
 def genTransList(worker_n, fillUpRiboInfos, headRiboInfo, polyInfoList):
     if (worker_n == None) | (worker_n == 1):
-        transList = genTransListSub(-1, fillUpRiboInfos, headRiboInfo, polyInfoList, '')
+        transList = genTransListSub(-1, fillUpRiboInfos, headRiboInfo, polyInfoList, '',1)
         return transList
     else:
         #make temp directory for data saving
@@ -287,8 +287,12 @@ def genTransList(worker_n, fillUpRiboInfos, headRiboInfo, polyInfoList):
         spl_ids = np.array_split(np.arange(fillUpRiboInfos.shape[0]),npr) 
         spl_ids = [i for i in spl_ids if len(i) > 0]
         for pr_id, spl_id in enumerate(spl_ids):
+            if pr_id > 0:
+                verbose = 0
+            else:
+                verbose = 1
             pr = mp.Process(target = genTransListSub, args=(pr_id, fillUpRiboInfos[spl_id,:], 
-                                                             headRiboInfo, polyInfoList, temp_dir))
+                                                             headRiboInfo, polyInfoList, temp_dir, verbose))
             pr.start()
             processes[pr_id] = pr
         for pr_id, pr in zip(processes.keys(), processes.values()):
@@ -308,9 +312,39 @@ def genTransList(worker_n, fillUpRiboInfos, headRiboInfo, polyInfoList):
             shutil.rmtree(temp_dir) 
     return transList
 
-def genTransListSub(pr_id, fillUpRiboInfos, headRiboInfo, polyInfoList, temp_dir):
+def genTransListSub(pr_id, fillUpRiboInfos, headRiboInfo, polyInfoList, temp_dir, verbose = 1):
     transListAct  =  np.array([]).reshape(-1, 30)
-    with alive_bar(fillUpRiboInfos.shape[0], title="calculate trans pairs for fillingUp") as bar:
+    if verbose:
+        with alive_bar(fillUpRiboInfos.shape[0], title="calculate trans pairs for fillingUp") as bar:
+            for i in range(fillUpRiboInfos.shape[0]):
+                for j in range(headRiboInfo.shape[0]):
+                    polyId1 = fillUpRiboInfos[i,1];polyId2 = headRiboInfo[j,1]
+                    tomo1 = polyInfoList[polyInfoList['pairLabel'] == polyId1]['pairTomoID'].values[0]
+                    tomo2 = polyInfoList[polyInfoList['pairLabel'] == polyId2]['pairTomoID'].values[0]
+                    if (polyId1 == polyId2) | (tomo1 != tomo2):
+                        #the first condition is whether two ribosomes are from the same polysome. 
+                        #the second condition is whether two ribosome are from the same tomogram
+                        continue
+                    
+                    pos1 = fillUpRiboInfos[i,2:5]
+                    ang1 = fillUpRiboInfos[i,5:]
+                    
+                    pos2 = headRiboInfo[j,2:5]
+                    ang2 = headRiboInfo[j,5:]  
+                    posTr1, angTr1, lenPosTr1, lenAngTr1 = tom_calcPairTransForm(pos1,ang1,pos2,ang2,'exact')
+                    transListAct = np.concatenate((transListAct, np.array([[fillUpRiboInfos[i,0],
+                                               fillUpRiboInfos[i,1], headRiboInfo[j,0], 
+                                               tomo1, posTr1[0], posTr1[1], posTr1[2], 
+                                               angTr1[0], angTr1[1], angTr1[2],                                        
+                                               -1, -1, -1, -1, -1, -1,
+                                               lenPosTr1, lenAngTr1,
+                                               pos1[0],pos1[1],pos1[2],
+                                               ang1[0],ang1[1],ang1[2],
+                                               pos2[0],pos2[1],pos2[2],
+                                               ang2[0],ang2[1],ang2[2]]])),
+                                               axis = 0)  
+                bar()
+    else:
         for i in range(fillUpRiboInfos.shape[0]):
             for j in range(headRiboInfo.shape[0]):
                 polyId1 = fillUpRiboInfos[i,1];polyId2 = headRiboInfo[j,1]
@@ -337,8 +371,7 @@ def genTransListSub(pr_id, fillUpRiboInfos, headRiboInfo, polyInfoList, temp_dir
                                            ang1[0],ang1[1],ang1[2],
                                            pos2[0],pos2[1],pos2[2],
                                            ang2[0],ang2[1],ang2[2]]])),
-                                           axis = 0)  
-            bar()
+                                           axis = 0)          
     if pr_id == -1:
         return transListAct   
     else:

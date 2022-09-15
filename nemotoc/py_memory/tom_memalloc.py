@@ -1,5 +1,5 @@
 import numpy as np
-def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None, chunk = 2000):
+def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None, chunk = 2000, verbose = 1):
     '''
     TOM_MEMALLOC returns the maxChunck for tom_pdist parallel computation 
 
@@ -36,7 +36,8 @@ def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None, chunk = 2000)
             else:
                 mem_free = freeMem
         maxChunk = np.uint64(mem_free*chunk/worker_n) #if memory error, reduce this number(6500),uint64
-        print('Free memory: %.2f mib'%mem_free)
+        if verbose:
+            print('Free memory: %.2f mib'%mem_free)
         return maxChunk
     else: 
         if isinstance(gpu_list, list):
@@ -56,7 +57,8 @@ def tom_memalloc(freeMem = None, worker_n = None, gpu_list = None, chunk = 2000)
                     print('gpu %d already used, skipping'%gpu_id)
                     continue
                 freeMem_dict[gpu_id] =  round(free/1024/1024,2)*0.8 #not sure if the pynvml is reliable
-                print('GPU %d:%.2f mib free memory'%(gpu_id, round(free/1024/1024,2)*0.8))
+                if verbose:
+                    print('GPU %d:%.2f mib free memory'%(gpu_id, round(free/1024/1024,2)*0.8))
             if len(freeMem_dict) == 0:
                 raise RuntimeError('Invalid gpu list')
                 
