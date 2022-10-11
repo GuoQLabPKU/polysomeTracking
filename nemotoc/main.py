@@ -30,6 +30,6 @@ if __name__ == '__main__':
             conf.minNumTransform_ratio, fillUpPoly, conf.cpuN, conf.gpu_list, 
             conf.remove_branches, conf.vectorfield_plotting,
             conf.show_longestPoly, conf.do_avg, avg,
-            conf.transNr_initialCluster, conf.iterationNr, conf.do_errorEstimate)
+            conf.transNr_initialCluster, conf.iterationNr, conf.threshold, conf.do_errorEstimate)
     end = time.time()
     print('Successfully finish NEMO-TOC with %.2fs'%(end-begin))

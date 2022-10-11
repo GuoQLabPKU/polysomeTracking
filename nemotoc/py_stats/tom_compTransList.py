@@ -59,7 +59,8 @@ def tom_compTransList(stdard, comp):
             if precision > precision_dict[sgC_cmp]:
                 precision_dict[sgC_cmp] = precision
     
-                
+    print('recall', recall_dict)
+    print('precision', precision_dict)
     #show the final figure as boxplot
     summary_data = pd.DataFrame({'score':list(recall_dict.values()) + list(precision_dict.values()),
                                  'type':['recall']*len(clusterU_cmp) + ['precision']*len(clusterU_cmp)})
@@ -67,9 +68,9 @@ def tom_compTransList(stdard, comp):
     sns.stripplot(x = 'type', y = 'score',size=10
           ,jitter=0.1, data = summary_data, color = 'black')
             
-            
+    
   
-tom_compTransList("../../myNemoProj/projNeuron/run0/allTransformsFillUp.star",
-                  "../../myNemoProj/projNeuron/run2/allTransformsFillUp.star",)
+hh = tom_compTransList("../../myNemoProj/projNeuron/run0/allTransforms.star",
+                  "../../myNemoProj/projNeuron/run5_allRiboIntoTrans_assign_threhold70/allTransforms.star",)
     
     

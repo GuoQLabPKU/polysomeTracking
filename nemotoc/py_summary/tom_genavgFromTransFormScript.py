@@ -117,7 +117,7 @@ def avgFromWildCard(wk, outputRoot, classFilt, avgCallTmpl, workerNr, maxRes, pi
             inputNameTmp = inputName.replace('.star', '_subset.star')
             call = 'cat %s | awk \"NF<4{print }\" > %s'%(inputName, inputNameTmp)
             p = subprocess.Popen(call, shell = True, stdout = subprocess.PIPE)
-            call = 'awk \"(NF>5 && NR<%d){print }\" >> %s'%(inputName, 
+            call = 'cat %s | awk \"(NF>5 && NR<%d){print }\" >> %s'%(inputName, 
                               maxLen, inputNameTmp)
             
             p = subprocess.Popen(call, shell = True, stdout = subprocess.PIPE)

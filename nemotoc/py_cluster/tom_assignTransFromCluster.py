@@ -4,7 +4,8 @@ from nemotoc.py_align.tom_align_transformDirection import tom_align_transformDir
 
 import numpy as np
 
-def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, iterN = 5, worker_n = 1, gpu_list = None, freeMem = None):
+def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, iterN = 5, threshold = 90,
+                               worker_n = 1, gpu_list = None, freeMem = None):
     '''
     assign each transform into one cluster 
     transList: pairList retunred by NEMO-TOC 
@@ -27,6 +28,7 @@ def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, ite
     #merge two arrays
     vectList = np.concatenate((transVect,transVectInv))
     angList = np.concatenate((transAngVect,transAngVectInv))
+    assert transVect.shape[0] == transAngVectInv.shape[0]
     
     for _ in range(iterN):
         #record the information of each trans
@@ -73,7 +75,7 @@ def tom_assignTransFromCluster(transList, clusterStat, cmb_metric, pruneRad, ite
                 distsCN = (distsAng+(distsVect2*2))/2
                 
             clusterStat[single_cluster] = np.zeros(7)
-            clusterStat[single_cluster][0] = np.max(distsCN)
+            clusterStat[single_cluster][0] = np.percentile(distsCN, threshold)     
             clusterStat[single_cluster][1:4] = [vectStat['meanTransVectX'], vectStat['meanTransVectY'], vectStat['meanTransVectZ']]
             clusterStat[single_cluster][4:7] = [angStat['meanTransAngPhi'], angStat['meanTransAngPsi'], angStat['meanTransAngTheta']]
             

@@ -11,7 +11,7 @@ search_radius = 170*2 #in Ang. The searching range for neighbors. Two neighbors 
 do_errorEstimate = 1 #if estimate the probaility that one transformation belongs to another clusters
 
 #####PREPROCESS STAR FILE PARAMETERS####
-min_dist = 170*0.8 #in Ang, the minmum distance to remove repeat particles. Default:raduis of particles*0.8
+min_dist = 170*0.8 #in Ang, the minmum distance to remove repeat particles
 subtomo_path = 'subtomograms' #if input is stopgap file, need specify the path pointing to subtomograms
 ctf_file =  'miss30Wedge.mrc' #if input is stopgap file, need specify the missing wedge file
 
@@ -26,7 +26,7 @@ show_longestPoly = 1 #plot and save the longest polysome in each cluster 0:switc
 
 #####AVERAGE PARAMETERS#####
 avg_pixS = 3.42  #the pixel size of particles for relion averaging
-avg_maxPart = 20000 #the maximum number of particles to average particles from each cluster
+avg_maxPart = 2000 #the maximum number of particles to average particles from each cluster
 avg_minPart = 50 #the minimal number of particles requirement for averaging from each cluster
 avg_maxRes = 20 #the maximum resolution for relion averaging
 avg_callByPython = 0 #if use python to call relion_reconstruct command 0: generate linux scripts to run relion_reconstruct, 1:use python to call relion
@@ -35,7 +35,7 @@ avg_command = 'mpirun -np XXX_cpuNr_XXX `which relion_reconstruct_mpi` --i XXX_i
               #generic (relion) call template
 #####ADVANCED PARAMETERS ######
 #for huge dataset
-transNr_initialCluster = 10000000000 #the amount of transformations used for the initial hirachical clustering
+transNr_initialCluster = 10000 #the amount of transformations used for the initial hirachical clustering
 iterationNr = 1 #the cycle times for k-means for cluster assignment
 #for gap fillingup
 link_depth = 2 #the searching depth for linking adjacent transforms into longer polysomes.

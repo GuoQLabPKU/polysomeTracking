@@ -347,10 +347,14 @@ class Polysome:
             self.transList = tom_calcTransforms(self.io['posAngList'], self.transForm['pixS'], maxDistInPix, '',
                                                 'exact', transFormFile, 1, worker_n)
     
-    def groupTransForms(self, worker_n = 1, gpu_list = None, freeMem = None, transNr_initialCluster = 10000, iterN = 1):
+    def groupTransForms(self, worker_n = 1, gpu_list = None, freeMem = None, transNr_initialCluster = 10000, iterN = 1,
+                        threshold = 90):
         '''
         generate the clustering transform clusters
         '''
+        # ####just for debug ####
+        # transNr_initialCluster = 1000000000
+        #######
         if gpu_list is not None:
             worker_n = None
         self.log.info('Start clustering')
@@ -402,6 +406,7 @@ class Polysome:
             self.log.error(errorInfo)    
             raise TypeError(errorInfo)            
                
+        #if 1:
         if transList_subset.shape[0] < self.transList.shape[0]:            
             oriTrans = copy.deepcopy(self.transList)
             
@@ -425,7 +430,7 @@ class Polysome:
             else:           
                 self.transList =  transListSelCmb               
                 os.rename('%s/scores/tree.npy'%self.io['classifyFold'],
-                             '%s/scores/treeb4Relink.npy'%self.io['classifyFold'])
+                              '%s/scores/treeb4Relink.npy'%self.io['classifyFold'])
                 self.log.info('Re-cluster filtered transformations')
                 self.groupTransForms(worker_n = worker_n, gpu_list = gpu_list, iterN = iterN)               
                 if os.path.exists('%s/allTransforms.star'%self.io['classifyFold']):
@@ -455,11 +460,10 @@ class Polysome:
                     distsCN = (distsAng+(distsVect2*2))/2
                     
                 stats_cluster[single_cluster] = np.zeros(7)
-                stats_cluster[single_cluster][0] = np.max(distsCN)
+                stats_cluster[single_cluster][0] = np.percentile(distsCN, threshold)                
                 stats_cluster[single_cluster][1:4] = [vectStat['meanTransVectX'], vectStat['meanTransVectY'], vectStat['meanTransVectZ']]
-                stats_cluster[single_cluster][4:7] = [angStat['meanTransAngPhi'], angStat['meanTransAngPsi'], angStat['meanTransAngTheta']]
-                          
-            pairClassList, _ = tom_assignTransFromCluster(oriTrans, stats_cluster, cmb_metric, maxDistInPix, iterN, worker_n, gpu_list, freeMem)
+                stats_cluster[single_cluster][4:7] = [angStat['meanTransAngPhi'], angStat['meanTransAngPsi'], angStat['meanTransAngTheta']]           
+            pairClassList, _ = tom_assignTransFromCluster(oriTrans, stats_cluster, cmb_metric, maxDistInPix, iterN, threshold, worker_n, gpu_list, freeMem)
             #update the pairClass as well as the color 
             clusterColor = { }
             for sgCluster, sgColor in zip(transList_subset['pairClass'].values, transList_subset['pairClassColour'].values):

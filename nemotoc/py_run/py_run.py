@@ -5,7 +5,7 @@ from nemotoc.polysome_class.polysome import Polysome
 
 def runPoly(input_star, run_time, project_folder, pixel_size, min_dist, subtomo_path, ctf_file,
             search_radius, link_depth, cluster_threshold, minNumTransform_ratio, fillUpPoly, cpuN, gpu_list, remove_branches,
-            vectorfield_plotting, show_longestPoly, if_avg, avg, transNr_initialCluster, iterN, do_errorEstimate):
+            vectorfield_plotting, show_longestPoly, if_avg, avg, transNr_initialCluster, iterN, threshold, do_errorEstimate):
     #check the type of input parameters
     assert isinstance(input_star, str)
     assert isinstance(run_time, str)
@@ -44,7 +44,8 @@ def runPoly(input_star, run_time, project_folder, pixel_size, min_dist, subtomo_
     polysome1.creatOutputFolder()  #create folder to store the result
     polysome1.preProcess(subtomo_path, ctf_file, min_dist) #preprocess
     polysome1.calcTransForms(worker_n = cpuN) #calculate transformations
-    polysome1.groupTransForms(worker_n = cpuN, gpu_list = gpu_list, transNr_initialCluster = transNr_initialCluster, iterN = iterN)  #cluster transformations
+    polysome1.groupTransForms(worker_n = cpuN, gpu_list = gpu_list, transNr_initialCluster = transNr_initialCluster, 
+                              iterN = iterN,threshold = threshold)  #cluster transformations
     transListSel, selFolds = polysome1.selectTransFormClasses(worker_n = cpuN, gpu_list = gpu_list, iterN = iterN) #filter clusters
     polysome1.genOutputList(transListSel, selFolds) #save the filtered clusters
     polysome1.alignTransforms() #align the transformationsto the same direction
