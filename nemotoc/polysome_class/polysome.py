@@ -181,15 +181,15 @@ class Polysome:
         #recenter particles 
         if (dataType == 'relion2') | (dataType == 'stopgap'):
             if 'rlnOriginX' in posAngListRelion.columns:
-                posAngListRelion['rlnCoordinateX'] = posAngListRelion['rlnCoordinateX'] + posAngListRelion['rlnOriginX']
-                posAngListRelion['rlnCoordinateY'] = posAngListRelion['rlnCoordinateY'] + posAngListRelion['rlnOriginY']
-                posAngListRelion['rlnCoordinateZ'] = posAngListRelion['rlnCoordinateZ'] + posAngListRelion['rlnOriginZ']
+                posAngListRelion['rlnCoordinateX'] = posAngListRelion['rlnCoordinateX'] - posAngListRelion['rlnOriginX']
+                posAngListRelion['rlnCoordinateY'] = posAngListRelion['rlnCoordinateY'] - posAngListRelion['rlnOriginY']
+                posAngListRelion['rlnCoordinateZ'] = posAngListRelion['rlnCoordinateZ'] - posAngListRelion['rlnOriginZ']
             
         elif dataType == 'relion3':
             if 'rlnOriginXAngst' in posAngListRelion.columns:
-                posAngListRelion['rlnCoordinateX'] = posAngListRelion['rlnCoordinateX'] + posAngListRelion['rlnOriginXAngst']/self.transForm['pixS']
-                posAngListRelion['rlnCoordinateY'] = posAngListRelion['rlnCoordinateY'] + posAngListRelion['rlnOriginYAngst']/self.transForm['pixS']
-                posAngListRelion['rlnCoordinateZ'] = posAngListRelion['rlnCoordinateZ'] + posAngListRelion['rlnOriginZAngst']/self.transForm['pixS']          
+                posAngListRelion['rlnCoordinateX'] = posAngListRelion['rlnCoordinateX'] - posAngListRelion['rlnOriginXAngst']/self.transForm['pixS']
+                posAngListRelion['rlnCoordinateY'] = posAngListRelion['rlnCoordinateY'] - posAngListRelion['rlnOriginYAngst']/self.transForm['pixS']
+                posAngListRelion['rlnCoordinateZ'] = posAngListRelion['rlnCoordinateZ'] - posAngListRelion['rlnOriginZAngst']/self.transForm['pixS']          
         #remove too closed neigbors
         uniq_mrc = np.unique(posAngListRelion['rlnMicrographName'].values)
         #remove the duplicates and also store the distance of two neighbors 

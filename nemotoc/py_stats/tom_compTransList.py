@@ -71,6 +71,6 @@ def tom_compTransList(stdard, comp):
     
   
 hh = tom_compTransList("../../myNemoProj/projNeuron/run0/allTransforms.star",
-                  "../../myNemoProj/projNeuron/run5_allRiboIntoTrans_assign_threhold70/allTransforms.star",)
+                  "../../myNemoProj/projNeuron/run4_allRiboIntoTrans_assign_threhold90/allTransforms.star")
     
     
